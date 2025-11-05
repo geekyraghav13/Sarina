@@ -19,6 +19,7 @@ import { RootStackParamList } from './types';
 const Stack = createStackNavigator<RootStackParamList>();
 
 export const AppNavigator: React.FC = () => {
+
   return (
     <NavigationContainer>
       <Stack.Navigator

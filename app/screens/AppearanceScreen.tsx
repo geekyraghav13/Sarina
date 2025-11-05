@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
-import { GlassContainer } from '../components/GlassContainer';
 import { ModeCard } from '../components/ModeCard';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
+import { getVideoForAppearance, VIDEO_SOURCES } from '../utils/videoSelector';
 
 type AppearanceScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -48,9 +48,14 @@ export const AppearanceScreen: React.FC<AppearanceScreenProps> = ({
 }) => {
   const [selectedAppearance, setSelectedAppearance] = useState<string>('');
   const { setProfile } = useUserProfile();
+  const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
 
   const handleAppearanceSelect = (id: string) => {
     setSelectedAppearance(id);
+
+    // Change video immediately based on appearance selection
+    const newVideo = getVideoForAppearance(id);
+    setVideoSource(newVideo);
   };
 
   const handleNext = () => {
@@ -66,7 +71,9 @@ export const AppearanceScreen: React.FC<AppearanceScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <VideoBackground source={require('../../assets/videos/default.mp4')} />
+      <VideoBackground
+        source={videoSource}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -101,19 +108,17 @@ export const AppearanceScreen: React.FC<AppearanceScreenProps> = ({
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
 
-            <GlassContainer style={styles.nextButtonContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.nextButton,
-                  !selectedAppearance && styles.nextButtonDisabled,
-                ]}
-                onPress={handleNext}
-                activeOpacity={0.8}
-                disabled={!selectedAppearance}
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </GlassContainer>
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                !selectedAppearance && styles.nextButtonDisabled,
+              ]}
+              onPress={handleNext}
+              activeOpacity={0.8}
+              disabled={!selectedAppearance}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -133,10 +138,11 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 80,
     paddingBottom: 60,
+    minHeight: '100%',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   step: {
     fontSize: 14,
@@ -156,10 +162,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   cardsContainer: {
-    marginBottom: 32,
+    flex: 1,
+    gap: 16,
   },
   footer: {
     marginTop: 'auto',
+    paddingTop: 24,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -178,11 +186,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  nextButtonContainer: {
-    flex: 2,
-    padding: 0,
-  },
   nextButton: {
+    flex: 2,
     backgroundColor: '#FF3263',
     paddingVertical: 18,
     borderRadius: 20,

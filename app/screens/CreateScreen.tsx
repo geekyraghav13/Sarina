@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
-import { GlassContainer } from '../components/GlassContainer';
 import { RootStackParamList } from '../navigation/types';
+import { ALL_VIDEOS } from '../utils/videoSelector';
 
 type CreateScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -15,44 +15,46 @@ interface CreateScreenProps {
 }
 
 export const CreateScreen: React.FC<CreateScreenProps> = ({ navigation }) => {
-  const handleStart = () => {
-    navigation.navigate('Age');
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(
+    Math.floor(Math.random() * ALL_VIDEOS.length)
+  );
+
+  // Change video every time it loops (when it ends)
+  const handleVideoEnd = () => {
+    // Pick a random video different from current one
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * ALL_VIDEOS.length);
+    } while (newIndex === currentVideoIndex && ALL_VIDEOS.length > 1);
+    setCurrentVideoIndex(newIndex);
   };
 
-  const handleSurprise = () => {
-    // TODO: Implement random profile generation
+  const handleStart = () => {
     navigation.navigate('Age');
   };
 
   return (
     <View style={styles.container}>
-      <VideoBackground source={require('../../assets/videos/default.mp4')} />
+      <VideoBackground
+        source={ALL_VIDEOS[currentVideoIndex]}
+        onVideoEnd={handleVideoEnd}
+      />
       <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Create Your</Text>
-          <Text style={styles.titleAccent}>AI Girlfriend</Text>
-          <Text style={styles.subtitle}>
-            Your perfect companion, personalized just for you
-          </Text>
-        </View>
-
         <View style={styles.footer}>
-          <GlassContainer style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={handleStart}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.primaryButtonText}>Start Creating</Text>
-            </TouchableOpacity>
-          </GlassContainer>
+          <View style={styles.header}>
+            <Text style={styles.title}>Create Your</Text>
+            <Text style={styles.titleAccent}>AI Girlfriend</Text>
+            <Text style={styles.subtitle}>
+              Your perfect companion, personalized just for you
+            </Text>
+          </View>
 
           <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleSurprise}
-            activeOpacity={0.7}
+            style={styles.primaryButton}
+            onPress={handleStart}
+            activeOpacity={0.8}
           >
-            <Text style={styles.secondaryButtonText}>Surprise Me</Text>
+            <Text style={styles.primaryButtonText}>Start Now</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -67,13 +69,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     padding: 24,
-    paddingTop: 80,
     paddingBottom: 60,
   },
   header: {
     alignItems: 'center',
+    marginBottom: 40,
   },
   title: {
     fontSize: 48,
@@ -96,9 +98,6 @@ const styles = StyleSheet.create({
   },
   footer: {
     gap: 16,
-  },
-  buttonContainer: {
-    padding: 0,
   },
   primaryButton: {
     backgroundColor: '#FF3263',

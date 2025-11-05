@@ -42,5 +42,16 @@ yarn-error.log
 .env.local
 .env.*.local
 
+# Firebase
+.firebase/
+.firebaserc
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
+# Firebase Config (if you want to keep it private)
+# Uncomment the line below if your firebase config has sensitive data
+# app/config/firebase.ts
+
 # TypeScript
 *.tsbuildinfo

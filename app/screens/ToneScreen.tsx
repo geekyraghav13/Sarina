@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
-import { GlassContainer } from '../components/GlassContainer';
 import { ChipSelector } from '../components/ChipSelector';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
+import { getVideoForTone, VIDEO_SOURCES } from '../utils/videoSelector';
 
 type ToneScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Tone'>;
 
@@ -27,11 +27,23 @@ const TONE_OPTIONS = [
 export const ToneScreen: React.FC<ToneScreenProps> = ({ navigation }) => {
   const [selectedTones, setSelectedTones] = useState<string[]>([]);
   const { setProfile } = useUserProfile();
+  const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
 
   const handleToneSelect = (tone: string) => {
-    setSelectedTones((prev) =>
-      prev.includes(tone) ? prev.filter((t) => t !== tone) : [...prev, tone]
-    );
+    const newSelectedTones = selectedTones.includes(tone)
+      ? selectedTones.filter((t) => t !== tone)
+      : [...selectedTones, tone];
+
+    setSelectedTones(newSelectedTones);
+
+    // Change video immediately based on the first selected tone
+    if (newSelectedTones.length > 0) {
+      const newVideo = getVideoForTone(newSelectedTones[0]);
+      setVideoSource(newVideo);
+    } else {
+      // No selection, use default
+      setVideoSource(VIDEO_SOURCES.FANTASY);
+    }
   };
 
   const handleNext = () => {
@@ -47,7 +59,9 @@ export const ToneScreen: React.FC<ToneScreenProps> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <VideoBackground source={require('../../assets/videos/default.mp4')} />
+      <VideoBackground
+        source={videoSource}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -61,14 +75,14 @@ export const ToneScreen: React.FC<ToneScreenProps> = ({ navigation }) => {
           </Text>
         </View>
 
-        <GlassContainer style={styles.optionsContainer}>
+        <View style={styles.optionsContainer}>
           <ChipSelector
             options={TONE_OPTIONS}
             selected={selectedTones}
             onSelect={handleToneSelect}
             multiSelect
           />
-        </GlassContainer>
+        </View>
 
         <View style={styles.footer}>
           <View style={styles.buttonRow}>
@@ -80,19 +94,17 @@ export const ToneScreen: React.FC<ToneScreenProps> = ({ navigation }) => {
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
 
-            <GlassContainer style={styles.nextButtonContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.nextButton,
-                  selectedTones.length === 0 && styles.nextButtonDisabled,
-                ]}
-                onPress={handleNext}
-                activeOpacity={0.8}
-                disabled={selectedTones.length === 0}
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </GlassContainer>
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                selectedTones.length === 0 && styles.nextButtonDisabled,
+              ]}
+              onPress={handleNext}
+              activeOpacity={0.8}
+              disabled={selectedTones.length === 0}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -112,10 +124,11 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 80,
     paddingBottom: 60,
+    minHeight: '100%',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 60,
   },
   step: {
     fontSize: 14,
@@ -135,10 +148,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   optionsContainer: {
-    marginBottom: 32,
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 40,
   },
   footer: {
     marginTop: 'auto',
+    paddingTop: 24,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -157,11 +174,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  nextButtonContainer: {
-    flex: 2,
-    padding: 0,
-  },
   nextButton: {
+    flex: 2,
     backgroundColor: '#FF3263',
     paddingVertical: 18,
     borderRadius: 20,

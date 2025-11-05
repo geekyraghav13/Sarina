@@ -9,8 +9,8 @@ import {
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
-import { GlassContainer } from '../components/GlassContainer';
 import { useUserProfile } from '../store/userProfile';
+import { useVideoForProfile } from '../hooks/useVideoForProfile';
 import { RootStackParamList } from '../navigation/types';
 
 type NameScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Name'>;
@@ -33,8 +33,9 @@ const RANDOM_NAMES = [
 ];
 
 export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
-  const [name, setName] = useState('');
   const { setProfile } = useUserProfile();
+  const videoSource = useVideoForProfile();
+  const [name, setName] = useState('');
 
   const handleRandomName = () => {
     const randomName =
@@ -55,7 +56,9 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <VideoBackground source={require('../../assets/videos/default.mp4')} />
+      <VideoBackground
+        source={videoSource}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -68,7 +71,7 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
         </View>
 
         <View style={styles.inputContainer}>
-          <GlassContainer style={styles.inputWrapper}>
+          <View style={styles.inputWrapper}>
             <TextInput
               style={styles.input}
               placeholder="Enter name..."
@@ -78,7 +81,7 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
               autoCapitalize="words"
               maxLength={20}
             />
-          </GlassContainer>
+          </View>
 
           <TouchableOpacity
             style={styles.randomButton}
@@ -99,19 +102,17 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
 
-            <GlassContainer style={styles.nextButtonContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.nextButton,
-                  !name.trim() && styles.nextButtonDisabled,
-                ]}
-                onPress={handleNext}
-                activeOpacity={0.8}
-                disabled={!name.trim()}
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </GlassContainer>
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                !name.trim() && styles.nextButtonDisabled,
+              ]}
+              onPress={handleNext}
+              activeOpacity={0.8}
+              disabled={!name.trim()}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -155,10 +156,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   inputContainer: {
-    marginBottom: 'auto',
+    flex: 1,
+    justifyContent: 'center',
   },
   inputWrapper: {
     marginBottom: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   input: {
     fontSize: 24,
@@ -166,6 +172,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     paddingVertical: 20,
+    paddingHorizontal: 20,
   },
   randomButton: {
     paddingVertical: 16,
@@ -181,6 +188,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 'auto',
+    paddingTop: 24,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -199,11 +207,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  nextButtonContainer: {
-    flex: 2,
-    padding: 0,
-  },
   nextButton: {
+    flex: 2,
     backgroundColor: '#FF3263',
     paddingVertical: 18,
     borderRadius: 20,

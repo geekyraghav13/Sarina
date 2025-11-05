@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
-import { GlassContainer } from '../components/GlassContainer';
 import { ChipSelector } from '../components/ChipSelector';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
+import { getVideoForInterest, VIDEO_SOURCES } from '../utils/videoSelector';
 
 type InterestsScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -36,13 +36,22 @@ export const InterestsScreen: React.FC<InterestsScreenProps> = ({
 }) => {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const { setProfile } = useUserProfile();
+  const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
 
   const handleInterestSelect = (interest: string) => {
-    setSelectedInterests((prev) =>
-      prev.includes(interest)
-        ? prev.filter((i) => i !== interest)
-        : [...prev, interest]
-    );
+    const newSelectedInterests = selectedInterests.includes(interest)
+      ? selectedInterests.filter((i) => i !== interest)
+      : [...selectedInterests, interest];
+
+    setSelectedInterests(newSelectedInterests);
+
+    // Change video immediately based on the first selected interest
+    if (newSelectedInterests.length > 0) {
+      const newVideo = getVideoForInterest(newSelectedInterests[0]);
+      setVideoSource(newVideo);
+    } else {
+      setVideoSource(VIDEO_SOURCES.FANTASY);
+    }
   };
 
   const handleNext = () => {
@@ -58,7 +67,9 @@ export const InterestsScreen: React.FC<InterestsScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <VideoBackground source={require('../../assets/videos/default.mp4')} />
+      <VideoBackground
+        source={videoSource}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -72,14 +83,14 @@ export const InterestsScreen: React.FC<InterestsScreenProps> = ({
           </Text>
         </View>
 
-        <GlassContainer style={styles.optionsContainer}>
+        <View style={styles.optionsContainer}>
           <ChipSelector
             options={INTEREST_OPTIONS}
             selected={selectedInterests}
             onSelect={handleInterestSelect}
             multiSelect
           />
-        </GlassContainer>
+        </View>
 
         <View style={styles.footer}>
           <View style={styles.buttonRow}>
@@ -91,19 +102,17 @@ export const InterestsScreen: React.FC<InterestsScreenProps> = ({
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
 
-            <GlassContainer style={styles.nextButtonContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.nextButton,
-                  selectedInterests.length === 0 && styles.nextButtonDisabled,
-                ]}
-                onPress={handleNext}
-                activeOpacity={0.8}
-                disabled={selectedInterests.length === 0}
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </GlassContainer>
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                selectedInterests.length === 0 && styles.nextButtonDisabled,
+              ]}
+              onPress={handleNext}
+              activeOpacity={0.8}
+              disabled={selectedInterests.length === 0}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -123,10 +132,11 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 80,
     paddingBottom: 60,
+    minHeight: '100%',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 60,
   },
   step: {
     fontSize: 14,
@@ -146,10 +156,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   optionsContainer: {
-    marginBottom: 32,
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 40,
   },
   footer: {
     marginTop: 'auto',
+    paddingTop: 24,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -168,11 +182,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  nextButtonContainer: {
-    flex: 2,
-    padding: 0,
-  },
   nextButton: {
+    flex: 2,
     backgroundColor: '#FF3263',
     paddingVertical: 18,
     borderRadius: 20,

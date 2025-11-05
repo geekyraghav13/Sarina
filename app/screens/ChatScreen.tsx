@@ -10,8 +10,8 @@ import {
   Platform,
 } from 'react-native';
 import { VideoBackground } from '../components/VideoBackground';
-import { GlassContainer } from '../components/GlassContainer';
 import { useUserProfile } from '../store/userProfile';
+import { useVideoForProfile } from '../hooks/useVideoForProfile';
 
 interface Message {
   id: string;
@@ -22,6 +22,7 @@ interface Message {
 
 export const ChatScreen: React.FC = () => {
   const { profile } = useUserProfile();
+  const videoSource = useVideoForProfile();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -69,7 +70,7 @@ export const ChatScreen: React.FC = () => {
         item.sender === 'user' ? styles.userMessage : styles.aiMessage,
       ]}
     >
-      <GlassContainer
+      <View
         style={[
           styles.messageBubble,
           item.sender === 'user'
@@ -78,13 +79,15 @@ export const ChatScreen: React.FC = () => {
         ]}
       >
         <Text style={styles.messageText}>{item.text}</Text>
-      </GlassContainer>
+      </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <VideoBackground source={require('../../assets/videos/default.mp4')} />
+      <VideoBackground
+        source={videoSource}
+      />
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
@@ -93,10 +96,10 @@ export const ChatScreen: React.FC = () => {
       >
         {/* Header */}
         <View style={styles.header}>
-          <GlassContainer style={styles.headerContent}>
+          <View style={styles.headerContent}>
             <Text style={styles.headerName}>{profile.name || 'Sarina'}</Text>
             <Text style={styles.headerStatus}>Online</Text>
-          </GlassContainer>
+          </View>
         </View>
 
         {/* Messages */}
@@ -110,41 +113,39 @@ export const ChatScreen: React.FC = () => {
 
         {/* Input Bar */}
         <View style={styles.inputContainer}>
-          <GlassContainer style={styles.inputWrapper}>
-            <View style={styles.inputRow}>
-              <TouchableOpacity
-                style={styles.voiceButton}
-                onPress={toggleVoiceMode}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.voiceIcon}>
-                  {isVoiceMode ? '🎤' : '⌨️'}
-                </Text>
-              </TouchableOpacity>
+          <View style={styles.inputWrapper}>
+            <TouchableOpacity
+              style={styles.voiceButton}
+              onPress={toggleVoiceMode}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.voiceIcon}>
+                {isVoiceMode ? '🎤' : '⌨️'}
+              </Text>
+            </TouchableOpacity>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Type a message..."
-                placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                value={inputText}
-                onChangeText={setInputText}
-                multiline
-                maxLength={500}
-              />
+            <TextInput
+              style={styles.input}
+              placeholder="Type a message..."
+              placeholderTextColor="rgba(255, 255, 255, 0.5)"
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={500}
+            />
 
-              <TouchableOpacity
-                style={[
-                  styles.sendButton,
-                  !inputText.trim() && styles.sendButtonDisabled,
-                ]}
-                onPress={handleSend}
-                activeOpacity={0.7}
-                disabled={!inputText.trim()}
-              >
-                <Text style={styles.sendIcon}>➤</Text>
-              </TouchableOpacity>
-            </View>
-          </GlassContainer>
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                !inputText.trim() && styles.sendButtonDisabled,
+              ]}
+              onPress={handleSend}
+              activeOpacity={0.7}
+              disabled={!inputText.trim()}
+            >
+              <Text style={styles.sendIcon}>➤</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -167,6 +168,10 @@ const styles = StyleSheet.create({
   headerContent: {
     padding: 16,
     alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   headerName: {
     fontSize: 20,
@@ -194,13 +199,17 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   messageBubble: {
-    padding: 12,
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
   userBubble: {
-    backgroundColor: 'rgba(255, 50, 99, 0.2)',
+    backgroundColor: 'rgba(255, 50, 99, 0.15)',
+    borderColor: '#FF3263',
   },
   aiBubble: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   messageText: {
     color: '#FFFFFF',
@@ -213,12 +222,14 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   inputWrapper: {
-    padding: 8,
-  },
-  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 25,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   voiceButton: {
     width: 40,
@@ -226,7 +237,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'transparent',
   },
   voiceIcon: {
     fontSize: 20,

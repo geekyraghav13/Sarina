@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ViewStyle,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
 interface ModeCardProps {
   title: string;
@@ -27,51 +26,31 @@ export const ModeCard: React.FC<ModeCardProps> = ({
 }) => {
   return (
     <TouchableOpacity
-      style={[styles.container, style]}
+      style={[
+        styles.container,
+        selected && styles.containerSelected,
+        style,
+      ]}
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <LinearGradient
-        colors={
-          selected
-            ? ['rgba(255, 50, 99, 0.4)', 'rgba(255, 50, 99, 0.2)']
-            : ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradient}
-      >
-        <View
-          style={[
-            styles.content,
-            selected && styles.contentSelected,
-          ]}
-        >
-          <Text style={styles.icon}>{icon}</Text>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.description}>{description}</Text>
-        </View>
-      </LinearGradient>
+      <Text style={styles.icon}>{icon}</Text>
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.description}>{description}</Text>
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  gradient: {
-    flex: 1,
-  },
-  content: {
     padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  contentSelected: {
+  containerSelected: {
+    backgroundColor: 'rgba(255, 50, 99, 0.15)',
     borderColor: '#FF3263',
     borderWidth: 2,
   },

@@ -2,8 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
-import { GlassContainer } from '../components/GlassContainer';
 import { useUserProfile } from '../store/userProfile';
+import { useVideoForProfile } from '../hooks/useVideoForProfile';
 import { RootStackParamList } from '../navigation/types';
 
 type SummaryScreenNavigationProp = StackNavigationProp<
@@ -17,6 +17,7 @@ interface SummaryScreenProps {
 
 export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
   const { profile } = useUserProfile();
+  const videoSource = useVideoForProfile();
 
   const handleStart = () => {
     navigation.navigate('Chat');
@@ -28,7 +29,9 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <VideoBackground source={require('../../assets/videos/default.mp4')} />
+      <VideoBackground
+        source={videoSource}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -42,7 +45,7 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
           </Text>
         </View>
 
-        <GlassContainer style={styles.summaryContainer}>
+        <View style={styles.summaryContainer}>
           <View style={styles.summarySection}>
             <Text style={styles.sectionLabel}>Name</Text>
             <Text style={styles.sectionValue}>{profile.name}</Text>
@@ -104,7 +107,7 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
                 : 'Not set'}
             </Text>
           </View>
-        </GlassContainer>
+        </View>
 
         <View style={styles.footer}>
           <View style={styles.buttonRow}>
@@ -116,15 +119,13 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
 
-            <GlassContainer style={styles.startButtonContainer}>
-              <TouchableOpacity
-                style={styles.startButton}
-                onPress={handleStart}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.startButtonText}>Start Chatting</Text>
-              </TouchableOpacity>
-            </GlassContainer>
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={handleStart}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.startButtonText}>Start Chatting</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -144,10 +145,11 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 80,
     paddingBottom: 60,
+    minHeight: '100%',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   step: {
     fontSize: 14,
@@ -167,7 +169,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   summaryContainer: {
-    marginBottom: 32,
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    padding: 20,
   },
   summarySection: {
     paddingVertical: 16,
@@ -191,6 +198,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     marginTop: 'auto',
+    paddingTop: 24,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -209,11 +217,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  startButtonContainer: {
-    flex: 2,
-    padding: 0,
-  },
   startButton: {
+    flex: 2,
     backgroundColor: '#FF3263',
     paddingVertical: 18,
     borderRadius: 20,

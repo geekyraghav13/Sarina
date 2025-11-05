@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
-import { GlassContainer } from '../components/GlassContainer';
 import { ChipSelector } from '../components/ChipSelector';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
+import { getVideoForPersonality, VIDEO_SOURCES } from '../utils/videoSelector';
 
 type PersonalityScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -36,13 +36,22 @@ export const PersonalityScreen: React.FC<PersonalityScreenProps> = ({
     []
   );
   const { setProfile } = useUserProfile();
+  const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
 
   const handlePersonalitySelect = (personality: string) => {
-    setSelectedPersonalities((prev) =>
-      prev.includes(personality)
-        ? prev.filter((p) => p !== personality)
-        : [...prev, personality]
-    );
+    const newSelectedPersonalities = selectedPersonalities.includes(personality)
+      ? selectedPersonalities.filter((p) => p !== personality)
+      : [...selectedPersonalities, personality];
+
+    setSelectedPersonalities(newSelectedPersonalities);
+
+    // Change video immediately based on the first selected personality
+    if (newSelectedPersonalities.length > 0) {
+      const newVideo = getVideoForPersonality(newSelectedPersonalities[0]);
+      setVideoSource(newVideo);
+    } else {
+      setVideoSource(VIDEO_SOURCES.FANTASY);
+    }
   };
 
   const handleNext = () => {
@@ -58,7 +67,9 @@ export const PersonalityScreen: React.FC<PersonalityScreenProps> = ({
 
   return (
     <View style={styles.container}>
-      <VideoBackground source={require('../../assets/videos/default.mp4')} />
+      <VideoBackground
+        source={videoSource}
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -72,14 +83,14 @@ export const PersonalityScreen: React.FC<PersonalityScreenProps> = ({
           </Text>
         </View>
 
-        <GlassContainer style={styles.optionsContainer}>
+        <View style={styles.optionsContainer}>
           <ChipSelector
             options={PERSONALITY_OPTIONS}
             selected={selectedPersonalities}
             onSelect={handlePersonalitySelect}
             multiSelect
           />
-        </GlassContainer>
+        </View>
 
         <View style={styles.footer}>
           <View style={styles.buttonRow}>
@@ -91,20 +102,18 @@ export const PersonalityScreen: React.FC<PersonalityScreenProps> = ({
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
 
-            <GlassContainer style={styles.nextButtonContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.nextButton,
-                  selectedPersonalities.length === 0 &&
-                    styles.nextButtonDisabled,
-                ]}
-                onPress={handleNext}
-                activeOpacity={0.8}
-                disabled={selectedPersonalities.length === 0}
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </GlassContainer>
+            <TouchableOpacity
+              style={[
+                styles.nextButton,
+                selectedPersonalities.length === 0 &&
+                  styles.nextButtonDisabled,
+              ]}
+              onPress={handleNext}
+              activeOpacity={0.8}
+              disabled={selectedPersonalities.length === 0}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -124,10 +133,11 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 80,
     paddingBottom: 60,
+    minHeight: '100%',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 60,
   },
   step: {
     fontSize: 14,
@@ -147,10 +157,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   optionsContainer: {
-    marginBottom: 32,
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 40,
   },
   footer: {
     marginTop: 'auto',
+    paddingTop: 24,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -169,11 +183,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  nextButtonContainer: {
-    flex: 2,
-    padding: 0,
-  },
   nextButton: {
+    flex: 2,
     backgroundColor: '#FF3263',
     paddingVertical: 18,
     borderRadius: 20,

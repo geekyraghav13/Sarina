@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
-import { GlassContainer } from '../components/GlassContainer';
 import { AgeWheel } from '../components/AgeWheel';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
+import { ALL_VIDEOS } from '../utils/videoSelector';
 
 type AgeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Age'>;
 
@@ -16,6 +16,18 @@ interface AgeScreenProps {
 export const AgeScreen: React.FC<AgeScreenProps> = ({ navigation }) => {
   const [age, setAge] = useState(25);
   const { setProfile } = useUserProfile();
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(
+    Math.floor(Math.random() * ALL_VIDEOS.length)
+  );
+
+  // Change video every time it loops
+  const handleVideoEnd = () => {
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * ALL_VIDEOS.length);
+    } while (newIndex === currentVideoIndex && ALL_VIDEOS.length > 1);
+    setCurrentVideoIndex(newIndex);
+  };
 
   const handleNext = () => {
     setProfile({ age });
@@ -28,7 +40,10 @@ export const AgeScreen: React.FC<AgeScreenProps> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <VideoBackground source={require('../../assets/videos/default.mp4')} />
+      <VideoBackground
+        source={ALL_VIDEOS[currentVideoIndex]}
+        onVideoEnd={handleVideoEnd}
+      />
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.step}>Step 1 of 8</Text>
@@ -37,9 +52,7 @@ export const AgeScreen: React.FC<AgeScreenProps> = ({ navigation }) => {
         </View>
 
         <View style={styles.wheelContainer}>
-          <GlassContainer style={styles.wheel}>
-            <AgeWheel onAgeChange={setAge} initialAge={age} />
-          </GlassContainer>
+          <AgeWheel onAgeChange={setAge} initialAge={age} />
         </View>
 
         <View style={styles.footer}>
@@ -52,15 +65,13 @@ export const AgeScreen: React.FC<AgeScreenProps> = ({ navigation }) => {
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
 
-            <GlassContainer style={styles.nextButtonContainer}>
-              <TouchableOpacity
-                style={styles.nextButton}
-                onPress={handleNext}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.nextButtonText}>Next</Text>
-              </TouchableOpacity>
-            </GlassContainer>
+            <TouchableOpacity
+              style={styles.nextButton}
+              onPress={handleNext}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.nextButtonText}>Next</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -105,9 +116,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginVertical: 40,
   },
-  wheel: {
-    padding: 20,
-  },
   footer: {
     gap: 16,
   },
@@ -128,11 +136,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  nextButtonContainer: {
-    flex: 2,
-    padding: 0,
-  },
   nextButton: {
+    flex: 2,
     backgroundColor: '#FF3263',
     paddingVertical: 18,
     borderRadius: 20,
