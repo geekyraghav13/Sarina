@@ -34,7 +34,7 @@ interface GirlfriendStore {
   isLoading: boolean;
   error: string | null;
   setSelectedGirlfriend: (girlfriend: Girlfriend) => void;
-  initializeDefaultGirlfriend: () => void;
+  initializeDefaultGirlfriend: (customName?: string) => void;
   addMessage: (girlfriendId: string, message: Message) => void;
   getChatHistory: (girlfriendId: string) => Message[];
   loadGirlfriends: () => Promise<void>;
@@ -111,14 +111,26 @@ export const useGirlfriendStore = create<GirlfriendStore>((set, get) => ({
     set({ selectedGirlfriend: girlfriend });
   },
 
-  initializeDefaultGirlfriend: () => {
+  initializeDefaultGirlfriend: (customName?: string) => {
     const defaultGirlfriend = createDefaultGirlfriend();
+
+    // Use custom name if provided, otherwise use default
+    if (customName) {
+      defaultGirlfriend.name = customName;
+    }
+
     const { girlfriends, chatHistories } = get();
 
     // Add default girlfriend to girlfriends list if not already present
     const existingDefault = girlfriends.find(gf => gf.id === 'default');
     if (!existingDefault) {
       set({ girlfriends: [defaultGirlfriend, ...girlfriends] });
+    } else {
+      // Update the name of existing default girlfriend
+      const updatedGirlfriends = girlfriends.map(gf =>
+        gf.id === 'default' ? { ...gf, name: defaultGirlfriend.name } : gf
+      );
+      set({ girlfriends: updatedGirlfriends });
     }
 
     set({ selectedGirlfriend: defaultGirlfriend });

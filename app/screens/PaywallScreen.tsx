@@ -33,13 +33,13 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({
   const { characterName } = route.params;
 
   const handleClose = () => {
-    // Go back to Chat Screen
-    navigation.navigate('Chat', { fromOnboarding: true });
+    // Go back to Chat Screen (fromOnboarding: false to prevent re-triggering call)
+    navigation.navigate('Chat', { fromOnboarding: false });
   };
 
   const handleSubscribe = () => {
     // For now, just go to chat (real subscription logic will be added later)
-    navigation.navigate('Chat', { fromOnboarding: true });
+    navigation.navigate('Chat', { fromOnboarding: false });
   };
 
   return (

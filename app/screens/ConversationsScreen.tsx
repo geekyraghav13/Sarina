@@ -167,7 +167,7 @@ export const ConversationsScreen: React.FC<ConversationsScreenProps> = () => {
     <Swipeable
       key={girlfriend.id}
       ref={(ref) => {
-        if (ref) {
+        if (ref && !swipeableRefs[girlfriend.id]) {
           setSwipeableRefs((prev) => ({ ...prev, [girlfriend.id]: ref }));
         }
       }}
@@ -185,7 +185,15 @@ export const ConversationsScreen: React.FC<ConversationsScreenProps> = () => {
         {/* Avatar with video preview */}
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <VideoBackground source={girlfriend.videoPath} />
+            {girlfriend.videoPath ? (
+              <VideoBackground source={girlfriend.videoPath} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarFallbackText}>
+                  {girlfriend.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
           </View>
           <View style={styles.onlineIndicator} />
         </View>
@@ -317,6 +325,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 2,
     borderColor: '#FF3263',
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255, 50, 99, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarFallbackText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   onlineIndicator: {
     position: 'absolute',

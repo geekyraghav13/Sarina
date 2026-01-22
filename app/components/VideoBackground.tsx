@@ -30,6 +30,11 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({
     }
   };
 
+  // Return null if source is not provided to prevent crashes
+  if (!source) {
+    return null;
+  }
+
   return (
     <Video
       ref={video}

@@ -39,8 +39,8 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
       interests: profile.interests,
     });
 
-    // Initialize default girlfriend from onboarding
-    initializeDefaultGirlfriend();
+    // Initialize default girlfriend from onboarding with custom name
+    initializeDefaultGirlfriend(profile.name);
 
     // Reset navigation and go to Chat directly with default girlfriend
     // User can access Home later via back button or bottom nav
