@@ -32,7 +32,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-av"
+      "expo-av",
+      "sentry-expo"
     ]
   }
 }

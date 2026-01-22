@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1051121433445",
+    "project_id": "sarina-ai-2b2c1",
+    "storage_bucket": "sarina-ai-2b2c1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1051121433445:android:PLACEHOLDER",
+        "android_client_info": {
+          "package_name": "com.sarina.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoso8vP9ZY6fCGq3g-bgOyEdLDja9Dyo0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

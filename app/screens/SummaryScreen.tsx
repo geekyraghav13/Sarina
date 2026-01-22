@@ -4,7 +4,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
 import { useUserProfile } from '../store/userProfile';
 import { useVideoForProfile } from '../hooks/useVideoForProfile';
+import { useGirlfriendStore } from '../store/girlfriendStore';
 import { RootStackParamList } from '../navigation/types';
+import { logScreenView, logOnboardingCompleted } from '../services/analyticsService';
 
 type SummaryScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -18,9 +20,37 @@ interface SummaryScreenProps {
 export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
   const { profile } = useUserProfile();
   const videoSource = useVideoForProfile();
+  const { initializeDefaultGirlfriend } = useGirlfriendStore();
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Summary');
+  }, []);
 
   const handleStart = () => {
-    navigation.navigate('Chat');
+    // Track onboarding completion
+    logOnboardingCompleted({
+      age: profile.age,
+      appearance: profile.appearance,
+      mode: profile.mode,
+      name: profile.name,
+      tone: profile.tone,
+      personality: profile.personality,
+      interests: profile.interests,
+    });
+
+    // Initialize default girlfriend from onboarding
+    initializeDefaultGirlfriend();
+
+    // Reset navigation and go to Chat directly with default girlfriend
+    // User can access Home later via back button or bottom nav
+    navigation.reset({
+      index: 1,
+      routes: [
+        { name: 'MainTabs' },
+        { name: 'Chat', params: { fromOnboarding: true } }
+      ],
+    });
   };
 
   const handleBack = () => {

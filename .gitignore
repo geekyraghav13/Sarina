@@ -41,6 +41,7 @@ yarn-error.log
 .env
 .env.local
 .env.*.local
+.env.production
 
 # Firebase
 .firebase/
@@ -48,6 +49,7 @@ yarn-error.log
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+service-account-key.json
 
 # Firebase Config (if you want to keep it private)
 # Uncomment the line below if your firebase config has sensitive data
