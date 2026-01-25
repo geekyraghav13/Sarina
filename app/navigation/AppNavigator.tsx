@@ -13,7 +13,7 @@ import { InterestsScreen } from '../screens/InterestsScreen';
 import { AppearanceScreen } from '../screens/AppearanceScreen';
 import { ModeScreen } from '../screens/ModeScreen';
 import { NameScreen } from '../screens/NameScreen';
-import { SummaryScreen } from '../screens/SummaryScreen';
+import { SummaryScreen, checkOnboardingCompleted } from '../screens/SummaryScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { ChatSettingsScreen } from '../screens/ChatSettingsScreen';
 import { IncomingCallScreen } from '../screens/IncomingCallScreen';
@@ -28,6 +28,7 @@ const Stack = createStackNavigator<RootStackParamList>();
 export const AppNavigator: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   useEffect(() => {
     checkInitialRoute();
@@ -35,7 +36,9 @@ export const AppNavigator: React.FC = () => {
 
   const checkInitialRoute = async () => {
     const accepted = await checkDisclaimerAccepted();
+    const completed = await checkOnboardingCompleted();
     setDisclaimerAccepted(accepted);
+    setOnboardingCompleted(completed);
     setIsLoading(false);
   };
 
@@ -47,10 +50,17 @@ export const AppNavigator: React.FC = () => {
     );
   }
 
+  // Determine initial route based on onboarding status
+  const getInitialRouteName = (): keyof RootStackParamList => {
+    if (!disclaimerAccepted) return 'Disclaimer';
+    if (!onboardingCompleted) return 'Create';
+    return 'MainTabs'; // User has completed onboarding, go to home screen
+  };
+
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName={disclaimerAccepted ? 'Create' : 'Disclaimer'}
+        initialRouteName={getInitialRouteName()}
         screenOptions={{
           headerShown: false,
           cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,

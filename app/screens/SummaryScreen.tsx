@@ -8,6 +8,9 @@ import { useGirlfriendStore } from '../store/girlfriendStore';
 import { RootStackParamList } from '../navigation/types';
 import { logScreenView, logOnboardingCompleted } from '../services/analyticsService';
 import { logOnboardingComplete } from '../services/firebaseAnalytics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const ONBOARDING_COMPLETED_KEY = '@onboarding_completed';
 
 type SummaryScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -28,7 +31,7 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
     logScreenView('Summary');
   }, []);
 
-  const handleStart = () => {
+  const handleStart = async () => {
     // Track onboarding completion
     logOnboardingCompleted({
       age: profile.age,
@@ -42,6 +45,13 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
 
     // Firebase: Track onboarding complete
     logOnboardingComplete();
+
+    // Save onboarding completion flag
+    try {
+      await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
+    } catch (error) {
+      console.error('Failed to save onboarding completion:', error);
+    }
 
     // Initialize default girlfriend from onboarding with custom name
     initializeDefaultGirlfriend(profile.name);
@@ -264,3 +274,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+// Export function to check if onboarding has been completed
+export const checkOnboardingCompleted = async (): Promise<boolean> => {
+  try {
+    const completed = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
+    return completed === 'true';
+  } catch (error) {
+    console.error('Failed to check onboarding completion:', error);
+    return false;
+  }
+};
