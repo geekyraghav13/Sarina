@@ -4,9 +4,11 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AppNavigator } from './app/navigation/AppNavigator';
 import { initSentry } from './app/config/sentry';
 import { initializeAnalytics, logAppOpen } from './app/services/firebaseAnalytics';
+import { initializeRevenueCat } from './app/services/revenueCatService';
+import { usePaymentStore } from './app/store/paymentStore';
 
 export default function App() {
-  // Initialize Sentry and Firebase Analytics on app launch
+  // Initialize Sentry, Firebase Analytics, and RevenueCat on app launch
   useEffect(() => {
     initSentry();
 
@@ -15,6 +17,17 @@ export default function App() {
       // Log app open event (first_open is automatic, this tracks all opens)
       logAppOpen();
     });
+
+    // Initialize RevenueCat
+    initializeRevenueCat().catch((error) => {
+      console.error('Failed to initialize RevenueCat:', error);
+    });
+
+    // Load subscription status from local storage
+    usePaymentStore.getState().loadSubscriptionStatus();
+
+    // Sync with RevenueCat to get latest subscription status
+    usePaymentStore.getState().syncWithRevenueCat();
   }, []);
 
   return (

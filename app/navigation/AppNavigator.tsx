@@ -17,7 +17,7 @@ import { SummaryScreen } from '../screens/SummaryScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { ChatSettingsScreen } from '../screens/ChatSettingsScreen';
 import { IncomingCallScreen } from '../screens/IncomingCallScreen';
-import { PaywallScreen } from '../screens/PaywallScreen';
+import { NewPaywallScreen } from '../screens/NewPaywallScreen';
 import { ReportScreen } from '../screens/ReportScreen';
 import { BottomTabNavigator } from './BottomTabNavigator';
 import { RootStackParamList } from './types';
@@ -86,7 +86,7 @@ export const AppNavigator: React.FC = () => {
         />
         <Stack.Screen
           name="Paywall"
-          component={PaywallScreen}
+          component={NewPaywallScreen}
           options={{
             presentation: 'transparentModal',
             cardStyleInterpolator: CardStyleInterpolators.forFadeFromCenter,

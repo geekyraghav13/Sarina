@@ -375,6 +375,78 @@ export const logSubscriptionCancel = async (subscriptionType: string, reason?: s
 };
 
 /**
+ * Log when user starts checkout (taps Continue button)
+ */
+export const logBeginCheckout = async (planType: string, value: number, currency: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('begin_checkout', {
+      plan_type: planType,
+      value: value,
+      currency: currency,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Begin checkout logged:', planType);
+  } catch (error) {
+    console.error('❌ Failed to log begin checkout:', error);
+  }
+};
+
+/**
+ * Log when purchase fails
+ */
+export const logPurchaseFailed = async (planType: string, error: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('purchase_failed', {
+      plan_type: planType,
+      error_message: error,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Purchase failed logged:', planType);
+  } catch (error) {
+    console.error('❌ Failed to log purchase failed:', error);
+  }
+};
+
+/**
+ * Log when user restores purchases
+ */
+export const logSubscriptionRestored = async (isPremium: boolean): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('subscription_restored', {
+      is_premium: isPremium,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Subscription restored logged');
+  } catch (error) {
+    console.error('❌ Failed to log subscription restored:', error);
+  }
+};
+
+/**
+ * Log when user selects a plan
+ */
+export const logPlanSelected = async (planType: string, value: number): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('plan_selected', {
+      plan_type: planType,
+      value: value,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Plan selected logged:', planType);
+  } catch (error) {
+    console.error('❌ Failed to log plan selected:', error);
+  }
+};
+
+/**
  * Enable/disable debug mode for analytics
  * Use this during development to see events in Firebase DebugView
  */
@@ -402,5 +474,9 @@ export default {
   logChatStart,
   logMessageSent,
   logSubscriptionCancel,
+  logBeginCheckout,
+  logPurchaseFailed,
+  logSubscriptionRestored,
+  logPlanSelected,
   setAnalyticsDebugMode,
 };
