@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { LinearGradient } from 'expo-linear-gradient';
+import { logAdImpression, logPurchase } from '../services/firebaseAnalytics';
 
 type PaywallScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -32,12 +33,40 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({
 }) => {
   const { characterName } = route.params;
 
+  // Log ad_impression when paywall is shown (Mandatory Event #2)
+  useEffect(() => {
+    logAdImpression({
+      ad_platform: 'paywall',
+      ad_format: 'subscription_offer',
+      ad_source: 'sarina_premium',
+      value: 9.99, // Adjust to your actual subscription price
+      currency: 'USD',
+      ad_unit_name: 'premium_monthly_offer',
+    });
+  }, []);
+
   const handleClose = () => {
     // Go back to Chat Screen (fromOnboarding: false to prevent re-triggering call)
     navigation.navigate('Chat', { fromOnboarding: false });
   };
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
+    // Log purchase event (Mandatory Event #3)
+    await logPurchase({
+      transaction_id: `txn_${Date.now()}`, // Replace with actual transaction ID from payment provider
+      value: 9.99, // Replace with actual purchase amount
+      currency: 'USD',
+      items: [
+        {
+          item_id: 'premium_monthly',
+          item_name: 'Sarina Premium Monthly',
+          item_category: 'subscription',
+          quantity: 1,
+          price: 9.99,
+        },
+      ],
+    });
+
     // For now, just go to chat (real subscription logic will be added later)
     navigation.navigate('Chat', { fromOnboarding: false });
   };

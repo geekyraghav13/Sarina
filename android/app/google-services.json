@@ -7,7 +7,7 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1051121433445:android:PLACEHOLDER",
+        "mobilesdk_app_id": "1:1051121433445:android:5656a756ac760a339c7f8c",
         "android_client_info": {
           "package_name": "com.sarina.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCoso8vP9ZY6fCGq3g-bgOyEdLDja9Dyo0"
+          "current_key": "AIzaSyC9RHSZtAB28DeSGc4Xktch6tRSPn-Axas"
         }
       ],
       "services": {

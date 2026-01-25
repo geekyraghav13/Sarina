@@ -11,6 +11,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logScreenView } from '../services/analyticsService';
+import { logOnboardingStart } from '../services/firebaseAnalytics';
 
 type DisclaimerScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -30,6 +31,7 @@ export const DisclaimerScreen: React.FC<DisclaimerScreenProps> = ({
 
   React.useEffect(() => {
     logScreenView('Disclaimer');
+    logOnboardingStart(); // Firebase: Track onboarding start
   }, []);
 
   const handleAgree = async () => {

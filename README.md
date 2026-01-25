@@ -2,9 +2,10 @@
 
 An immersive mobile app with 20 unique AI characters, real conversations, and beautiful UI.
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)
 ![Status](https://img.shields.io/badge/status-production%20ready-success.svg)
 ![Cost](https://img.shields.io/badge/infrastructure-free-green.svg)
+![Firebase](https://img.shields.io/badge/Firebase-Analytics-orange.svg)
 
 **📖 See [CHANGELOG.md](CHANGELOG.md) for detailed development history**
 
@@ -13,12 +14,13 @@ An immersive mobile app with 20 unique AI characters, real conversations, and be
 ## Features
 
 - 🤖 **20 AI Characters** - Realistic, Anime, Fantasy styles with unique personalities
-- 💬 **Real AI Chat** - Context-aware conversations with OpenRouter AI
+- 💬 **Real AI Chat** - Context-aware conversations with OpenRouter AI (Qwen 2.5)
 - 💾 **Persistent Chats** - Messages saved across app restarts
 - 🔴 **Crash Reporting** - Sentry monitoring (free tier)
 - ⚡ **Fast Images** - expo-image with disk caching
 - 🎨 **Beautiful UI** - Video backgrounds, glassmorphism, smooth animations
-- 📊 **Analytics** - Firebase tracking for insights
+- 📊 **Firebase Analytics** - Complete integration with all 3 mandatory events
+- 🎨 **Professional Branding** - New gradient purple logo and splash screen
 
 ---
 
@@ -75,6 +77,33 @@ sarina/
 4. **google-services.json** - Already in `android/app/`
 
 All services are on **FREE tiers** - no costs! 💰
+
+---
+
+## Latest Release (v1.2.0)
+
+### 📦 Production Build Available
+- **File:** `sarina-v1.2.0-release.aab` (54MB)
+- **Location:** `/home/raghav/Downloads/sarina-v1.2.0-release.aab`
+- **Signed:** Yes, with production keystore
+- **Ready for:** Google Play Console upload
+
+### What's New in v1.2.0
+- ✅ Firebase Analytics fully integrated (all 3 mandatory events)
+- ✅ New professional branding (gradient purple logo)
+- ✅ Updated splash screen with logo
+- ✅ OpenRouter API switched to Qwen 2.5 model
+- ✅ Version bumped to 1.2.0 (versionCode: 5)
+- ✅ Expo Go compatibility for Firebase (graceful fallback)
+
+### Firebase Analytics Events Tracked
+1. **first_open** - Automatic (first app launch)
+2. **ad_impression** - When paywall is shown
+3. **purchase** - When subscribe button clicked
+4. **app_open** - Every app launch
+5. **onboarding_start/complete** - Onboarding flow
+6. **screen_view** - Screen navigation
+7. **chat_start/message_sent** - Chat interactions
 
 ---
 

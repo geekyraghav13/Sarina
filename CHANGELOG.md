@@ -1,8 +1,83 @@
 # Sarina AI - Development Changelog
 
 **Project:** Sarina AI - AI Girlfriend Companion App
-**Version:** 1.0.0
+**Version:** 1.2.0
 **Status:** Production Ready 🚀
+
+---
+
+## 📅 January 22, 2026 - Version 1.2.0
+
+### 🎨 New Branding & Visual Updates
+- **New App Logo & Icon**
+  - Gradient purple logo with woman silhouette and heart
+  - Professional 1024x1024 icon for all platforms
+  - Adaptive icon for Android with #1a0933 background
+  - Updated splash screen with centered logo
+  - New favicon (512x512) for web
+  - Files: `assets/icon.png`, `assets/adaptive-icon.png`, `assets/splash.png`, `assets/favicon.png`
+
+### 📊 Firebase Analytics Integration (COMPLETE)
+- **All 3 Mandatory Events Implemented:**
+  1. ✅ `first_open` - Automatically tracked by Firebase SDK
+  2. ✅ `ad_impression` - Logs when paywall shown (PaywallScreen.tsx:38-46)
+  3. ✅ `purchase` - Logs when subscribe clicked (PaywallScreen.tsx:55-68)
+
+- **Additional Analytics Events:**
+  - `app_open` - Tracks all app launches (App.tsx:16)
+  - `onboarding_start` - User starts onboarding (DisclaimerScreen.tsx)
+  - `onboarding_complete` - User completes onboarding (SummaryScreen.tsx)
+  - Screen view tracking capability
+  - Chat event tracking (start, message sent)
+
+- **Firebase Configuration:**
+  - Installed: `@react-native-firebase/analytics` (v21.10.0)
+  - Service file: `app/services/firebaseAnalytics.ts`
+  - Google Services plugin applied: `android/app/build.gradle:191`
+  - Google Services classpath: `android/build.gradle:12`
+  - Expo Go compatibility: Gracefully skips Firebase in development
+  - Configuration files: `android/app/google-services.json`
+
+### 🔧 API & Performance Updates
+- **OpenRouter Model Changed:**
+  - Switched from `meta-llama/llama-3.2-3b-instruct:free` → `qwen/qwen-2.5-7b-instruct:free`
+  - Reason: Avoiding rate limiting and spending limit issues
+  - Better stability for free tier users
+
+### 📱 Version Bump
+- Version Code: 4 → 5
+- Version Name: 1.1.0 → 1.2.0
+- Both `app.json` and `android/app/build.gradle` updated
+
+### 📦 Release Build
+- **File:** `sarina-v1.2.0-release.aab` (54MB)
+- **Signed with:** `sarina-upload-key.keystore` ✅
+- **Ready for:** Google Play Console upload
+- **Build time:** 15 minutes 9 seconds
+- **Location:** `/home/raghav/Downloads/sarina-v1.2.0-release.aab`
+
+### 📝 Files Modified
+- `app/services/firebaseAnalytics.ts` - Created complete analytics service
+- `app/services/openRouterService.ts` - Updated model to Qwen 2.5
+- `App.tsx` - Initialize Firebase Analytics on startup
+- `app/screens/PaywallScreen.tsx` - Added ad_impression & purchase events
+- `app/screens/DisclaimerScreen.tsx` - Added onboarding_start event
+- `app/screens/SummaryScreen.tsx` - Added onboarding_complete event
+- `android/build.gradle` - Added Google Services classpath
+- `android/app/build.gradle` - Applied Google Services plugin, version bump
+- `android/app/google-services.json` - Firebase configuration
+- `app.json` - Version bump to 1.2.0, updated splash/icon colors
+- `assets/*` - All new branding assets
+
+### 📚 Documentation Created
+- `FIREBASE_ANALYTICS_SETUP.md` - Complete technical documentation
+- `FIREBASE_REGISTRATION_STEPS.md` - Step-by-step setup guide
+- `FIREBASE_TODO_CHECKLIST.md` - Quick action checklist
+
+### ⚠️ Pending Actions
+- Register Android app in Firebase Console
+- Download production `google-services.json` from Firebase
+- Test Firebase Analytics in production
 
 ---
 

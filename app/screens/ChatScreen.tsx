@@ -21,6 +21,7 @@ import { SuggestionChips } from '../components/SuggestionChips';
 import { useUserProfile } from '../store/userProfile';
 import { useGirlfriendStore } from '../store/girlfriendStore';
 import { useCallStore } from '../store/callStore';
+import { usePaymentStore } from '../store/paymentStore';
 import { useVideoForProfile } from '../hooks/useVideoForProfile';
 import { RootStackParamList } from '../navigation/types';
 import {
@@ -87,6 +88,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
   // Check if coming from onboarding
   const fromOnboarding = route.params?.fromOnboarding;
   const { shouldShowCall } = useCallStore();
+
+  // Payment store for freemium model
+  const { isPremium, freeMessagesCount, loadSubscriptionStatus } = usePaymentStore();
+
+  // Load subscription status on mount
+  useEffect(() => {
+    loadSubscriptionStatus();
+  }, []);
 
   // Track screen view and chat start
   useEffect(() => {
@@ -287,6 +296,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
     setIsVoiceMode(!isVoiceMode);
   };
 
+  const handleUnlockPress = () => {
+    navigation.navigate('Paywall', {
+      characterName: girlfriendName,
+      characterImageUrl: selectedGirlfriend?.imageUrl,
+    });
+  };
+
   const handleSuggestionPress = (suggestion: string) => {
     setInputText(suggestion);
     setShowSuggestions(false);
@@ -373,6 +389,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
         messages={messages}
         characterAvatarUrl={selectedGirlfriend?.imageUrl}
         characterName={girlfriendName}
+        isPremium={isPremium}
+        freeMessagesCount={freeMessagesCount}
+        onUnlockPress={handleUnlockPress}
       />
 
       {/* AI Typing Indicator */}

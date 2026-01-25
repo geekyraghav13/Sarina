@@ -7,6 +7,7 @@ import { useVideoForProfile } from '../hooks/useVideoForProfile';
 import { useGirlfriendStore } from '../store/girlfriendStore';
 import { RootStackParamList } from '../navigation/types';
 import { logScreenView, logOnboardingCompleted } from '../services/analyticsService';
+import { logOnboardingComplete } from '../services/firebaseAnalytics';
 
 type SummaryScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -38,6 +39,9 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
       personality: profile.personality,
       interests: profile.interests,
     });
+
+    // Firebase: Track onboarding complete
+    logOnboardingComplete();
 
     // Initialize default girlfriend from onboarding with custom name
     initializeDefaultGirlfriend(profile.name);

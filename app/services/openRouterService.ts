@@ -10,13 +10,14 @@ import { captureError, addBreadcrumb } from '../config/sentry';
 const OPENROUTER_API_KEY = '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';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-// Using Meta Llama model for humanized responses (free and reliable)
-const MODEL = 'meta-llama/llama-3.2-3b-instruct:free';
+// Using Qwen model for humanized responses (free and reliable)
+// Switched to avoid rate limiting issues
+const MODEL = 'qwen/qwen-2.5-7b-instruct:free';
 // Alternative free models if this doesn't work:
+// - 'nousresearch/hermes-3-llama-3.1-405b:free'
 // - 'meta-llama/llama-3.1-8b-instruct:free'
-// - 'google/gemma-2-9b-it:free'
-// - 'qwen/qwen-2-7b-instruct:free'
 // - 'microsoft/phi-3-mini-128k-instruct:free'
+// - 'mistralai/mistral-7b-instruct:free'
 
 // Rate limiting configuration
 const MAX_RETRIES = 3;

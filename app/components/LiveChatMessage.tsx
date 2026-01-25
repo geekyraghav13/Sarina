@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View, Image } from 'react-native';
+import { Animated, StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 interface LiveChatMessageProps {
   text: string;
@@ -10,6 +11,8 @@ interface LiveChatMessageProps {
   isNew?: boolean;
   avatarUrl?: string;
   isUser?: boolean;
+  isLocked?: boolean;
+  onUnlockPress?: () => void;
 }
 
 export const LiveChatMessage: React.FC<LiveChatMessageProps> = ({
@@ -20,6 +23,8 @@ export const LiveChatMessage: React.FC<LiveChatMessageProps> = ({
   isNew = false,
   avatarUrl,
   isUser = false,
+  isLocked = false,
+  onUnlockPress,
 }) => {
   const slideAnim = useRef(new Animated.Value(isNew ? 50 : 0)).current;
   const opacityAnim = useRef(new Animated.Value(isNew ? 0 : 1)).current;
@@ -95,15 +100,33 @@ export const LiveChatMessage: React.FC<LiveChatMessageProps> = ({
           </LinearGradient>
         ) : (
           /* AI message with white background */
-          <View style={[styles.messageBackground, styles.aiMessageBackground]}>
-            <View style={styles.senderContainer}>
-              <Text style={styles.aiSenderText} numberOfLines={1}>
-                {sender}
+          <View>
+            <View style={[styles.messageBackground, styles.aiMessageBackground]}>
+              <View style={styles.senderContainer}>
+                <Text style={styles.aiSenderText} numberOfLines={1}>
+                  {sender}
+                </Text>
+              </View>
+              <Text style={[styles.aiMessageText, isLocked && styles.blurredText]} numberOfLines={3}>
+                {text}
               </Text>
             </View>
-            <Text style={styles.aiMessageText} numberOfLines={3}>
-              {text}
-            </Text>
+
+            {/* Unlock overlay for locked messages */}
+            {isLocked && (
+              <TouchableOpacity
+                style={styles.unlockOverlay}
+                onPress={onUnlockPress}
+                activeOpacity={0.9}
+              >
+                <BlurView intensity={40} style={styles.blurView} tint="light">
+                  <View style={styles.unlockContent}>
+                    <Text style={styles.lockIcon}>🔒</Text>
+                    <Text style={styles.unlockText}>Unlock</Text>
+                  </View>
+                </BlurView>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -174,5 +197,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     fontWeight: '500',
+  },
+  blurredText: {
+    opacity: 0.3,
+  },
+  unlockOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  blurView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  unlockContent: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#FF3263',
+  },
+  lockIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  unlockText: {
+    color: '#FF3263',
+    fontSize: 14,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });

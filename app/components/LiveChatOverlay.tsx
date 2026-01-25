@@ -23,6 +23,9 @@ interface LiveChatOverlayProps {
   maxVisibleMessages?: number;
   characterAvatarUrl?: string;
   characterName?: string;
+  isPremium?: boolean;
+  freeMessagesCount?: number;
+  onUnlockPress?: () => void;
 }
 
 export const LiveChatOverlay: React.FC<LiveChatOverlayProps> = ({
@@ -30,6 +33,9 @@ export const LiveChatOverlay: React.FC<LiveChatOverlayProps> = ({
   maxVisibleMessages = 8,
   characterAvatarUrl,
   characterName,
+  isPremium = false,
+  freeMessagesCount = 0,
+  onUnlockPress,
 }) => {
   const scrollViewRef = useRef<ScrollView>(null);
   const [displayMessages, setDisplayMessages] = useState<Message[]>([]);
@@ -70,6 +76,15 @@ export const LiveChatOverlay: React.FC<LiveChatOverlayProps> = ({
       >
         {displayMessages.map((message, index) => {
           const isUser = message.sender === 'You' || message.sender === 'User';
+
+          // Count how many AI messages came before this one (excluding welcome message at index 0)
+          const aiMessagesBeforeThis = displayMessages
+            .slice(0, index + 1)
+            .filter((m, i) => m.sender !== 'You' && m.sender !== 'User' && i > 0).length;
+
+          // Lock AI messages after the first one if user is not premium
+          const isLocked = !isPremium && !isUser && aiMessagesBeforeThis > 1;
+
           return (
             <LiveChatMessage
               key={message.id}
@@ -80,6 +95,8 @@ export const LiveChatOverlay: React.FC<LiveChatOverlayProps> = ({
               isNew={index === displayMessages.length - 1 && displayMessages.length > 1}
               avatarUrl={!isUser ? characterAvatarUrl : undefined}
               isUser={isUser}
+              isLocked={isLocked}
+              onUnlockPress={onUnlockPress}
             />
           );
         })}
@@ -104,8 +121,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 100,
-    background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.1))',
     // For React Native, we'll use opacity change instead
+    backgroundColor: 'transparent',
     opacity: 0.5,
   },
   messagesContainer: {
