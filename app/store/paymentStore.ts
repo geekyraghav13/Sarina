@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { checkPremiumStatus } from '../services/revenueCatService';
+// import { checkPremiumStatus } from '../services/revenueCatService';
 
 const SUBSCRIPTION_KEY = '@subscription_status';
 
@@ -80,8 +80,8 @@ export const usePaymentStore = create<PaymentStore>((set, get) => ({
 
   syncWithRevenueCat: async () => {
     try {
-      const isPremium = await checkPremiumStatus();
-      set({ isPremium });
+      // const isPremium = await checkPremiumStatus();
+      // set({ isPremium });
       get().saveSubscriptionStatus();
     } catch (error) {
       console.error('Failed to sync with RevenueCat:', error);

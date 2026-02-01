@@ -4,7 +4,6 @@
  */
 
 import { Girlfriend } from '../store/girlfriendStore';
-import { captureError, addBreadcrumb } from '../config/sentry';
 
 // OpenRouter Configuration
 const OPENROUTER_API_KEY = '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';
@@ -204,13 +203,6 @@ export const generateAIResponse = async (
     console.log('Model:', MODEL);
     console.log('Character:', character.name);
 
-    // Add Sentry breadcrumb
-    addBreadcrumb('AI Request Sent', 'openrouter', {
-      character: character.name,
-      model: MODEL,
-      messageLength: userMessage.length,
-    });
-
     // Use retry logic with exponential backoff
     const data = await makeAPIRequestWithRetry(messages);
 
@@ -224,14 +216,6 @@ export const generateAIResponse = async (
     return aiResponse;
   } catch (error) {
     console.error('Error generating AI response:', error);
-
-    // Report error to Sentry
-    captureError(error as Error, {
-      character: character.name,
-      userMessage,
-      chatHistoryLength: chatHistory.length,
-      service: 'openrouter',
-    });
 
     // Fallback responses based on character personality
     const fallbackResponses = [

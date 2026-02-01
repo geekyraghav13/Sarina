@@ -7,21 +7,35 @@
     "preview": {
       "android": {
         "buildType": "apk"
+      },
+      "ios": {
+        "simulator": true
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "credentialsSource": "remote"
       }
     },
     "local": {
       "android": {
         "buildType": "app-bundle"
       },
+      "ios": {
+        "simulator": true
+      },
       "distribution": "internal"
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "ascAppId": "6758547730",
+        "appleId": "geekyraghav13@gmail.com"
+      }
+    }
   }
 }

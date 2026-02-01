@@ -11,7 +11,6 @@
  */
 
 import { Platform } from 'react-native';
-import { captureError } from '../config/sentry';
 
 // Lazy import Firebase to handle Expo Go environment
 let analytics: any = null;
@@ -55,7 +54,6 @@ export const initializeAnalytics = async (): Promise<void> => {
     // when the app is opened for the first time
   } catch (error) {
     console.error('❌ Failed to initialize Firebase Analytics:', error);
-    captureError(error as Error, { service: 'firebase_analytics', action: 'initialize' });
   }
 };
 
@@ -71,7 +69,6 @@ export const setUserId = async (userId: string): Promise<void> => {
     console.log(`📊 Analytics User ID set: ${userId}`);
   } catch (error) {
     console.error('❌ Failed to set analytics user ID:', error);
-    captureError(error as Error, { service: 'firebase_analytics', action: 'setUserId' });
   }
 };
 
@@ -88,7 +85,6 @@ export const setUserProperties = async (properties: Record<string, string>): Pro
     console.log('📊 User properties set:', properties);
   } catch (error) {
     console.error('❌ Failed to set user properties:', error);
-    captureError(error as Error, { service: 'firebase_analytics', action: 'setUserProperties' });
   }
 };
 
@@ -162,7 +158,6 @@ export const logAdImpression = async (params: AdImpressionParams): Promise<void>
     console.log('📊 Ad impression logged:', params);
   } catch (error) {
     console.error('❌ Failed to log ad impression:', error);
-    captureError(error as Error, { service: 'firebase_analytics', action: 'logAdImpression', params });
   }
 };
 
@@ -247,7 +242,6 @@ export const logPurchase = async (params: PurchaseParams): Promise<void> => {
     console.log('📊 Purchase logged:', params);
   } catch (error) {
     console.error('❌ Failed to log purchase:', error);
-    captureError(error as Error, { service: 'firebase_analytics', action: 'logPurchase', params });
   }
 };
 

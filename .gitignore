@@ -57,3 +57,6 @@ service-account-key.json
 
 # TypeScript
 *.tsbuildinfo
+
+# Sensitive credentials - DO NOT COMMIT
+IMPORTANT_CREDENTIALS.md

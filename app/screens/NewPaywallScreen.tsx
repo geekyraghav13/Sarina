@@ -15,12 +15,6 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import {
-  getOfferings,
-  purchasePackage,
-  restorePurchases,
-  PRODUCT_IDS,
-} from '../services/revenueCatService';
 import { usePaymentStore } from '../store/paymentStore';
 import {
   logAdImpression,
@@ -29,7 +23,6 @@ import {
   logSubscriptionRestored,
   logPlanSelected,
 } from '../services/firebaseAnalytics';
-import { PurchasesPackage } from 'react-native-purchases';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -55,8 +48,6 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
   const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'yearly'>('yearly');
   const [loading, setLoading] = useState(false);
   const [packages, setPackages] = useState<{
-    weekly: PurchasesPackage | null;
-    yearly: PurchasesPackage | null;
   }>({ weekly: null, yearly: null });
 
   const { setIsPremium, setSubscriptionType } = usePaymentStore();
@@ -72,13 +63,11 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
       ad_unit_name: 'premium_subscription_offer',
     });
 
-    // Load offerings from RevenueCat
     loadOfferings();
   }, []);
 
   const loadOfferings = async () => {
     try {
-      const offerings = await getOfferings();
       if (offerings && offerings.availablePackages.length > 0) {
         const weeklyPackage = offerings.availablePackages.find((pkg) =>
           pkg.product.identifier.includes('weekly')
@@ -118,7 +107,6 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
     setLoading(true);
 
     try {
-      const result = await purchasePackage(selectedPackage);
 
       if (result.success) {
         setIsPremium(true);
@@ -147,7 +135,6 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
   const handleRestorePurchases = async () => {
     setLoading(true);
     try {
-      const result = await restorePurchases();
 
       // Log restoration attempt
       await logSubscriptionRestored(result.isPremium);
