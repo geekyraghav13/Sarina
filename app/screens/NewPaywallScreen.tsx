@@ -23,6 +23,7 @@ import {
   logSubscriptionRestored,
   logPlanSelected,
 } from '../services/firebaseAnalytics';
+import * as SubscriptionService from '../services/subscriptionService';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -47,12 +48,13 @@ const BACKGROUND_IMAGE =
 export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }) => {
   const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'yearly'>('yearly');
   const [loading, setLoading] = useState(false);
-  const [packages, setPackages] = useState<{
-  }>({ weekly: null, yearly: null });
+  const [subscriptions, setSubscriptions] = useState<SubscriptionService.Subscription[]>([]);
+  const [weeklySubscription, setWeeklySubscription] = useState<SubscriptionService.Subscription | null>(null);
+  const [yearlySubscription, setYearlySubscription] = useState<SubscriptionService.Subscription | null>(null);
 
   const { setIsPremium, setSubscriptionType } = usePaymentStore();
 
-  // Log ad impression when paywall is shown
+  // Initialize IAP and load subscriptions
   useEffect(() => {
     logAdImpression({
       ad_platform: 'paywall',
@@ -63,26 +65,58 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
       ad_unit_name: 'premium_subscription_offer',
     });
 
-    loadOfferings();
+    initializeSubscriptions();
+
+    // Setup purchase listener
+    SubscriptionService.setupPurchaseListener(
+      () => {
+        // Purchase successful
+        setIsPremium(true);
+        setSubscriptionType(selectedPlan);
+        Alert.alert('Success', 'Premium access activated!', [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Chat', { fromOnboarding: false }),
+          },
+        ]);
+      },
+      (error) => {
+        // Purchase failed
+        console.error('Purchase listener error:', error);
+      }
+    );
+
+    return () => {
+      SubscriptionService.disconnectIAP();
+    };
   }, []);
 
-  const loadOfferings = async () => {
+  const initializeSubscriptions = async () => {
+    setLoading(true);
     try {
-      if (offerings && offerings.availablePackages.length > 0) {
-        const weeklyPackage = offerings.availablePackages.find((pkg) =>
-          pkg.product.identifier.includes('weekly')
-        );
-        const yearlyPackage = offerings.availablePackages.find((pkg) =>
-          pkg.product.identifier.includes('yearly')
-        );
+      // Initialize IAP connection
+      const connected = await SubscriptionService.initializeIAP();
 
-        setPackages({
-          weekly: weeklyPackage || null,
-          yearly: yearlyPackage || null,
-        });
+      if (!connected) {
+        console.error('Failed to connect to IAP');
+        setLoading(false);
+        return;
       }
+
+      // Fetch available subscriptions
+      const subs = await SubscriptionService.getSubscriptions();
+      setSubscriptions(subs);
+
+      // Find weekly and yearly subscriptions
+      const weekly = subs.find(s => s.productId === SubscriptionService.SUBSCRIPTION_IDS.WEEKLY);
+      const yearly = subs.find(s => s.productId === SubscriptionService.SUBSCRIPTION_IDS.YEARLY);
+
+      setWeeklySubscription(weekly || null);
+      setYearlySubscription(yearly || null);
     } catch (error) {
-      console.error('Failed to load offerings:', error);
+      console.error('Failed to load subscriptions:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,9 +126,9 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
   };
 
   const handleContinue = async () => {
-    const selectedPackage = selectedPlan === 'weekly' ? packages.weekly : packages.yearly;
+    const selectedSubscription = selectedPlan === 'weekly' ? weeklySubscription : yearlySubscription;
 
-    if (!selectedPackage) {
+    if (!selectedSubscription) {
       Alert.alert('Error', 'Selected plan is not available. Please try again.');
       return;
     }
@@ -107,6 +141,8 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
     setLoading(true);
 
     try {
+      // Purchase the subscription
+      const result = await SubscriptionService.purchaseSubscription(selectedSubscription.productId);
 
       if (result.success) {
         setIsPremium(true);
@@ -135,9 +171,11 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
   const handleRestorePurchases = async () => {
     setLoading(true);
     try {
+      // Restore purchases
+      const result = await SubscriptionService.restorePurchases();
 
       // Log restoration attempt
-      await logSubscriptionRestored(result.isPremium);
+      await logSubscriptionRestored(result.isPremium || false);
 
       if (result.success && result.isPremium) {
         setIsPremium(true);
