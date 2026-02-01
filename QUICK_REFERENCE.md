@@ -67,10 +67,11 @@ EXPO_APPLE_APP_SPECIFIC_PASSWORD="aiyl-rmxf-mcar-rfxl" \
 ## 📚 Documentation Files
 
 1. **QUICK_REFERENCE.md** - This file (quick commands and status)
-2. **FINAL_DEPLOYMENT_SUMMARY.md** - Complete deployment guide
+2. **ANDROID_DEPLOYMENT_GUIDE.md** - Complete Android deployment guide
 3. **SUBSCRIPTION_SETUP_GUIDE.md** - How to set up subscriptions (₹299/week, ₹1299/year)
-4. **IMPORTANT_CREDENTIALS.md** - All credentials and what to keep safe
-5. **CHANGELOG.md** - Project change history
+4. **FINAL_DEPLOYMENT_SUMMARY.md** - iOS deployment history
+5. **IMPORTANT_CREDENTIALS.md** - All credentials and what to keep safe
+6. **CHANGELOG.md** - Project change history
 
 ---
 
