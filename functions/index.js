@@ -1,0 +1,330 @@
+/**
+ * Cloud Functions for Sarina Voice Credit Management
+ *
+ * Functions:
+ * 1. dailyCreditReset - Reset credits for weekly/yearly subscribers (runs daily at midnight)
+ * 2. mockTopUp - Mock function to add 300 seconds ($1.99 top-up) for testing
+ */
+
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const { onCall } = require('firebase-functions/v2/https');
+const { initializeApp } = require('firebase-admin/app');
+const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
+
+// Initialize Firebase Admin
+initializeApp();
+const db = getFirestore();
+
+// ==================== DAILY CREDIT RESET ====================
+
+/**
+ * Daily Credit Reset Function
+ * Runs every day at midnight (00:00 UTC)
+ * Checks both weekly and yearly subscriptions
+ *
+ * Weekly: Resets to 60 seconds (1 min) if last_reset_date > 7 days ago
+ * Yearly: Resets to 3000 seconds (50 min) if last_reset_date > 365 days ago
+ */
+exports.dailyCreditReset = onSchedule(
+  {
+    schedule: '0 0 * * *', // Every day at midnight UTC
+    timeZone: 'UTC',
+    memory: '256MiB',
+    maxInstances: 1,
+  },
+  async (event) => {
+    console.log('🔄 Starting daily credit reset check...');
+
+    try {
+      const now = Timestamp.now();
+      const nowDate = now.toDate();
+
+      // Calculate cutoff dates
+      const sevenDaysAgo = new Date(nowDate);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgoTimestamp = Timestamp.fromDate(sevenDaysAgo);
+
+      const oneYearAgo = new Date(nowDate);
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      const oneYearAgoTimestamp = Timestamp.fromDate(oneYearAgo);
+
+      // Query all users with subscriptions
+      const usersRef = db.collection('users');
+      const weeklyQuery = usersRef
+        .where('subscription_tier', '==', 'weekly')
+        .where('last_reset_date', '<=', sevenDaysAgoTimestamp);
+
+      const yearlyQuery = usersRef
+        .where('subscription_tier', '==', 'yearly')
+        .where('last_reset_date', '<=', oneYearAgoTimestamp);
+
+      const [weeklySnapshot, yearlySnapshot] = await Promise.all([
+        weeklyQuery.get(),
+        yearlyQuery.get(),
+      ]);
+
+      const batch = db.batch();
+      let weeklyCount = 0;
+      let yearlyCount = 0;
+
+      // Process weekly subscriptions
+      weeklySnapshot.forEach((doc) => {
+        const userRef = usersRef.doc(doc.id);
+        const userData = doc.data();
+
+        batch.update(userRef, {
+          voice_balance_seconds: 60,
+          last_reset_date: now,
+          updated_at: FieldValue.serverTimestamp(),
+        });
+
+        // Log transaction
+        const transactionRef = db.collection('credit_transactions').doc();
+        batch.set(transactionRef, {
+          userId: doc.id,
+          type: 'reset',
+          amount_seconds: 60,
+          balance_before: userData.voice_balance_seconds || 0,
+          balance_after: 60,
+          product_id: null,
+          call_session_id: null,
+          timestamp: FieldValue.serverTimestamp(),
+          metadata: {
+            subscription_tier: 'weekly',
+            reset_reason: 'scheduled_weekly',
+          },
+        });
+
+        weeklyCount++;
+      });
+
+      // Process yearly subscriptions
+      yearlySnapshot.forEach((doc) => {
+        const userRef = usersRef.doc(doc.id);
+        const userData = doc.data();
+
+        batch.update(userRef, {
+          voice_balance_seconds: 3000,
+          last_reset_date: now,
+          updated_at: FieldValue.serverTimestamp(),
+        });
+
+        // Log transaction
+        const transactionRef = db.collection('credit_transactions').doc();
+        batch.set(transactionRef, {
+          userId: doc.id,
+          type: 'reset',
+          amount_seconds: 3000,
+          balance_before: userData.voice_balance_seconds || 0,
+          balance_after: 3000,
+          product_id: null,
+          call_session_id: null,
+          timestamp: FieldValue.serverTimestamp(),
+          metadata: {
+            subscription_tier: 'yearly',
+            reset_reason: 'scheduled_yearly',
+          },
+        });
+
+        yearlyCount++;
+      });
+
+      // Commit batch
+      if (weeklyCount > 0 || yearlyCount > 0) {
+        await batch.commit();
+      }
+
+      console.log(`✅ Credits reset: ${weeklyCount} weekly, ${yearlyCount} yearly`);
+
+      return {
+        success: true,
+        weeklyCount,
+        yearlyCount,
+        timestamp: now.toDate().toISOString(),
+      };
+    } catch (error) {
+      console.error('❌ Error in daily credit reset:', error);
+      throw error;
+    }
+  }
+);
+
+// ==================== MOCK TOP-UP FUNCTION ====================
+
+/**
+ * Mock function to add 300 seconds ($1.99 top-up) to user balance
+ * For testing purposes only
+ *
+ * Usage:
+ * await mockTopUp({ userId: 'user_id_here' })
+ */
+exports.mockTopUp = onCall(
+  {
+    memory: '256MiB',
+  },
+  async (request) => {
+    console.log('💰 Processing mock $1.99 top-up...');
+
+    try {
+      // Get userId from request or auth
+      const userId = request.data.userId || (request.auth && request.auth.uid);
+
+      if (!userId) {
+        throw new Error('User ID required');
+      }
+
+      const userRef = db.collection('users').doc(userId);
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+
+      const currentBalance = userDoc.data().voice_balance_seconds || 0;
+      const addedSeconds = 300; // $1.99 = 5 minutes
+
+      // Add credits
+      await userRef.update({
+        voice_balance_seconds: FieldValue.increment(addedSeconds),
+        total_minutes_purchased: FieldValue.increment(addedSeconds / 60),
+        updated_at: FieldValue.serverTimestamp(),
+      });
+
+      // Log transaction
+      await db.collection('credit_transactions').add({
+        userId,
+        type: 'purchase',
+        amount_seconds: addedSeconds,
+        balance_before: currentBalance,
+        balance_after: currentBalance + addedSeconds,
+        product_id: 'mock_topup_199',
+        call_session_id: null,
+        timestamp: FieldValue.serverTimestamp(),
+        metadata: {
+          product_name: '$1.99 Top-Up (Mock)',
+          price: 1.99,
+          platform: 'mock',
+        },
+      });
+
+      console.log(`✅ Added ${addedSeconds}s to user ${userId}. New balance: ${currentBalance + addedSeconds}s`);
+
+      return {
+        success: true,
+        creditsAdded: addedSeconds,
+        newBalance: currentBalance + addedSeconds,
+        message: `Successfully added 5 minutes (300 seconds) to your balance!`,
+      };
+    } catch (error) {
+      console.error('❌ Error in mock top-up:', error);
+      throw error;
+    }
+  }
+);
+
+// ==================== CREDIT PURCHASE HANDLER (FOR REAL IAP) ====================
+
+/**
+ * Handle credit purchase from IAP
+ * Called by React Native app after successful purchase
+ */
+exports.handleCreditPurchase = onCall(
+  {
+    memory: '256MiB',
+  },
+  async (request) => {
+    console.log('💳 Processing credit purchase...');
+
+    try {
+      // Verify user is authenticated
+      if (!request.auth) {
+        throw new Error('Unauthenticated');
+      }
+
+      const userId = request.auth.uid;
+      const { productId, purchaseToken, transactionId } = request.data;
+
+      if (!productId || !purchaseToken) {
+        throw new Error('Missing required fields');
+      }
+
+      // Define product credits
+      const PRODUCTS = {
+        'voice5min': { seconds: 300, name: '5 Minutes', price: 1.99 },
+        'voice15min': { seconds: 900, name: '15 Minutes', price: 4.99 },
+        'voice30min': { seconds: 1800, name: '30 Minutes', price: 8.99 },
+      };
+
+      const product = PRODUCTS[productId];
+
+      if (!product) {
+        throw new Error(`Unknown product: ${productId}`);
+      }
+
+      // Check if transaction already processed (prevent double-credit)
+      const existingTransaction = await db
+        .collection('credit_transactions')
+        .where('userId', '==', userId)
+        .where('metadata.transactionId', '==', transactionId)
+        .limit(1)
+        .get();
+
+      if (!existingTransaction.empty) {
+        console.warn(`⚠️ Transaction ${transactionId} already processed`);
+        return {
+          success: false,
+          error: 'Transaction already processed',
+          duplicate: true,
+        };
+      }
+
+      // Get current balance
+      const userRef = db.collection('users').doc(userId);
+      const userDoc = await userRef.get();
+
+      if (!userDoc.exists()) {
+        throw new Error('User not found');
+      }
+
+      const currentBalance = userDoc.data().voice_balance_seconds || 0;
+
+      // Add credits
+      await userRef.update({
+        voice_balance_seconds: FieldValue.increment(product.seconds),
+        total_minutes_purchased: FieldValue.increment(product.seconds / 60),
+        updated_at: FieldValue.serverTimestamp(),
+      });
+
+      // Log transaction
+      await db.collection('credit_transactions').add({
+        userId,
+        type: 'purchase',
+        amount_seconds: product.seconds,
+        balance_before: currentBalance,
+        balance_after: currentBalance + product.seconds,
+        product_id: productId,
+        call_session_id: null,
+        timestamp: FieldValue.serverTimestamp(),
+        metadata: {
+          product_name: product.name,
+          price: product.price,
+          transactionId,
+          purchaseToken,
+          platform: request.data.platform || 'unknown',
+        },
+      });
+
+      console.log(`✅ Added ${product.seconds}s to user ${userId}. New balance: ${currentBalance + product.seconds}s`);
+
+      return {
+        success: true,
+        creditsAdded: product.seconds,
+        newBalance: currentBalance + product.seconds,
+        productName: product.name,
+      };
+    } catch (error) {
+      console.error('❌ Error processing credit purchase:', error);
+      throw error;
+    }
+  }
+);

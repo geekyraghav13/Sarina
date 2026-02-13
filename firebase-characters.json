@@ -203,7 +203,7 @@
       "Wine"
     ],
     "tone": [
-      "Seductive",
+      "Charming",
       "Warm"
     ],
     "imageUrl": "https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fbella.jpg?alt=media&token=5cba7b17-80e2-4c0f-b35c-859762f0ce73"
@@ -291,7 +291,7 @@
     "appearance": "fantasy",
     "personality": [
       "Powerful",
-      "Seductive"
+      "Confident"
     ],
     "interests": [
       "Magic",
@@ -299,7 +299,7 @@
     ],
     "tone": [
       "Commanding",
-      "Sultry"
+      "Alluring"
     ],
     "imageUrl": "https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fnyx.jpg?alt=media&token=31f84520-a6fa-4731-b550-aaa8abcc7823"
   },

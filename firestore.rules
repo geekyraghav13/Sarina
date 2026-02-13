@@ -1,0 +1,72 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection - voice credits and subscription data
+    match /users/{userId} {
+      // Allow read if authenticated and user is owner
+      allow read: if isOwner(userId);
+
+      // Allow create if authenticated (for initial setup)
+      allow create: if isOwner(userId);
+
+      // Allow update for owner
+      // NOTE: For production, these fields should only be modified by backend
+      // But for development/testing with mock purchases, we allow client updates
+      allow update: if isOwner(userId);
+
+      // No delete allowed
+      allow delete: if false;
+    }
+
+    // Call sessions collection
+    match /call_sessions/{sessionId} {
+      // Allow read if user owns the session
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      // Only backend can create/update sessions
+      allow create, update: if false;
+
+      // No delete allowed
+      allow delete: if false;
+    }
+
+    // Credit transactions collection
+    match /credit_transactions/{transactionId} {
+      // Allow read if user owns the transaction
+      allow read: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid;
+
+      // Only backend can create transactions
+      allow create, update: if false;
+
+      // No delete allowed
+      allow delete: if false;
+    }
+
+    // Characters collection (if you add it later)
+    match /characters/{characterId} {
+      // Allow read to all authenticated users
+      allow read: if isAuthenticated();
+
+      // No write allowed from clients
+      allow write: if false;
+    }
+
+    // Default: deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

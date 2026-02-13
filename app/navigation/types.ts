@@ -1,4 +1,5 @@
 export type RootStackParamList = {
+  SignIn: undefined;
   Disclaimer: undefined;
   Create: undefined;
   Age: undefined;
@@ -10,7 +11,10 @@ export type RootStackParamList = {
   Name: undefined;
   Summary: undefined;
   MainTabs: undefined; // Bottom Tab Navigator (contains Home & Conversations tabs)
-  Chat: { fromOnboarding?: boolean } | undefined; // Track if coming from onboarding
+  Chat: {
+    fromOnboarding?: boolean;
+    isFirstLaunch?: boolean; // NEW: First-time user flag
+  } | undefined; // Track if coming from onboarding
   ChatSettings: undefined;
   Home: undefined; // Add Home type for navigation
   Conversations: undefined; // Add Conversations type for navigation
@@ -21,6 +25,14 @@ export type RootStackParamList = {
   Paywall: {
     characterName: string;
     characterImageUrl?: string;
+    callAction?: 'pick' | 'decline'; // NEW: Why user is seeing paywall
+    returnScreen?: string; // NEW: Where to go on cancel
+  };
+  VoiceCall: {
+    characterName: string;
+    characterImageUrl?: string;
+    characterId: string;
+    characterProfile: any;
   };
   Report: undefined;
 };

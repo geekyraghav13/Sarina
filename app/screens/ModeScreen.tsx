@@ -28,8 +28,8 @@ const MODES = [
   },
   {
     id: 'nsfw',
-    title: 'NSFW',
-    description: 'Mature and intimate conversations (18+)',
+    title: 'Hot',
+    description: 'Playful and flirty conversations (18+)',
     icon: '🔥',
   },
 ];

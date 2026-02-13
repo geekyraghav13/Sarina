@@ -19,48 +19,48 @@ export const SuggestionChips: React.FC<SuggestionChipsProps> = ({
 }) => {
   const suggestions = [
     {
-      icon: '📸',
-      text: 'Experiment with different angles and perspectives to capture your beauty in a new...',
+      icon: '💭',
+      text: "What's been on your mind lately?",
     },
     {
-      icon: '😘',
-      text: "I'm so turned on by you.",
+      icon: '😊',
+      text: "Tell me about your day!",
     },
     {
-      icon: '🎨',
-      text: 'Use props or accessories to enhance the naughtiness of the image.',
-    },
-    {
-      icon: '💋',
-      text: "I can't wait to be with you.",
-    },
-    {
-      icon: '✨',
-      text: 'Let your imagination run wild and create something truly unique.',
-    },
-    {
-      icon: '📷',
-      text: 'Capture a candid moment that reveals your playful and seductive side.',
-    },
-    {
-      icon: '💖',
-      text: "You're my biggest fantasy.",
-    },
-    {
-      icon: '🌙',
-      text: "I'm so excited to see you.",
-    },
-    {
-      icon: '🔥',
-      text: 'Create a scene that tells a naughty story, leaving something to the imagination.',
+      icon: '🎵',
+      text: "What kind of music do you like?",
     },
     {
       icon: '💕',
-      text: "Let's make some memories tonight.",
+      text: "I really enjoy talking with you.",
     },
     {
-      icon: '😈',
-      text: "Let's do something naughty tonight.",
+      icon: '✨',
+      text: "What makes you happiest?",
+    },
+    {
+      icon: '🌟',
+      text: "You always brighten my day!",
+    },
+    {
+      icon: '💖',
+      text: "What are your dreams and goals?",
+    },
+    {
+      icon: '🌙',
+      text: "I'm here for you anytime you need to talk.",
+    },
+    {
+      icon: '🎨',
+      text: "Tell me about your hobbies and interests.",
+    },
+    {
+      icon: '💬',
+      text: "Let's have a fun conversation!",
+    },
+    {
+      icon: '🌸',
+      text: "What's something that made you smile today?",
     },
   ];
 

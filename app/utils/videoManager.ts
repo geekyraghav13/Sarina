@@ -61,7 +61,7 @@ export const preloadVideoUrls = async (videoPaths: string[]): Promise<void> => {
  * @returns Promise with video URL
  */
 export const getVideoForAppearance = async (appearance?: string): Promise<string> => {
-  let videoPath = VIDEO_PATHS.DEFAULT;
+  let videoPath: string = VIDEO_PATHS.DEFAULT;
 
   switch (appearance?.toLowerCase()) {
     case 'anime':

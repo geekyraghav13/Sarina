@@ -1,25 +1,56 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as SplashScreen from 'expo-splash-screen';
 import { AppNavigator } from './app/navigation/AppNavigator';
 import { initializeAnalytics, logAppOpen } from './app/services/firebaseAnalytics';
 import { usePaymentStore } from './app/store/paymentStore';
 
-export default function App() {
-  // Initialize Firebase Analytics on app launch
-  useEffect(() => {
-    // Initialize Firebase Analytics
-    initializeAnalytics().then(() => {
-      // Log app open event (first_open is automatic, this tracks all opens)
-      logAppOpen();
-    });
+// Keep splash screen visible while loading
+SplashScreen.preventAutoHideAsync();
 
-    // Load subscription status from local storage
-    usePaymentStore.getState().loadSubscriptionStatus();
+export default function App() {
+  const [appIsReady, setAppIsReady] = useState(false);
+
+  // Initialize app resources
+  useEffect(() => {
+    async function prepare() {
+      try {
+        // Initialize Firebase Analytics
+        await initializeAnalytics();
+
+        // Log app open event
+        logAppOpen();
+
+        // Load subscription status from local storage
+        await usePaymentStore.getState().loadSubscriptionStatus();
+
+        // Short delay for smooth transition (removed 10 second splash)
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (e) {
+        console.warn('Error during app initialization:', e);
+      } finally {
+        setAppIsReady(true);
+      }
+    }
+
+    prepare();
   }, []);
 
+  // Hide splash screen when app is ready
+  const onLayoutRootView = useCallback(async () => {
+    if (appIsReady) {
+      await SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
+
+  if (!appIsReady) {
+    return null;
+  }
+
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <StatusBar style="light" />
       <AppNavigator />
     </GestureHandlerRootView>

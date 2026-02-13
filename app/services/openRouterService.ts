@@ -6,7 +6,7 @@
 import { Girlfriend } from '../store/girlfriendStore';
 
 // OpenRouter Configuration
-const OPENROUTER_API_KEY = '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';
+const OPENROUTER_API_KEY: string = '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';
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Using Qwen model for humanized responses (free and reliable)

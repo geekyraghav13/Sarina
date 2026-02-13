@@ -24,6 +24,12 @@ import {
   logPlanSelected,
 } from '../services/firebaseAnalytics';
 import * as SubscriptionService from '../services/subscriptionService';
+import { getCurrentUser } from '../services/authService';
+import { getCreditAllocationForTier } from '../services/creditService';
+import { updateUserSubscriptionREST } from '../services/firestoreRestService';
+import { useGirlfriendStore } from '../store/girlfriendStore';
+import { useUserProfile } from '../store/userProfile';
+import { getAuth } from 'firebase/auth';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -45,7 +51,13 @@ const FEATURES = [
 const BACKGROUND_IMAGE =
   'https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fakira.jpg?alt=media&token=c46eda7f-d55f-4637-842e-f8538c26b54e';
 
-export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }) => {
+// Feature flag: Set to true to use mock purchases (for testing without Play Console setup)
+// Set to false to use real IAP (production)
+const USE_MOCK_PURCHASES = false; // Real IAP enabled with react-native-iap
+
+const BACKEND_URL = 'https://sarina-voice-backend-fv2lgy22ja-uc.a.run.app';
+
+export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, route }) => {
   const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'yearly'>('yearly');
   const [loading, setLoading] = useState(false);
   const [subscriptions, setSubscriptions] = useState<SubscriptionService.Subscription[]>([]);
@@ -53,6 +65,10 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
   const [yearlySubscription, setYearlySubscription] = useState<SubscriptionService.Subscription | null>(null);
 
   const { setIsPremium, setSubscriptionType } = usePaymentStore();
+  const { profile } = useUserProfile();
+
+  // NEW: Get navigation params
+  const { characterName, characterImageUrl, callAction, returnScreen } = route.params || {};
 
   // Initialize IAP and load subscriptions
   useEffect(() => {
@@ -67,24 +83,8 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
 
     initializeSubscriptions();
 
-    // Setup purchase listener
-    SubscriptionService.setupPurchaseListener(
-      () => {
-        // Purchase successful
-        setIsPremium(true);
-        setSubscriptionType(selectedPlan);
-        Alert.alert('Success', 'Premium access activated!', [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Chat', { fromOnboarding: false }),
-          },
-        ]);
-      },
-      (error) => {
-        // Purchase failed
-        console.error('Purchase listener error:', error);
-      }
-    );
+    // Setup purchase listener (disabled in this build)
+    SubscriptionService.setupPurchaseListener();
 
     return () => {
       SubscriptionService.disconnectIAP();
@@ -104,12 +104,12 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
       }
 
       // Fetch available subscriptions
-      const subs = await SubscriptionService.getSubscriptions();
+      const subs = await SubscriptionService.getAvailableSubscriptions();
       setSubscriptions(subs);
 
       // Find weekly and yearly subscriptions
-      const weekly = subs.find(s => s.productId === SubscriptionService.SUBSCRIPTION_IDS.WEEKLY);
-      const yearly = subs.find(s => s.productId === SubscriptionService.SUBSCRIPTION_IDS.YEARLY);
+      const weekly = subs.find((s: any) => s.productId === SubscriptionService.SUBSCRIPTION_IDS.WEEKLY);
+      const yearly = subs.find((s: any) => s.productId === SubscriptionService.SUBSCRIPTION_IDS.YEARLY);
 
       setWeeklySubscription(weekly || null);
       setYearlySubscription(yearly || null);
@@ -121,18 +121,12 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
   };
 
   const handleClose = () => {
-    // Navigate to Chat screen when user closes paywall
-    navigation.navigate('Chat', { fromOnboarding: false });
+    // Navigate to return screen (default to Chat)
+    const screen = returnScreen || 'Chat';
+    navigation.navigate(screen as any, { fromOnboarding: false });
   };
 
   const handleContinue = async () => {
-    const selectedSubscription = selectedPlan === 'weekly' ? weeklySubscription : yearlySubscription;
-
-    if (!selectedSubscription) {
-      Alert.alert('Error', 'Selected plan is not available. Please try again.');
-      return;
-    }
-
     const planValue = selectedPlan === 'weekly' ? 299 : 1299;
 
     // Log begin checkout
@@ -141,26 +135,101 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
     setLoading(true);
 
     try {
-      // Purchase the subscription
-      const result = await SubscriptionService.purchaseSubscription(selectedSubscription.productId);
+      const user = getCurrentUser();
+      if (!user?.uid) {
+        Alert.alert('Error', 'You must be signed in to purchase');
+        setLoading(false);
+        return;
+      }
 
-      if (result.success) {
+      if (USE_MOCK_PURCHASES) {
+        // MOCK PURCHASE FLOW - For testing without Play Console setup
+        console.log('💳 Processing MOCK purchase via REST API...');
+        const creditsToAdd = getCreditAllocationForTier(selectedPlan);
+
+        await updateUserSubscriptionREST(user.uid, selectedPlan, creditsToAdd);
+
+        // Update local state
         setIsPremium(true);
         setSubscriptionType(selectedPlan);
-        Alert.alert('Success', 'Premium access activated!', [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Chat', { fromOnboarding: false }),
-          },
-        ]);
+
+        console.log(`✅ MOCK Purchase successful: ${selectedPlan} plan, ${creditsToAdd}s added`);
+
+        showSuccessAndNavigate(creditsToAdd);
       } else {
-        if (result.error !== 'Purchase cancelled') {
-          // Log purchase failed
-          await logPurchaseFailed(selectedPlan, result.error || 'Unknown error');
-          Alert.alert('Purchase Failed', result.error || 'Something went wrong. Please try again.');
+        // REAL IAP FLOW - Production purchase
+        console.log('💳 Processing REAL IAP purchase...');
+
+        const productId = selectedPlan === 'weekly'
+          ? SubscriptionService.SUBSCRIPTION_IDS.WEEKLY
+          : SubscriptionService.SUBSCRIPTION_IDS.YEARLY;
+
+        // Initiate purchase through Play Store
+        const purchaseResult = await SubscriptionService.purchaseSubscription(productId);
+
+        if (!purchaseResult.success) {
+          // User cancelled or error occurred
+          if (purchaseResult.error !== 'Purchase cancelled') {
+            await logPurchaseFailed(selectedPlan, purchaseResult.error || 'Unknown error');
+            Alert.alert('Purchase Failed', purchaseResult.error || 'Failed to complete purchase. Please try again.');
+          }
+          setLoading(false);
+          return;
         }
+
+        // Purchase successful, now validate with backend
+        console.log('📝 Validating purchase with backend...');
+        const purchase = purchaseResult.purchase;
+
+        // Get Firebase ID token for authentication
+        const auth = getAuth();
+        const idToken = await auth.currentUser?.getIdToken();
+
+        if (!idToken) {
+          throw new Error('Failed to get authentication token');
+        }
+
+        // Send receipt to backend for validation
+        const validationResponse = await fetch(`${BACKEND_URL}/api/validate-purchase`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            userId: user.uid,
+            platform: Platform.OS,
+            productId: purchase.productId,
+            purchaseToken: purchase.purchaseToken,
+          }),
+        });
+
+        const validationResult = await validationResponse.json();
+
+        if (!validationResult.success) {
+          console.error('❌ Backend validation failed:', validationResult.error);
+          await logPurchaseFailed(selectedPlan, validationResult.error);
+          Alert.alert('Validation Failed', 'Purchase could not be verified. Please contact support.');
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ Purchase validated! Credits:', validationResult.creditsAdded);
+
+        // Update local state
+        setIsPremium(true);
+        setSubscriptionType(selectedPlan);
+
+        // Log successful purchase
+        await logPurchase(selectedPlan, planValue, 'INR', purchase.transactionId);
+
+        // Finish transaction (important for consumables)
+        await SubscriptionService.finishTransaction(purchase);
+
+        showSuccessAndNavigate(validationResult.creditsAdded);
       }
     } catch (error: any) {
+      console.error('Purchase failed:', error);
       await logPurchaseFailed(selectedPlan, error.message || 'Unknown error');
       Alert.alert('Error', 'Failed to process purchase. Please try again.');
     } finally {
@@ -168,27 +237,115 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation }
     }
   };
 
+  const showSuccessAndNavigate = (creditsAdded: number) => {
+    Alert.alert(
+      'Success! 🎉',
+      `${selectedPlan === 'weekly' ? 'Weekly' : 'Yearly'} plan activated!\nYou got ${creditsAdded} seconds of voice calling.`,
+      [
+        {
+          text: 'Start Call Now',
+          onPress: () => {
+            // Navigate to voice call if user picked up
+            if (callAction === 'pick') {
+              const { girlfriends } = useGirlfriendStore.getState();
+              const girlfriend = girlfriends.find(gf => gf.name === characterName);
+
+              // Use girlfriend data if found, otherwise use profile data
+              const charName = girlfriend?.name || characterName || profile.name || 'Sarina';
+              const charImageUrl = girlfriend?.imageUrl || characterImageUrl || '';
+              const charId = girlfriend?.id || 'default';
+
+              navigation.replace('VoiceCall', {
+                characterName: charName,
+                characterImageUrl: charImageUrl,
+                characterId: charId,
+                characterProfile: {
+                  name: charName,
+                  personality: girlfriend?.personality || profile.personality || [],
+                  tone: girlfriend?.tone || profile.tone || [],
+                  interests: girlfriend?.interests || profile.interests || [],
+                  appearance: girlfriend?.appearance || profile.appearance || 'realistic',
+                },
+              });
+            } else {
+              // User declined or no call context, go to chat
+              navigation.navigate('Chat', { fromOnboarding: false });
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleRestorePurchases = async () => {
     setLoading(true);
     try {
-      // Restore purchases
-      const result = await SubscriptionService.restorePurchases();
+      if (USE_MOCK_PURCHASES) {
+        // Mock mode - just check Firestore
+        const status = await SubscriptionService.syncSubscriptionStatus();
+        await logSubscriptionRestored(status?.isPremium || false);
 
-      // Log restoration attempt
-      await logSubscriptionRestored(result.isPremium || false);
-
-      if (result.success && result.isPremium) {
-        setIsPremium(true);
-        Alert.alert('Success', 'Your purchases have been restored!', [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Chat', { fromOnboarding: false }),
-          },
-        ]);
+        if (status?.isPremium) {
+          setIsPremium(true);
+          setSubscriptionType(status.subscriptionType || null);
+          Alert.alert('Success', 'Your subscription has been restored!', [
+            {
+              text: 'OK',
+              onPress: () => navigation.navigate('Chat', { fromOnboarding: false }),
+            },
+          ]);
+        } else {
+          Alert.alert('No Purchases Found', 'No active subscriptions found to restore.');
+        }
       } else {
-        Alert.alert('No Purchases Found', 'No active subscriptions found to restore.');
+        // Real IAP mode - restore from Play Store
+        const result = await SubscriptionService.restorePurchases();
+
+        // Log restoration attempt
+        await logSubscriptionRestored(result.isPremium || false);
+
+        if (result.success && result.isPremium && result.purchase) {
+          // Validate the restored purchase with backend
+          const user = getCurrentUser();
+          const auth = getAuth();
+          const idToken = await auth.currentUser?.getIdToken();
+
+          if (idToken && user) {
+            const validationResponse = await fetch(`${BACKEND_URL}/api/validate-purchase`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+              },
+              body: JSON.stringify({
+                userId: user.uid,
+                platform: Platform.OS,
+                productId: result.purchase.productId,
+                purchaseToken: result.purchase.purchaseToken,
+              }),
+            });
+
+            const validationResult = await validationResponse.json();
+
+            if (validationResult.success) {
+              setIsPremium(true);
+              setSubscriptionType(validationResult.subscriptionTier || null);
+              Alert.alert('Success', 'Your purchases have been restored!', [
+                {
+                  text: 'OK',
+                  onPress: () => navigation.navigate('Chat', { fromOnboarding: false }),
+                },
+              ]);
+            } else {
+              Alert.alert('Validation Failed', 'Could not verify your purchase. Please try again.');
+            }
+          }
+        } else {
+          Alert.alert('No Purchases Found', 'No active subscriptions found to restore.');
+        }
       }
     } catch (error) {
+      console.error('Restore error:', error);
       Alert.alert('Error', 'Failed to restore purchases. Please try again.');
     } finally {
       setLoading(false);

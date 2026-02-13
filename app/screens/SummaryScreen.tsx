@@ -49,6 +49,7 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
     // Save onboarding completion flag
     try {
       await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
+      console.log('✅ Onboarding completed, navigating to Chat');
     } catch (error) {
       console.error('Failed to save onboarding completion:', error);
     }
@@ -56,14 +57,10 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
     // Initialize default girlfriend from onboarding with custom name
     initializeDefaultGirlfriend(profile.name);
 
-    // Reset navigation and go to Chat directly with default girlfriend
-    // User can access Home later via back button or bottom nav
-    navigation.reset({
-      index: 1,
-      routes: [
-        { name: 'MainTabs' },
-        { name: 'Chat', params: { fromOnboarding: true } }
-      ],
+    // NEW: Navigate directly to Chat with first-time flags
+    navigation.replace('Chat', {
+      fromOnboarding: true,
+      isFirstLaunch: true,
     });
   };
 

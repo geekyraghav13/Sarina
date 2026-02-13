@@ -16,6 +16,7 @@ import { RootStackParamList } from '../navigation/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCallStore } from '../store/callStore';
 import { useGirlfriendStore } from '../store/girlfriendStore';
+import { usePaymentStore } from '../store/paymentStore';
 
 type IncomingCallScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -38,6 +39,7 @@ export const IncomingCallScreen: React.FC<IncomingCallScreenProps> = ({
   const { characterName, characterImageUrl } = route.params;
   const { setHasSeenCall, setLastDeclinedTime } = useCallStore();
   const { girlfriends } = useGirlfriendStore();
+  const { isPremium } = usePaymentStore();
 
   // Get a random girlfriend image from Firebase (or use provided one)
   const getRandomGirlfriendImage = () => {
@@ -105,14 +107,49 @@ export const IncomingCallScreen: React.FC<IncomingCallScreenProps> = ({
   const handlePickUp = () => {
     Vibration.cancel();
     setHasSeenCall(true);
-    navigation.navigate('Paywall', { characterName, characterImageUrl });
+
+    // Check if user is premium
+    if (isPremium) {
+      // Premium users can call directly
+      const girlfriend = girlfriends.find(gf => gf.name === characterName);
+
+      if (girlfriend) {
+        navigation.navigate('VoiceCall', {
+          characterName: girlfriend.name,
+          characterImageUrl: girlfriend.imageUrl || characterImageUrl,
+          characterId: girlfriend.id,
+          characterProfile: {
+            name: girlfriend.name,
+            personality: girlfriend.personality,
+            tone: girlfriend.tone,
+            interests: girlfriend.interests,
+            appearance: girlfriend.appearance,
+          },
+        });
+      }
+    } else {
+      // Non-premium users see paywall
+      navigation.replace('Paywall', {
+        characterName,
+        characterImageUrl,
+        callAction: 'pick', // User wants to start call
+        returnScreen: 'Chat', // Where to go after cancel
+      });
+    }
   };
 
   const handleDecline = () => {
     Vibration.cancel();
     setHasSeenCall(true);
     setLastDeclinedTime(Date.now()); // Track when user declined
-    navigation.navigate('Paywall', { characterName, characterImageUrl });
+
+    // Show paywall even on decline
+    navigation.replace('Paywall', {
+      characterName,
+      characterImageUrl,
+      callAction: 'decline', // User declined but see paywall anyway
+      returnScreen: 'Chat',
+    });
   };
 
   return (

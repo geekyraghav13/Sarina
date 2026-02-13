@@ -36,9 +36,10 @@ export const DisclaimerScreen: React.FC<DisclaimerScreenProps> = ({
 
   const handleAgree = async () => {
     try {
+      setIsAgreed(true);
       await AsyncStorage.setItem(DISCLAIMER_ACCEPTED_KEY, 'true');
-      // Navigate to Create screen (start of onboarding)
-      navigation.replace('Create');
+      console.log('✅ Disclaimer accepted');
+      // Don't navigate - let AppNavigator handle it via state change
     } catch (error) {
       console.error('Failed to save disclaimer acceptance:', error);
     }

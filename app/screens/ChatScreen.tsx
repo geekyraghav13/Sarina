@@ -85,8 +85,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
   // Load messages from chat history
   const messages = getChatHistory(girlfriendId);
 
-  // Check if coming from onboarding
+  // Check if coming from onboarding and if first launch
   const fromOnboarding = route.params?.fromOnboarding;
+  const isFirstLaunch = route.params?.isFirstLaunch;
   const { shouldShowCall } = useCallStore();
 
   // Payment store for freemium model
@@ -111,8 +112,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
 
   // Trigger incoming call based on timing logic
   useEffect(() => {
-    // Only trigger if coming from onboarding AND shouldShowCall returns true
-    if (fromOnboarding && shouldShowCall()) {
+    // NEW: Show incoming call after 7 seconds for first-time users
+    if (isFirstLaunch) {
+      const timer = setTimeout(() => {
+        navigation.navigate('IncomingCall', {
+          characterName: girlfriendName,
+          characterImageUrl: selectedGirlfriend?.imageUrl,
+        });
+      }, 7000); // 7 seconds for first-time users
+
+      return () => clearTimeout(timer);
+    }
+    // Existing logic for subsequent visits
+    else if (fromOnboarding && shouldShowCall()) {
       const timer = setTimeout(() => {
         navigation.navigate('IncomingCall', {
           characterName: girlfriendName,
@@ -122,9 +134,8 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
 
       return () => clearTimeout(timer);
     }
-
-    // If not from onboarding but should show call (1 minute passed), check periodically
-    if (!fromOnboarding) {
+    // If not from onboarding but should show call (repeat timer), check periodically
+    else if (!fromOnboarding && !isFirstLaunch) {
       const checkInterval = setInterval(() => {
         if (shouldShowCall()) {
           navigation.navigate('IncomingCall', {
@@ -133,11 +144,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
           });
           clearInterval(checkInterval);
         }
-      }, 10000); // Check every 10 seconds
+      }, 120000); // Check every 2 minutes (120 seconds)
 
       return () => clearInterval(checkInterval);
     }
-  }, [fromOnboarding, girlfriendName, selectedGirlfriend, navigation, shouldShowCall]);
+  }, [fromOnboarding, isFirstLaunch, girlfriendName, selectedGirlfriend, navigation, shouldShowCall]);
 
   // Keyboard event listeners
   useEffect(() => {
@@ -347,10 +358,13 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
         <View style={styles.headerLeft}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => navigation.reset({
-              index: 0,
-              routes: [{ name: 'MainTabs' }],
-            })}
+            onPress={() => {
+              // Always navigate to MainTabs (Home screen)
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'MainTabs' }],
+              });
+            }}
             activeOpacity={0.7}
           >
             <Text style={styles.backIcon}>←</Text>

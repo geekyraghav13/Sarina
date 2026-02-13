@@ -56,13 +56,13 @@ export const useCallStore = create<CallState>((set, get) => ({
       return true;
     }
 
-    // If seen before, check if 1 minute has passed since last decline
+    // If seen before, check if 2 minutes has passed since last decline
     if (state.lastDeclinedTime) {
       const now = Date.now();
-      const oneMinute = 60 * 1000; // 1 minute in milliseconds
+      const twoMinutes = 2 * 60 * 1000; // 2 minutes in milliseconds
       const timeSinceDecline = now - state.lastDeclinedTime;
 
-      return timeSinceDecline >= oneMinute;
+      return timeSinceDecline >= twoMinutes;
     }
 
     return false;

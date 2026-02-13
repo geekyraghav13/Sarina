@@ -1,11 +1,9 @@
-import React, { useRef, useState } from 'react';
-import { StyleSheet, Dimensions } from 'react-native';
-import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
-
-const { width, height } = Dimensions.get('window');
+import React from 'react';
+import { StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface VideoBackgroundProps {
-  source: any; // Local video source
+  source?: any; // Kept for compatibility, but not used
   onLoad?: () => void;
   onVideoEnd?: () => void;
 }
@@ -15,44 +13,20 @@ export const VideoBackground: React.FC<VideoBackgroundProps> = ({
   onLoad,
   onVideoEnd,
 }) => {
-  const video = useRef<Video>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-    if (status.isLoaded && !isLoaded) {
-      setIsLoaded(true);
-      onLoad?.();
-    }
-
-    // Call onVideoEnd when video finishes (just before it loops)
-    if (status.isLoaded && status.didJustFinish && onVideoEnd) {
-      onVideoEnd();
-    }
-  };
-
-  // Return null if source is not provided to prevent crashes
-  if (!source) {
-    return null;
-  }
-
+  // Use a static gradient background instead of video
+  // Purple/pink gradient matching the app theme
   return (
-    <Video
-      ref={video}
-      source={source}
-      style={styles.video}
-      resizeMode={ResizeMode.COVER}
-      shouldPlay
-      isLooping
-      isMuted
-      onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
+    <LinearGradient
+      colors={['#1a0933', '#2d1854', '#4a1d75']}
+      style={styles.gradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     />
   );
 };
 
 const styles = StyleSheet.create({
-  video: {
+  gradient: {
     ...StyleSheet.absoluteFillObject,
-    width,
-    height,
   },
 });
