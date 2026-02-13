@@ -20,6 +20,9 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 
 prepare_react_native_project!
 
+# Fix for Firebase and GoogleUtilities Swift pod compatibility
+use_modular_headers!
+
 target 'Sarina' do
   use_expo_modules!
 
