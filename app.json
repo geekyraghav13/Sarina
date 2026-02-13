@@ -35,11 +35,6 @@
             }
           }
         }
-      },
-      "entitlements": {
-        "com.apple.developer.in-app-payments": [
-          "merchant.com.sarina.app"
-        ]
       }
     },
     "android": {
