@@ -15,10 +15,31 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sarina.app",
-      "buildNumber": "4",
+      "buildNumber": "5",
       "appStoreId": "6758547730",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Sarina needs access to your microphone for AI voice conversations with your companion.",
+        "NSSpeechRecognitionUsageDescription": "Sarina uses speech recognition to understand your voice during conversations.",
+        "UIBackgroundModes": ["audio"],
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": false,
+          "NSExceptionDomains": {
+            "sarina-voice-backend-fv2lgy22ja-uc.a.run.app": {
+              "NSExceptionAllowsInsecureHTTPLoads": false,
+              "NSIncludesSubdomains": true,
+              "NSExceptionRequiresForwardSecrecy": true,
+              "NSExceptionMinimumTLSVersion": "TLSv1.2"
+            }
+          }
+        }
+      },
+      "entitlements": {
+        "com.apple.developer.in-app-payments": [
+          "merchant.com.sarina.app"
+        ]
       }
     },
     "android": {
