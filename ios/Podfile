@@ -20,6 +20,12 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 
 prepare_react_native_project!
 
+# Fix for Firebase and GoogleUtilities Swift pod compatibility
+use_modular_headers!
+
+# Disable Firebase Analytics Ad ID support (not needed, simplifies build)
+$RNFirebaseAnalyticsWithoutAdIdSupport = true
+
 target 'Sarina' do
   use_expo_modules!
 
