@@ -18,12 +18,16 @@ import { getDocumentREST, createUserDocumentREST } from './firestoreRestService'
 // Web Client ID from Firebase Console (google-services.json)
 const WEB_CLIENT_ID = '1051121433445-8sehc92iuvth1aq4ej5fb8452pcf61mt.apps.googleusercontent.com';
 
+// iOS Client ID from Firebase Console (GoogleService-Info.plist)
+const IOS_CLIENT_ID = '1051121433445-rqjvp9kqjdkqvoctr14ac57eilstg0v3.apps.googleusercontent.com';
+
 /**
  * Initialize Google Sign-In
  */
 export const initializeGoogleSignIn = () => {
   GoogleSignin.configure({
     webClientId: WEB_CLIENT_ID,
+    iosClientId: IOS_CLIENT_ID,
     offlineAccess: true,
   });
 };
