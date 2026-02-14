@@ -30,6 +30,12 @@
           <string>com.sarina.app</string>
         </array>
       </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.1051121433445-rqjvp9kqjdkqvoctr14ac57eilstg0v3</string>
+        </array>
+      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>6</string>
