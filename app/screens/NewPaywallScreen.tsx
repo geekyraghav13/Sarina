@@ -85,10 +85,8 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
 
     initializeSubscriptions();
 
-    // Setup purchase listener (disabled in this build)
-    SubscriptionService.setupPurchaseListener();
-
     return () => {
+      SubscriptionService.removeListeners(); // Remove any lingering listeners
       SubscriptionService.disconnectIAP();
     };
   }, []);
@@ -154,6 +152,7 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         // Update local state
         await setIsPremium(true);
         setSubscriptionType(selectedPlan);
+        await loadSubscriptionStatus(); // CRITICAL: Reload to ensure sync
 
         console.log(`✅ MOCK Purchase successful: ${selectedPlan} plan, ${creditsToAdd}s added`);
 
@@ -201,6 +200,7 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
           // Just grant the subscription locally
           await setIsPremium(true);
           setSubscriptionType(selectedPlan);
+          await loadSubscriptionStatus(); // CRITICAL: Reload to ensure sync
           await logPurchase({
             transaction_id: purchase.transactionId || 'unknown',
             value: planValue,
@@ -248,6 +248,7 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         // Update local state
         await setIsPremium(true);
         setSubscriptionType(selectedPlan);
+        await loadSubscriptionStatus(); // CRITICAL: Reload to ensure sync
 
         // Log successful purchase
         await logPurchase({
@@ -300,13 +301,15 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
     setLoading(true);
     try {
       if (USE_MOCK_PURCHASES) {
-        // Mock mode - just check Firestore
+        // Mock mode - check Firestore
         const status = await SubscriptionService.syncSubscriptionStatus();
         await logSubscriptionRestored(status?.isPremium || false);
 
         if (status?.isPremium) {
           await setIsPremium(true);
           setSubscriptionType(status.subscriptionType || null);
+          await loadSubscriptionStatus();
+
           Alert.alert('Success', 'Your subscription has been restored!', [
             {
               text: 'OK',
@@ -320,76 +323,31 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
           Alert.alert('No Purchases Found', 'No active subscriptions found to restore.');
         }
       } else {
-        // Real IAP mode - restore from Play Store
+        // Real IAP mode - TRUST STORE VALIDATION
         const result = await SubscriptionService.restorePurchases();
 
-        // Log restoration attempt
         await logSubscriptionRestored(result.isPremium || false);
 
         if (result.success && result.isPremium && result.purchase) {
-          // Validate the restored purchase with backend
-          const user = getCurrentUser();
-          let idToken: string | undefined;
+          // TRUST STORE - Don't require backend validation
+          await setIsPremium(true);
 
-          try {
-            const auth = getAuth();
-            if (auth && auth.currentUser) {
-              idToken = await auth.currentUser.getIdToken();
-            }
-          } catch (authError) {
-            console.error('Auth error during restore:', authError);
-          }
+          // Derive subscription type from productId
+          const productId = result.purchase?.productId;
+          const subType = productId === SubscriptionService.SUBSCRIPTION_IDS.WEEKLY ? 'weekly' :
+                         productId === SubscriptionService.SUBSCRIPTION_IDS.YEARLY ? 'yearly' : null;
+          setSubscriptionType(subType);
+          await loadSubscriptionStatus(); // Ensure sync
 
-          if (idToken && user) {
-            const validationResponse = await fetch(`${BACKEND_URL}/api/validate-purchase`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`,
-              },
-              body: JSON.stringify({
-                userId: user.uid,
-                platform: Platform.OS,
-                productId: result.purchase.productId,
-                purchaseToken: result.purchase.purchaseToken,
+          Alert.alert('Success', 'Your purchases have been restored!', [
+            {
+              text: 'OK',
+              onPress: () => navigation.reset({
+                index: 0,
+                routes: [{ name: 'MainTabs' }],
               }),
-            });
-
-            const validationResult = await validationResponse.json();
-
-            if (validationResult.success) {
-              await setIsPremium(true);
-              setSubscriptionType(validationResult.subscriptionTier || null);
-              Alert.alert('Success', 'Your purchases have been restored!', [
-                {
-                  text: 'OK',
-                  onPress: () => navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'MainTabs' }],
-                  }),
-                },
-              ]);
-            } else {
-              Alert.alert('Validation Failed', 'Could not verify your purchase. Please try again.');
-            }
-          } else {
-            // No auth token but have purchase - trust Apple's validation
-            await setIsPremium(true);
-            // Derive subscription type from productId
-            const productId = result.purchase?.productId;
-            const subType = productId === SubscriptionService.SUBSCRIPTION_IDS.WEEKLY ? 'weekly' :
-                           productId === SubscriptionService.SUBSCRIPTION_IDS.YEARLY ? 'yearly' : null;
-            setSubscriptionType(subType);
-            Alert.alert('Success', 'Your purchases have been restored!', [
-              {
-                text: 'OK',
-                onPress: () => navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'MainTabs' }],
-                }),
-              },
-            ]);
-          }
+            },
+          ]);
         } else {
           Alert.alert('No Purchases Found', 'No active subscriptions found to restore.');
         }

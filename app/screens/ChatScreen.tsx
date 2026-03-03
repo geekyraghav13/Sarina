@@ -13,7 +13,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VideoBackground } from '../components/VideoBackground';
 import { LiveChatOverlay } from '../components/LiveChatOverlay';
@@ -131,6 +131,16 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
   useEffect(() => {
     loadSubscriptionStatus();
   }, []);
+
+  // CRITICAL: Reload premium status when screen comes into focus
+  // This ensures that after purchasing in the paywall and returning to chat,
+  // the voice calling feature will immediately check the updated premium status
+  useFocusEffect(
+    React.useCallback(() => {
+      loadSubscriptionStatus();
+      console.log('🔄 ChatScreen focused - reloading premium status');
+    }, [loadSubscriptionStatus])
+  );
 
   // Track screen view and chat start
   useEffect(() => {
