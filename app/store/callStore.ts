@@ -24,7 +24,7 @@ export const useCallStore = create<CallState>((set, get) => ({
     AsyncStorage.setItem(
       CALL_STATE_KEY,
       JSON.stringify({ hasSeenCall: seen })
-    );
+    ).catch((error) => console.warn('Failed to save call state:', error));
   },
 
   setLastDeclinedTime: (time) => {
@@ -32,7 +32,7 @@ export const useCallStore = create<CallState>((set, get) => ({
     AsyncStorage.setItem(
       CALL_STATE_KEY,
       JSON.stringify({ ...get(), lastDeclinedTime: time })
-    );
+    ).catch((error) => console.warn('Failed to save call state:', error));
   },
 
   setPremium: (premium) => {
@@ -40,7 +40,7 @@ export const useCallStore = create<CallState>((set, get) => ({
     AsyncStorage.setItem(
       CALL_STATE_KEY,
       JSON.stringify({ ...get(), isPremium: premium })
-    );
+    ).catch((error) => console.warn('Failed to save call state:', error));
   },
 
   shouldShowCall: () => {
@@ -70,7 +70,7 @@ export const useCallStore = create<CallState>((set, get) => ({
 
   reset: () => {
     set({ hasSeenCall: false, lastDeclinedTime: null, isPremium: false });
-    AsyncStorage.removeItem(CALL_STATE_KEY);
+    AsyncStorage.removeItem(CALL_STATE_KEY).catch((error) => console.warn('Failed to remove call state:', error));
   },
 }));
 
