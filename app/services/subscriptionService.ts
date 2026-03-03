@@ -119,16 +119,24 @@ export const purchaseSubscription = async (productId: string): Promise<PurchaseR
     // v14 API: Use requestPurchase for subscriptions (event-based)
     // We wrap it in a promise that listens for the purchase result
     return new Promise((resolve, reject) => {
+      let resolved = false; // Prevent double resolution
+
+      const resolveSafely = (result: PurchaseResult) => {
+        if (!resolved) {
+          resolved = true;
+          if (purchaseListener) purchaseListener.remove();
+          if (errorListener) errorListener.remove();
+          resolve(result);
+        }
+      };
+
       // Set up one-time listeners for this purchase
       const purchaseListener = RNIap.purchaseUpdatedListener((purchase) => {
         console.log('📦 Purchase received:', purchase);
 
         // Check if this is the purchase we're waiting for
         if (purchase.productId === productId) {
-          purchaseListener.remove();
-          errorListener.remove();
-
-          resolve({
+          resolveSafely({
             success: true,
             isPremium: true,
             purchase: purchase,
@@ -138,13 +146,11 @@ export const purchaseSubscription = async (productId: string): Promise<PurchaseR
 
       const errorListener = RNIap.purchaseErrorListener((error: any) => {
         console.error('❌ Purchase error from listener:', error);
-        purchaseListener.remove();
-        errorListener.remove();
 
         if (error.code === 'E_USER_CANCELLED' || error.code === 2) {
-          resolve({ success: false, error: 'Purchase cancelled' });
+          resolveSafely({ success: false, error: 'Purchase cancelled' });
         } else {
-          resolve({
+          resolveSafely({
             success: false,
             error: error.message || 'Purchase failed'
           });
@@ -160,25 +166,21 @@ export const purchaseSubscription = async (productId: string): Promise<PurchaseR
         type: 'subs'
       }).catch((error) => {
         console.error('❌ requestPurchase error:', error);
-        purchaseListener.remove();
-        errorListener.remove();
 
         if (error.code === 'E_USER_CANCELLED' || error.message?.includes('cancelled')) {
-          resolve({ success: false, error: 'Purchase cancelled' });
+          resolveSafely({ success: false, error: 'Purchase cancelled' });
         } else {
-          resolve({
+          resolveSafely({
             success: false,
             error: error.message || error.toString() || 'Purchase failed'
           });
         }
       });
 
-      // Timeout after 2 minutes
+      // Timeout after 90 seconds
       setTimeout(() => {
-        purchaseListener.remove();
-        errorListener.remove();
-        resolve({ success: false, error: 'Purchase timeout' });
-      }, 120000);
+        resolveSafely({ success: false, error: 'Purchase timeout' });
+      }, 90000);
     });
   } catch (error: any) {
     console.error('❌ Purchase setup error:', error);
