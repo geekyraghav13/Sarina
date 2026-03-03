@@ -17,19 +17,26 @@ export default function App() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Initialize Firebase Analytics
-        await initializeAnalytics();
-
-        // Log app open event
-        logAppOpen();
+        // Initialize Firebase Analytics (don't block if it fails)
+        try {
+          await initializeAnalytics();
+          logAppOpen();
+        } catch (analyticsError) {
+          console.warn('Analytics initialization failed (non-critical):', analyticsError);
+        }
 
         // Load subscription status from local storage
-        await usePaymentStore.getState().loadSubscriptionStatus();
+        try {
+          await usePaymentStore.getState().loadSubscriptionStatus();
+        } catch (storageError) {
+          console.warn('Subscription status load failed (non-critical):', storageError);
+        }
 
-        // Show splash screen for 3 seconds minimum for better UX
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Show splash screen for 2 seconds minimum for better UX
+        await new Promise(resolve => setTimeout(resolve, 2000));
       } catch (e) {
-        console.warn('Error during app initialization:', e);
+        console.error('Critical error during app initialization:', e);
+        // Still set app as ready to prevent infinite loading
       } finally {
         setAppIsReady(true);
       }
