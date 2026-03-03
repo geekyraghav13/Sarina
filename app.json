@@ -16,13 +16,15 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.sarina.app",
       "buildNumber": "13",
-      "appStoreId": "6758547730",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Sarina needs access to your microphone for AI voice conversations with your companion.",
         "NSSpeechRecognitionUsageDescription": "Sarina uses speech recognition to understand your voice during conversations.",
+        "NSLocalNetworkUsageDescription": "Sarina connects to voice servers for real-time AI conversations.",
+        "NSUserTrackingUsageDescription": "We use your data to improve your experience and provide personalized AI conversations.",
+        "NSBonjourServices": ["_http._tcp", "_https._tcp"],
         "UIBackgroundModes": ["audio"],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,

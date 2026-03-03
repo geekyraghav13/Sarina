@@ -19,7 +19,7 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.3.9</string>
+    <string>2.2.3</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
@@ -42,7 +42,7 @@
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSMinimumSystemVersion</key>
-    <string>12.0</string>
+    <string>13.0</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NSAppTransportSecurity</key>
@@ -51,7 +51,7 @@
       <false/>
       <key>NSExceptionDomains</key>
       <dict>
-        <key>sarina-voice-backend-fv2lgy22ja-uc.a.run.app</key>
+        <key>sarina-voice-backend-1051121433445.us-central1.run.app</key>
         <dict>
           <key>NSExceptionAllowsInsecureHTTPLoads</key>
           <false/>
@@ -69,7 +69,7 @@
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Sarina uses speech recognition to understand your voice during conversations.</string>
     <key>RCTNewArchEnabled</key>
-    <true/>
+    <false/>
     <key>UIBackgroundModes</key>
     <array>
       <string>audio</string>
