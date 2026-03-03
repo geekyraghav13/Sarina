@@ -374,10 +374,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
     navigation.navigate('ChatSettings');
   };
 
-  const handlePhoneCall = async () => {
-    // Reload premium status before navigating to ensure latest state
-    await loadSubscriptionStatus();
-
+  const handlePhoneCall = () => {
     // Trigger incoming call when phone icon is tapped
     navigation.navigate('IncomingCall', {
       characterName: girlfriendName,
