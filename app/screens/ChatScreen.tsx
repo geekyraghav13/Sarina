@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VideoBackground } from '../components/VideoBackground';
 import { LiveChatOverlay } from '../components/LiveChatOverlay';
 import { TypingIndicator } from '../components/TypingIndicator';
@@ -35,6 +36,9 @@ import {
   generateWelcomeMessage,
   isOpenRouterConfigured,
 } from '../services/geminiService';
+
+// AsyncStorage key for tracking first chat visit
+const FIRST_CHAT_SEEN_KEY = '@first_chat_seen';
 
 interface Message {
   id: string;
@@ -92,6 +96,36 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
 
   // Payment store for freemium model
   const { isPremium, freeMessagesCount, loadSubscriptionStatus } = usePaymentStore();
+
+  // ONE-TIME SCREEN LOGIC: Check if this is the first time seeing this chat screen
+  useEffect(() => {
+    const handleFirstChatCheck = async () => {
+      try {
+        // Only apply one-time logic if coming from onboarding
+        if (fromOnboarding && isFirstLaunch) {
+          const hasSeenFirstChat = await AsyncStorage.getItem(FIRST_CHAT_SEEN_KEY);
+
+          if (hasSeenFirstChat === 'true') {
+            // User has already seen this screen - immediately redirect to home
+            console.log('🔄 First chat already seen - redirecting to home');
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainTabs' }],
+            });
+            return;
+          }
+
+          // Mark as seen immediately to prevent race conditions
+          await AsyncStorage.setItem(FIRST_CHAT_SEEN_KEY, 'true');
+          console.log('✅ First chat screen marked as seen');
+        }
+      } catch (error) {
+        console.error('Error checking first chat status:', error);
+      }
+    };
+
+    handleFirstChatCheck();
+  }, [fromOnboarding, isFirstLaunch, navigation]);
 
   // Load subscription status on mount
   useEffect(() => {
