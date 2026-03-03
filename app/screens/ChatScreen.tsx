@@ -129,7 +129,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
 
   // Load subscription status on mount
   useEffect(() => {
-    loadSubscriptionStatus();
+    loadSubscriptionStatus().catch((error) => {
+      console.warn('Failed to load subscription status in ChatScreen:', error);
+    });
   }, []);
 
   // Track screen view and chat start
