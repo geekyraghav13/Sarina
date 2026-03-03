@@ -29,7 +29,7 @@ import { onAuthStateChange, getCurrentUser } from '../services/authService';
 const Stack = createStackNavigator<RootStackParamList>();
 
 export const AppNavigator: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(false); // Changed to false to avoid flash
+  const [isLoading, setIsLoading] = useState(true); // Start with loading state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
@@ -51,6 +51,7 @@ export const AppNavigator: React.FC = () => {
 
     setIsAuthenticated(authenticated);
     setIsInitialized(true);
+    setIsLoading(false); // Auth check complete
     console.log('🧭 Navigation state updated - authenticated:', authenticated);
   };
 
@@ -85,8 +86,13 @@ export const AppNavigator: React.FC = () => {
     };
   }, [isAuthenticated, disclaimerAccepted]);
 
-  if (!isInitialized) {
-    return null; // Don't show loading, just return null to avoid flash
+  if (!isInitialized || isLoading) {
+    // Show black screen while checking auth to prevent flash (no spinner)
+    return (
+      <View style={styles.loadingContainer}>
+        {/* No loading indicator - just black screen to prevent flash */}
+      </View>
+    );
   }
 
   return (
@@ -127,6 +133,7 @@ export const AppNavigator: React.FC = () => {
                 gestureEnabled: false, // Disable swipe back gesture
               }}
             />
+            <Stack.Screen name="ChatSettings" component={ChatSettingsScreen} />
             <Stack.Screen
               name="IncomingCall"
               component={IncomingCallScreen}

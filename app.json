@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Sarina",
+    "name": "Sarina AI Companion",
     "slug": "sarina",
     "owner": "8284",
-    "version": "1.3.9",
+    "version": "2.2.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sarina.app",
-      "buildNumber": "7",
+      "buildNumber": "13",
       "appStoreId": "6758547730",
       "config": {
         "usesNonExemptEncryption": false
@@ -27,7 +27,7 @@
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,
           "NSExceptionDomains": {
-            "sarina-voice-backend-fv2lgy22ja-uc.a.run.app": {
+            "sarina-voice-backend-1051121433445.us-central1.run.app": {
               "NSExceptionAllowsInsecureHTTPLoads": false,
               "NSIncludesSubdomains": true,
               "NSExceptionRequiresForwardSecrecy": true,
@@ -42,8 +42,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1a0933"
       },
-      "package": "com.sarina.app",
-      "versionCode": 22,
+      "package": "com.x8284.katrina",
+      "versionCode": 20,
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"

@@ -7,7 +7,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { getIdToken } from './authService';
 
 // Production WebSocket URL (Google Cloud Run)
-const WS_URL = 'wss://sarina-voice-backend-fv2lgy22ja-uc.a.run.app';
+const WS_URL = 'wss://sarina-voice-backend-1051121433445.us-central1.run.app';
 
 // For local testing, use: 'ws://172.16.101.198:8080'
 

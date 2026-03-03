@@ -9,7 +9,7 @@ interface PaymentStore {
   freeMessagesCount: number;
   subscriptionType: 'weekly' | 'yearly' | null;
   expirationDate: string | null;
-  setIsPremium: (status: boolean) => void;
+  setIsPremium: (status: boolean) => Promise<void>;
   setSubscriptionType: (type: 'weekly' | 'yearly' | null) => void;
   setExpirationDate: (date: string | null) => void;
   incrementFreeMessages: () => void;
@@ -25,9 +25,9 @@ export const usePaymentStore = create<PaymentStore>((set, get) => ({
   subscriptionType: null,
   expirationDate: null,
 
-  setIsPremium: (status: boolean) => {
+  setIsPremium: async (status: boolean) => {
     set({ isPremium: status });
-    get().saveSubscriptionStatus();
+    await get().saveSubscriptionStatus();
   },
 
   setSubscriptionType: (type: 'weekly' | 'yearly' | null) => {

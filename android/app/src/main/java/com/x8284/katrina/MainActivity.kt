@@ -1,4 +1,4 @@
-package com.sarina.app
+package com.x8284.katrina
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

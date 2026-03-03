@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useVoiceCall, CallState } from '../services/voiceCallService';
 import { getCurrentUser } from '../services/authService';
 import { canStartCall } from '../services/creditService';
+import { usePaymentStore } from '../store/paymentStore';
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 
@@ -39,6 +40,9 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   route,
 }) => {
   const { characterName, characterImageUrl, characterId, characterProfile } = route.params;
+
+  // Get premium status from store
+  const { isPremium } = usePaymentStore();
 
   const {
     state,
@@ -71,39 +75,44 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   useEffect(() => {
     const initializeCall = async () => {
       console.log('🎙️ Initializing voice call...');
+      console.log('💎 Premium status:', isPremium);
 
-      // NEW: Task 2.1 - Check balance before starting call
-      console.log('💰 Checking credit balance...');
-      const balanceCheck = await canStartCall();
+      // Check if user has premium subscription OR sufficient balance
+      // After purchase, isPremium is set immediately but balance might sync later
+      if (!isPremium) {
+        // Only check balance if not premium
+        console.log('💰 Checking credit balance...');
+        const balanceCheck = await canStartCall();
 
-      if (!balanceCheck.allowed) {
-        console.warn('❌ Insufficient balance:', balanceCheck.message);
-        Alert.alert(
-          'Insufficient Balance',
-          balanceCheck.message || 'You need at least 10 seconds to start a call.',
-          [
-            {
-              text: 'Purchase More',
-              onPress: () => {
-                navigation.replace('Paywall', {
-                  characterName,
-                  characterImageUrl,
-                  callAction: 'pick',
-                  returnScreen: 'Chat',
-                });
+        if (!balanceCheck.allowed) {
+          console.warn('❌ Insufficient balance:', balanceCheck.message);
+          Alert.alert(
+            'Insufficient Balance',
+            balanceCheck.message || 'You need at least 10 seconds to start a call.',
+            [
+              {
+                text: 'Purchase More',
+                onPress: () => {
+                  navigation.replace('Paywall', {
+                    characterName,
+                    characterImageUrl,
+                    callAction: 'pick',
+                    returnScreen: 'Chat',
+                  });
+                },
               },
-            },
-            {
-              text: 'Cancel',
-              onPress: () => navigation.goBack(),
-              style: 'cancel',
-            },
+              {
+                text: 'Cancel',
+                onPress: () => navigation.goBack(),
+                style: 'cancel',
+              },
           ]
         );
         return;
+        }
       }
 
-      console.log('✅ Balance sufficient:', balanceCheck.balance, 'seconds');
+      console.log('✅ User can start call - Premium or sufficient balance');
 
       // Request audio permissions
       try {

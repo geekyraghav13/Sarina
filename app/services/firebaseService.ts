@@ -92,7 +92,12 @@ export const fetchCharactersFromRemoteConfig = async (): Promise<Girlfriend[]> =
       return [];
     }
 
-    const characters: FirebaseCharacter[] = JSON.parse(charactersJson);
+    // Sanitize JSON string to remove control characters (U+0000 to U+001F)
+    // These characters are not allowed in JSON strings and can cause parse errors
+    const sanitizedJson = charactersJson.replace(/[\u0000-\u001F]/g, '');
+    console.log('JSON sanitized, removed control characters');
+
+    const characters: FirebaseCharacter[] = JSON.parse(sanitizedJson);
 
     // Map to Girlfriend interface
     const girlfriends: Girlfriend[] = characters.map((char) => ({

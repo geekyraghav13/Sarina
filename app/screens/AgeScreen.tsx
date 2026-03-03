@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
+import { CharacterImageOverlay } from '../components/CharacterImageOverlay';
 import { AgeWheel } from '../components/AgeWheel';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
@@ -44,6 +45,7 @@ export const AgeScreen: React.FC<AgeScreenProps> = ({ navigation }) => {
         source={ALL_VIDEOS[currentVideoIndex]}
         onVideoEnd={handleVideoEnd}
       />
+      <CharacterImageOverlay />
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.step}>Step 1 of 8</Text>

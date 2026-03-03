@@ -1,4 +1,4 @@
-package com.sarina.app
+package com.x8284.katrina
 
 import android.app.Application
 import android.content.res.Configuration

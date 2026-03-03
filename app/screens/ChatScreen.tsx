@@ -34,7 +34,7 @@ import {
   generateAIResponse,
   generateWelcomeMessage,
   isOpenRouterConfigured,
-} from '../services/openRouterService';
+} from '../services/geminiService';
 
 interface Message {
   id: string;
@@ -337,7 +337,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
   };
 
   const openChatSettings = () => {
-    navigation.navigate('ChatSettings' as any);
+    navigation.navigate('ChatSettings');
   };
 
   const handlePhoneCall = () => {
@@ -371,7 +371,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
           </TouchableOpacity>
           <View style={styles.liveIndicator}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveText}>LIVE</Text>
+            <Text style={styles.liveText}>Home</Text>
           </View>
         </View>
         <View style={styles.headerContent}>

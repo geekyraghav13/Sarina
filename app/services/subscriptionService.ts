@@ -78,21 +78,35 @@ export const getAvailableSubscriptions = async (): Promise<Subscription[]> => {
     console.log('📦 Fetching products from store...');
     const productIds = [SUBSCRIPTION_IDS.WEEKLY, SUBSCRIPTION_IDS.YEARLY];
 
-    const subscriptions = await RNIap.getSubscriptions({ skus: productIds });
+    // v14 API: Use fetchProducts with type 'subs' for subscriptions
+    const subscriptions = await RNIap.fetchProducts({
+      skus: productIds,
+      type: 'subs'
+    });
+
+    if (!subscriptions || subscriptions.length === 0) {
+      console.warn('⚠️ No subscriptions returned from store');
+      return [];
+    }
 
     console.log(`✅ Fetched ${subscriptions.length} products from store`);
 
-    return subscriptions.map((product) => ({
-      productId: product.productId,
-      price: product.price,
-      localizedPrice: product.localizedPrice,
+    return subscriptions.map((product: any) => ({
+      productId: product.productId || product.sku,
+      price: product.price?.toString() || '0',
+      localizedPrice: product.localizedPrice || product.price || '0',
       title: product.title || 'Subscription',
       description: product.description || '',
-      priceAmountMicros: parseFloat(product.price) * 1000000,
-      priceCurrencyCode: product.currency,
+      priceAmountMicros: parseFloat(product.price?.toString() || '0') * 1000000,
+      priceCurrencyCode: product.currency || 'USD',
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error fetching subscriptions:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      platform: Platform.OS,
+    });
     return [];
   }
 };
@@ -100,35 +114,78 @@ export const getAvailableSubscriptions = async (): Promise<Subscription[]> => {
 // Purchase a subscription
 export const purchaseSubscription = async (productId: string): Promise<PurchaseResult> => {
   try {
-    console.log(`💳 Initiating purchase for: ${productId}`);
+    console.log(`💳 Initiating purchase for: ${productId} on ${Platform.OS}`);
 
-    const purchase = await RNIap.requestSubscription({ sku: productId });
+    // v14 API: Use requestPurchase for subscriptions (event-based)
+    // We wrap it in a promise that listens for the purchase result
+    return new Promise((resolve, reject) => {
+      // Set up one-time listeners for this purchase
+      const purchaseListener = RNIap.purchaseUpdatedListener((purchase) => {
+        console.log('📦 Purchase received:', purchase);
 
-    console.log('Purchase result:', purchase);
+        // Check if this is the purchase we're waiting for
+        if (purchase.productId === productId) {
+          purchaseListener.remove();
+          errorListener.remove();
 
-    if (purchase) {
-      console.log('✅ Purchase successful!', {
-        productId: purchase.productId,
-        transactionId: purchase.transactionId,
+          resolve({
+            success: true,
+            isPremium: true,
+            purchase: purchase,
+          });
+        }
       });
 
-      return {
-        success: true,
-        isPremium: true,
-        purchase: purchase,
-      };
-    } else {
-      return { success: false, error: 'No purchase data received' };
-    }
+      const errorListener = RNIap.purchaseErrorListener((error: any) => {
+        console.error('❌ Purchase error from listener:', error);
+        purchaseListener.remove();
+        errorListener.remove();
+
+        if (error.code === 'E_USER_CANCELLED' || error.code === 2) {
+          resolve({ success: false, error: 'Purchase cancelled' });
+        } else {
+          resolve({
+            success: false,
+            error: error.message || 'Purchase failed'
+          });
+        }
+      });
+
+      // Initiate the purchase
+      RNIap.requestPurchase({
+        request: {
+          apple: { sku: productId },
+          google: { skus: [productId] }
+        },
+        type: 'subs'
+      }).catch((error) => {
+        console.error('❌ requestPurchase error:', error);
+        purchaseListener.remove();
+        errorListener.remove();
+
+        if (error.code === 'E_USER_CANCELLED' || error.message?.includes('cancelled')) {
+          resolve({ success: false, error: 'Purchase cancelled' });
+        } else {
+          resolve({
+            success: false,
+            error: error.message || error.toString() || 'Purchase failed'
+          });
+        }
+      });
+
+      // Timeout after 2 minutes
+      setTimeout(() => {
+        purchaseListener.remove();
+        errorListener.remove();
+        resolve({ success: false, error: 'Purchase timeout' });
+      }, 120000);
+    });
   } catch (error: any) {
-    console.error('❌ Purchase error:', error);
-
-    if (error.code === 'E_USER_CANCELLED') {
-      console.log('⚠️ User cancelled the purchase');
-      return { success: false, error: 'Purchase cancelled' };
-    }
-
-    return { success: false, error: error.message || 'Purchase failed' };
+    console.error('❌ Purchase setup error:', error);
+    return {
+      success: false,
+      error: error.message || error.toString() || 'Purchase failed'
+    };
   }
 };
 
@@ -258,18 +315,27 @@ export const getVoiceProducts = async (): Promise<Subscription[]> => {
     console.log('📦 Fetching voice credit products...');
     const productIds = Object.values(VOICE_CREDIT_IDS);
 
-    const products = await RNIap.getProducts({ skus: productIds });
+    // v14 API: Use fetchProducts with type 'in-app' for consumables
+    const products = await RNIap.fetchProducts({
+      skus: productIds,
+      type: 'in-app'
+    });
+
+    if (!products || products.length === 0) {
+      console.warn('⚠️ No products returned from store');
+      return [];
+    }
 
     console.log(`✅ Fetched ${products.length} voice credit products`);
 
-    return products.map((product) => ({
-      productId: product.productId,
-      price: product.price,
-      localizedPrice: product.localizedPrice,
+    return products.map((product: any) => ({
+      productId: product.productId || product.sku,
+      price: product.price?.toString() || '0',
+      localizedPrice: product.localizedPrice || product.price || '0',
       title: product.title || 'Voice Credits',
       description: product.description || '',
-      priceAmountMicros: parseFloat(product.price) * 1000000,
-      priceCurrencyCode: product.currency,
+      priceAmountMicros: parseFloat(product.price?.toString() || '0') * 1000000,
+      priceCurrencyCode: product.currency || 'USD',
     }));
   } catch (error) {
     console.error('❌ Error fetching voice products:', error);
@@ -282,21 +348,21 @@ export const purchaseVoiceCredits = async (productId: string): Promise<PurchaseR
   try {
     console.log(`💳 Initiating voice credit purchase for: ${productId}`);
 
-    const purchase = await RNIap.requestPurchase({ skus: [productId] });
+    // v14 API: Use requestPurchase for in-app products
+    await RNIap.requestPurchase({
+      request: {
+        apple: { sku: productId },
+        google: { skus: [productId] }
+      },
+      type: 'in-app'
+    });
 
-    if (purchase) {
-      console.log('✅ Voice credit purchase successful!', {
-        productId: purchase.productId,
-        transactionId: purchase.transactionId,
-      });
+    console.log('✅ Voice credit purchase request initiated');
 
-      return {
-        success: true,
-        purchase: purchase,
-      };
-    } else {
-      return { success: false, error: 'No purchase data received' };
-    }
+    return {
+      success: true,
+      purchase: null, // Will come through listener
+    };
   } catch (error: any) {
     console.error('❌ Voice credit purchase error:', error);
 

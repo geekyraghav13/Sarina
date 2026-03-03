@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { VideoBackground } from '../components/VideoBackground';
+import { CharacterImageOverlay } from '../components/CharacterImageOverlay';
 import { useUserProfile } from '../store/userProfile';
 import { useVideoForProfile } from '../hooks/useVideoForProfile';
 import { RootStackParamList } from '../navigation/types';

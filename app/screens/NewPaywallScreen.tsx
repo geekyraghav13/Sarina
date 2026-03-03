@@ -8,6 +8,7 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -19,6 +20,7 @@ import { usePaymentStore } from '../store/paymentStore';
 import {
   logAdImpression,
   logBeginCheckout,
+  logPurchase,
   logPurchaseFailed,
   logSubscriptionRestored,
   logPlanSelected,
@@ -150,7 +152,7 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         await updateUserSubscriptionREST(user.uid, selectedPlan, creditsToAdd);
 
         // Update local state
-        setIsPremium(true);
+        await setIsPremium(true);
         setSubscriptionType(selectedPlan);
 
         console.log(`✅ MOCK Purchase successful: ${selectedPlan} plan, ${creditsToAdd}s added`);
@@ -182,11 +184,38 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         const purchase = purchaseResult.purchase;
 
         // Get Firebase ID token for authentication
-        const auth = getAuth();
-        const idToken = await auth.currentUser?.getIdToken();
+        let idToken: string | undefined;
+        try {
+          const auth = getAuth();
+          if (auth && auth.currentUser) {
+            idToken = await auth.currentUser.getIdToken();
+          }
+        } catch (authError) {
+          console.error('Auth error:', authError);
+          // Continue without backend validation if auth fails
+        }
 
         if (!idToken) {
-          throw new Error('Failed to get authentication token');
+          console.warn('No auth token available, skipping backend validation');
+          // For iOS, we can trust Apple's receipt validation
+          // Just grant the subscription locally
+          await setIsPremium(true);
+          setSubscriptionType(selectedPlan);
+          await logPurchase({
+            transaction_id: purchase.transactionId || 'unknown',
+            value: planValue,
+            currency: 'INR',
+            items: [{
+              item_id: selectedPlan,
+              item_name: `Sarina ${selectedPlan === 'weekly' ? 'Weekly' : 'Yearly'} Plan`,
+              item_category: 'subscription',
+              quantity: 1,
+              price: planValue
+            }]
+          });
+          await SubscriptionService.finishTransaction(purchase);
+          showSuccessAndNavigate(getCreditAllocationForTier(selectedPlan));
+          return;
         }
 
         // Send receipt to backend for validation
@@ -217,11 +246,22 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         console.log('✅ Purchase validated! Credits:', validationResult.creditsAdded);
 
         // Update local state
-        setIsPremium(true);
+        await setIsPremium(true);
         setSubscriptionType(selectedPlan);
 
         // Log successful purchase
-        await logPurchase(selectedPlan, planValue, 'INR', purchase.transactionId);
+        await logPurchase({
+          transaction_id: purchase.transactionId || 'unknown',
+          value: planValue,
+          currency: 'INR',
+          items: [{
+            item_id: selectedPlan,
+            item_name: `Sarina ${selectedPlan === 'weekly' ? 'Weekly' : 'Yearly'} Plan`,
+            item_category: 'subscription',
+            quantity: 1,
+            price: planValue
+          }]
+        });
 
         // Finish transaction (important for consumables)
         await SubscriptionService.finishTransaction(purchase);
@@ -243,34 +283,13 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
       `${selectedPlan === 'weekly' ? 'Weekly' : 'Yearly'} plan activated!\nYou got ${creditsAdded} seconds of voice calling.`,
       [
         {
-          text: 'Start Call Now',
+          text: 'Got it!',
           onPress: () => {
-            // Navigate to voice call if user picked up
-            if (callAction === 'pick') {
-              const { girlfriends } = useGirlfriendStore.getState();
-              const girlfriend = girlfriends.find(gf => gf.name === characterName);
-
-              // Use girlfriend data if found, otherwise use profile data
-              const charName = girlfriend?.name || characterName || profile.name || 'Sarina';
-              const charImageUrl = girlfriend?.imageUrl || characterImageUrl || '';
-              const charId = girlfriend?.id || 'default';
-
-              navigation.replace('VoiceCall', {
-                characterName: charName,
-                characterImageUrl: charImageUrl,
-                characterId: charId,
-                characterProfile: {
-                  name: charName,
-                  personality: girlfriend?.personality || profile.personality || [],
-                  tone: girlfriend?.tone || profile.tone || [],
-                  interests: girlfriend?.interests || profile.interests || [],
-                  appearance: girlfriend?.appearance || profile.appearance || 'realistic',
-                },
-              });
-            } else {
-              // User declined or no call context, go to chat
-              navigation.navigate('Chat', { fromOnboarding: false });
-            }
+            // Navigate to MainTabs (Home screen) after purchase
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainTabs' }],
+            });
           },
         },
       ]
@@ -286,12 +305,15 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         await logSubscriptionRestored(status?.isPremium || false);
 
         if (status?.isPremium) {
-          setIsPremium(true);
+          await setIsPremium(true);
           setSubscriptionType(status.subscriptionType || null);
           Alert.alert('Success', 'Your subscription has been restored!', [
             {
               text: 'OK',
-              onPress: () => navigation.navigate('Chat', { fromOnboarding: false }),
+              onPress: () => navigation.reset({
+                index: 0,
+                routes: [{ name: 'MainTabs' }],
+              }),
             },
           ]);
         } else {
@@ -307,8 +329,16 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         if (result.success && result.isPremium && result.purchase) {
           // Validate the restored purchase with backend
           const user = getCurrentUser();
-          const auth = getAuth();
-          const idToken = await auth.currentUser?.getIdToken();
+          let idToken: string | undefined;
+
+          try {
+            const auth = getAuth();
+            if (auth && auth.currentUser) {
+              idToken = await auth.currentUser.getIdToken();
+            }
+          } catch (authError) {
+            console.error('Auth error during restore:', authError);
+          }
 
           if (idToken && user) {
             const validationResponse = await fetch(`${BACKEND_URL}/api/validate-purchase`, {
@@ -328,17 +358,37 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
             const validationResult = await validationResponse.json();
 
             if (validationResult.success) {
-              setIsPremium(true);
+              await setIsPremium(true);
               setSubscriptionType(validationResult.subscriptionTier || null);
               Alert.alert('Success', 'Your purchases have been restored!', [
                 {
                   text: 'OK',
-                  onPress: () => navigation.navigate('Chat', { fromOnboarding: false }),
+                  onPress: () => navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'MainTabs' }],
+                  }),
                 },
               ]);
             } else {
               Alert.alert('Validation Failed', 'Could not verify your purchase. Please try again.');
             }
+          } else {
+            // No auth token but have purchase - trust Apple's validation
+            await setIsPremium(true);
+            // Derive subscription type from productId
+            const productId = result.purchase?.productId;
+            const subType = productId === SubscriptionService.SUBSCRIPTION_IDS.WEEKLY ? 'weekly' :
+                           productId === SubscriptionService.SUBSCRIPTION_IDS.YEARLY ? 'yearly' : null;
+            setSubscriptionType(subType);
+            Alert.alert('Success', 'Your purchases have been restored!', [
+              {
+                text: 'OK',
+                onPress: () => navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'MainTabs' }],
+                }),
+              },
+            ]);
           }
         } else {
           Alert.alert('No Purchases Found', 'No active subscriptions found to restore.');

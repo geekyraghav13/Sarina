@@ -26,8 +26,8 @@ export default function App() {
         // Load subscription status from local storage
         await usePaymentStore.getState().loadSubscriptionStatus();
 
-        // Short delay for smooth transition (removed 10 second splash)
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Show splash screen for 3 seconds minimum for better UX
+        await new Promise(resolve => setTimeout(resolve, 3000));
       } catch (e) {
         console.warn('Error during app initialization:', e);
       } finally {

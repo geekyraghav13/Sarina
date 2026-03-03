@@ -6,12 +6,21 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
+  Image,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logScreenView } from '../services/analyticsService';
 import { logOnboardingStart } from '../services/firebaseAnalytics';
+
+// Sample character images from Firebase
+const SAMPLE_CHARACTERS = [
+  { id: '1', name: 'Serena', imageUrl: 'https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fserena.jpg?alt=media&token=5f6ca662-d41b-4d72-92a8-053c1d466cd2' },
+  { id: '2', name: 'Maya', imageUrl: 'https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fmaya.jpg?alt=media&token=eb0872f5-d151-4d94-8379-eb81247fb09e' },
+  { id: '3', name: 'Luna', imageUrl: 'https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fluna.jpg?alt=media&token=03a97c04-0d46-44e5-bf47-927d159fd6b0' },
+  { id: '4', name: 'Sophie', imageUrl: 'https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fsophie.jpg?alt=media&token=9bf29ed5-ef5b-4314-9f8d-23901f2dbade' },
+];
 
 type DisclaimerScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -60,6 +69,22 @@ export const DisclaimerScreen: React.FC<DisclaimerScreenProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>Before We Begin...</Text>
+
+        {/* Character Preview Grid */}
+        <View style={styles.charactersGrid}>
+          {SAMPLE_CHARACTERS.map((char) => (
+            <View key={char.id} style={styles.characterCard}>
+              <Image
+                source={{ uri: char.imageUrl }}
+                style={styles.characterImage}
+                resizeMode="cover"
+              />
+              <View style={styles.characterOverlay}>
+                <Text style={styles.characterName}>{char.name}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
 
         {/* AI Generated Content */}
         <View style={styles.section}>
@@ -215,6 +240,38 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  charactersGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 32,
+    gap: 12,
+  },
+  characterCard: {
+    width: '48%',
+    aspectRatio: 0.75,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  characterImage: {
+    width: '100%',
+    height: '100%',
+  },
+  characterOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  characterName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
   },
 });
 
