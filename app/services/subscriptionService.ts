@@ -53,7 +53,14 @@ let purchaseErrorSubscription: any = null;
 export const initializeIAP = async (): Promise<boolean> => {
   try {
     console.log('🔌 Connecting to IAP...');
-    await RNIap.initConnection();
+
+    // Add timeout to prevent infinite waiting
+    const connectionPromise = RNIap.initConnection();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('IAP connection timeout')), 10000)
+    );
+
+    await Promise.race([connectionPromise, timeoutPromise]);
     console.log('✅ IAP connection established');
     return true;
   } catch (error) {
@@ -79,13 +86,19 @@ export const getAvailableSubscriptions = async (): Promise<Subscription[]> => {
     const productIds = [SUBSCRIPTION_IDS.WEEKLY, SUBSCRIPTION_IDS.YEARLY];
 
     // v14 API: Use fetchProducts with type 'subs' for subscriptions
-    const subscriptions = await RNIap.fetchProducts({
+    // Add timeout to prevent infinite waiting
+    const fetchPromise = RNIap.fetchProducts({
       skus: productIds,
       type: 'subs'
     });
+    const timeoutPromise = new Promise<any>((_, reject) =>
+      setTimeout(() => reject(new Error('Product fetch timeout')), 15000)
+    );
+
+    const subscriptions = await Promise.race([fetchPromise, timeoutPromise]);
 
     if (!subscriptions || subscriptions.length === 0) {
-      console.warn('⚠️ No subscriptions returned from store');
+      console.warn('⚠️ No subscriptions returned from store - products may not be configured in App Store Connect');
       return [];
     }
 

@@ -57,7 +57,8 @@ const BACKGROUND_IMAGE =
 // Set to false to use real IAP (production)
 const USE_MOCK_PURCHASES = false; // Real IAP enabled with react-native-iap
 
-const BACKEND_URL = 'https://sarina-voice-backend-fv2lgy22ja-uc.a.run.app';
+// Use the correct backend URL matching voice call service
+const BACKEND_URL = 'https://sarina-voice-backend-1051121433445.us-central1.run.app';
 
 export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, route }) => {
   const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'yearly'>('yearly');
@@ -100,23 +101,47 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
       const connected = await SubscriptionService.initializeIAP();
 
       if (!connected) {
-        console.error('Failed to connect to IAP');
+        console.error('❌ Failed to connect to IAP - products may not be configured yet');
+        Alert.alert(
+          'Store Not Ready',
+          'The subscription store is not configured yet. Please use the app in free mode or contact support.',
+          [{ text: 'OK', onPress: handleClose }]
+        );
         setLoading(false);
         return;
       }
 
       // Fetch available subscriptions
       const subs = await SubscriptionService.getAvailableSubscriptions();
+      console.log(`📦 Loaded ${subs.length} subscription products from store`);
       setSubscriptions(subs);
 
       // Find weekly and yearly subscriptions
       const weekly = subs.find((s: any) => s.productId === SubscriptionService.SUBSCRIPTION_IDS.WEEKLY);
       const yearly = subs.find((s: any) => s.productId === SubscriptionService.SUBSCRIPTION_IDS.YEARLY);
 
+      if (!weekly && !yearly) {
+        console.error('❌ No subscription products found - products not configured in App Store Connect');
+        Alert.alert(
+          'Subscriptions Not Available',
+          'Subscription products are not configured in the App Store yet. Please try again later or contact support.',
+          [{ text: 'OK', onPress: handleClose }]
+        );
+        setLoading(false);
+        return;
+      }
+
       setWeeklySubscription(weekly || null);
       setYearlySubscription(yearly || null);
+
+      console.log(`✅ Subscription products loaded successfully`);
     } catch (error) {
-      console.error('Failed to load subscriptions:', error);
+      console.error('❌ Failed to load subscriptions:', error);
+      Alert.alert(
+        'Error Loading Subscriptions',
+        'Unable to load subscription options. Please try again later.',
+        [{ text: 'OK', onPress: handleClose }]
+      );
     } finally {
       setLoading(false);
     }
