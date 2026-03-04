@@ -3,7 +3,7 @@
     "name": "Sarina AI Companion",
     "slug": "sarina",
     "owner": "8284",
-    "version": "1.4.2",
+    "version": "1.4.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sarina.app",
-      "buildNumber": "18",
+      "buildNumber": "19",
       "appStoreId": "6758547730",
       "config": {
         "usesNonExemptEncryption": false
