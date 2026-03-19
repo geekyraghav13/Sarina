@@ -3,7 +3,7 @@
     "name": "Sarina AI Companion",
     "slug": "sarina",
     "owner": "8284",
-    "version": "1.4.3",
+    "version": "1.4.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sarina.app",
-      "buildNumber": "19",
+      "buildNumber": "20",
       "appStoreId": "6758547730",
       "config": {
         "usesNonExemptEncryption": false
@@ -43,7 +43,7 @@
         "backgroundColor": "#1a0933"
       },
       "package": "com.x8284.katrina",
-      "versionCode": 20,
+      "versionCode": 21,
       "permissions": [
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
@@ -53,7 +53,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-av"
+      "expo-av",
+      "expo-apple-authentication"
     ],
     "extra": {
       "eas": {

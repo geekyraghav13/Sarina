@@ -6,12 +6,15 @@
 import {
   signInWithCredential,
   GoogleAuthProvider,
+  OAuthProvider,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User
 } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { Platform } from 'react-native';
 import { getDocumentREST, createUserDocumentREST } from './firestoreRestService';
 
 // Configure Google Sign-In
@@ -82,7 +85,11 @@ export const signInWithGoogle = async (): Promise<User> => {
  * Initialize user document in Firestore with required fields
  * Includes retry logic for network issues
  */
-const initializeUserDocument = async (user: User, retryCount = 0): Promise<void> => {
+const initializeUserDocument = async (
+  user: User,
+  retryCount = 0,
+  overrideData?: { displayName?: string | null; email?: string | null }
+): Promise<void> => {
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 2000; // 2 seconds
 
@@ -96,8 +103,8 @@ const initializeUserDocument = async (user: User, retryCount = 0): Promise<void>
       console.log('📝 Creating user document via REST API...');
       await createUserDocumentREST({
         uid: user.uid,
-        email: user.email,
-        displayName: user.displayName,
+        email: overrideData?.email || user.email,
+        displayName: overrideData?.displayName || user.displayName,
         photoURL: user.photoURL,
       });
 
@@ -112,7 +119,7 @@ const initializeUserDocument = async (user: User, retryCount = 0): Promise<void>
     if (retryCount < MAX_RETRIES) {
       console.log(`🔄 Retrying user document creation (${retryCount + 1}/${MAX_RETRIES})...`);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      return initializeUserDocument(user, retryCount + 1);
+      return initializeUserDocument(user, retryCount + 1, overrideData);
     }
 
     throw error;
@@ -161,5 +168,85 @@ export const getIdToken = async (): Promise<string | null> => {
   } catch (error) {
     console.error('❌ Failed to get ID token:', error);
     return null;
+  }
+};
+
+/**
+ * Check if Apple Sign In is available
+ */
+export const isAppleSignInAvailable = async (): Promise<boolean> => {
+  if (Platform.OS !== 'ios') {
+    return false;
+  }
+  try {
+    return await AppleAuthentication.isAvailableAsync();
+  } catch (error) {
+    console.error('❌ Error checking Apple Sign In availability:', error);
+    return false;
+  }
+};
+
+/**
+ * Sign in with Apple
+ */
+export const signInWithApple = async (): Promise<User> => {
+  try {
+    console.log('🍎 Starting Apple Sign-In...');
+
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+
+    console.log('📝 Apple Sign-In response received');
+
+    // Create an OAuthProvider credential
+    const provider = new OAuthProvider('apple.com');
+    const oauthCredential = provider.credential({
+      idToken: credential.identityToken!,
+      rawNonce: credential.realUserStatus?.toString(),
+    });
+
+    // Sign in with Firebase
+    const userCredential = await signInWithCredential(auth, oauthCredential);
+    const user = userCredential.user;
+
+    console.log('✅ Apple Sign-In successful:', user.uid);
+
+    // Update user profile with Apple user info if available
+    if (credential.fullName) {
+      const displayName = [
+        credential.fullName.givenName,
+        credential.fullName.familyName
+      ].filter(Boolean).join(' ');
+
+      // Initialize user document with Apple user info
+      initializeUserDocument(user, 0, {
+        displayName: displayName || null,
+        email: credential.email || user.email,
+      }).catch((error) => {
+        console.warn('⚠️ Could not initialize user document immediately:', error.message);
+        console.log('ℹ️ User document will be created on next successful connection');
+      });
+    } else {
+      // Initialize user document with default info
+      initializeUserDocument(user).catch((error) => {
+        console.warn('⚠️ Could not initialize user document immediately:', error.message);
+        console.log('ℹ️ User document will be created on next successful connection');
+      });
+    }
+
+    return user;
+  } catch (error: any) {
+    console.error('❌ Apple Sign-In failed:', error);
+
+    // Check if user cancelled
+    if (error.code === 'ERR_CANCELED') {
+      throw new Error('Apple Sign-In was cancelled');
+    }
+
+    throw new Error(error.message || 'Apple Sign-In failed');
   }
 };

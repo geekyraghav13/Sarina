@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "Sarina.app"
-               BlueprintName = "Sarina"
-               ReferencedContainer = "container:Sarina.xcodeproj">
+               BuildableName = "SarinaAICompanion.app"
+               BlueprintName = "SarinaAICompanion"
+               ReferencedContainer = "container:SarinaAICompanion.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "SarinaTests.xctest"
-               BlueprintName = "SarinaTests"
-               ReferencedContainer = "container:Sarina.xcodeproj">
+               BuildableName = "SarinaAICompanionTests.xctest"
+               BlueprintName = "SarinaAICompanionTests"
+               ReferencedContainer = "container:SarinaAICompanion.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "Sarina.app"
-            BlueprintName = "Sarina"
-            ReferencedContainer = "container:Sarina.xcodeproj">
+            BuildableName = "SarinaAICompanion.app"
+            BlueprintName = "SarinaAICompanion"
+            ReferencedContainer = "container:SarinaAICompanion.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "Sarina.app"
-            BlueprintName = "Sarina"
-            ReferencedContainer = "container:Sarina.xcodeproj">
+            BuildableName = "SarinaAICompanion.app"
+            BlueprintName = "SarinaAICompanion"
+            ReferencedContainer = "container:SarinaAICompanion.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

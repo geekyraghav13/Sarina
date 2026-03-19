@@ -4,10 +4,12 @@
   <dict>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
+    <key>CFBundleAllowMixedLocalizations</key>
+    <true/>
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>Sarina</string>
+    <string>Sarina AI Companion</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -30,12 +32,6 @@
           <string>com.sarina.app</string>
         </array>
       </dict>
-      <dict>
-        <key>CFBundleURLSchemes</key>
-        <array>
-          <string>com.googleusercontent.apps.1051121433445-rqjvp9kqjdkqvoctr14ac57eilstg0v3</string>
-        </array>
-      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>19</string>
@@ -51,7 +47,7 @@
       <false/>
       <key>NSExceptionDomains</key>
       <dict>
-        <key>sarina-voice-backend-fv2lgy22ja-uc.a.run.app</key>
+        <key>sarina-voice-backend-1051121433445.us-central1.run.app</key>
         <dict>
           <key>NSExceptionAllowsInsecureHTTPLoads</key>
           <false/>

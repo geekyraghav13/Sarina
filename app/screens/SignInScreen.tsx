@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,17 +6,33 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { signInWithGoogle, initializeGoogleSignIn } from '../services/authService';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import {
+  signInWithGoogle,
+  signInWithApple,
+  initializeGoogleSignIn,
+  isAppleSignInAvailable
+} from '../services/authService';
 
 export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
+  const [appleSignInAvailable, setAppleSignInAvailable] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     // Initialize Google Sign-In on mount
     initializeGoogleSignIn();
+
+    // Check if Apple Sign In is available
+    checkAppleSignIn();
   }, []);
+
+  const checkAppleSignIn = async () => {
+    const available = await isAppleSignInAvailable();
+    setAppleSignInAvailable(available);
+  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -48,6 +64,37 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    try {
+      setLoading(true);
+      console.log('🍎 Starting Apple Sign-In...');
+
+      const user = await signInWithApple();
+
+      console.log('✅ Apple Sign-In successful:', user.uid);
+      setLoading(false);
+
+      // Navigation will happen automatically via auth state listener
+      console.log('ℹ️ Waiting for navigation...');
+    } catch (error: any) {
+      console.error('❌ Apple Sign-in error:', error);
+      setLoading(false);
+
+      // Don't show alert if user cancelled
+      if (error.message?.includes('cancelled')) {
+        return;
+      }
+
+      let errorMessage = 'Failed to sign in with Apple. Please try again.';
+
+      if (error.message) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert('Sign In Failed', errorMessage);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -61,15 +108,27 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             <Text style={styles.subtitle}>Your AI Girlfriend Experience</Text>
           </View>
 
-          {/* Sign In Button */}
+          {/* Sign In Buttons */}
           <View style={styles.buttonContainer}>
+            {/* Apple Sign In Button - Show first on iOS */}
+            {appleSignInAvailable && (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={30}
+                style={styles.appleButton}
+                onPress={handleAppleSignIn}
+              />
+            )}
+
+            {/* Google Sign In Button */}
             <TouchableOpacity
-              style={styles.googleButton}
+              style={[styles.googleButton, appleSignInAvailable && styles.googleButtonSpacing]}
               onPress={handleGoogleSignIn}
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color="#000000" />
               ) : (
                 <>
                   <View style={styles.googleIcon}>
@@ -122,6 +181,12 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     alignItems: 'center',
+    width: '100%',
+  },
+  appleButton: {
+    width: '100%',
+    height: 54,
+    marginBottom: 16,
   },
   googleButton: {
     flexDirection: 'row',
@@ -137,6 +202,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  googleButtonSpacing: {
+    marginTop: 0,
   },
   googleIcon: {
     width: 24,
