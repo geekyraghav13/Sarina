@@ -54,10 +54,10 @@ export const initializeIAP = async (): Promise<boolean> => {
   try {
     console.log('🔌 Connecting to IAP...');
 
-    // Add timeout to prevent infinite waiting
+    // Add timeout to prevent infinite waiting (increased to 30s for iOS)
     const connectionPromise = RNIap.initConnection();
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('IAP connection timeout')), 10000)
+      setTimeout(() => reject(new Error('IAP connection timeout')), 30000)
     );
 
     await Promise.race([connectionPromise, timeoutPromise]);
@@ -84,15 +84,17 @@ export const getAvailableSubscriptions = async (): Promise<Subscription[]> => {
   try {
     console.log('📦 Fetching products from store...');
     const productIds = [SUBSCRIPTION_IDS.WEEKLY, SUBSCRIPTION_IDS.YEARLY];
+    console.log('🔍 Product IDs to fetch:', productIds);
+    console.log('📱 Platform:', Platform.OS);
 
     // v14 API: Use fetchProducts with type 'subs' for subscriptions
-    // Add timeout to prevent infinite waiting
+    // Add timeout to prevent infinite waiting (increased to 45s for iOS App Store)
     const fetchPromise = RNIap.fetchProducts({
       skus: productIds,
       type: 'subs'
     });
     const timeoutPromise = new Promise<any>((_, reject) =>
-      setTimeout(() => reject(new Error('Product fetch timeout')), 15000)
+      setTimeout(() => reject(new Error('Product fetch timeout - products may not be configured in App Store Connect yet')), 45000)
     );
 
     const subscriptions = await Promise.race([fetchPromise, timeoutPromise]);
