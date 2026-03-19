@@ -3,7 +3,7 @@
     "name": "Sarina AI Companion",
     "slug": "sarina",
     "owner": "8284",
-    "version": "1.4.6",
+    "version": "1.4.7",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -15,10 +15,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sarina.app",
-      "buildNumber": "25",
+      "buildNumber": "26",
       "appStoreId": "6758547730",
       "config": {
-        "usesNonExemptEncryption": false
+        "usesNonExemptEncryption": false,
+        "googleSignIn": {
+          "reservedClientId": "com.googleusercontent.apps.1051121433445-rqjvp9kqjdkqvoctr14ac57eilstg0v3"
+        }
       },
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Sarina needs access to your microphone for AI voice conversations with your companion.",
@@ -36,7 +39,14 @@
               "NSExceptionMinimumTLSVersion": "TLSv1.2"
             }
           }
-        }
+        },
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.1051121433445-rqjvp9kqjdkqvoctr14ac57eilstg0v3"
+            ]
+          }
+        ]
       }
     },
     "android": {
