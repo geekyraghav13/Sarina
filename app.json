@@ -3,7 +3,7 @@
     "name": "Sarina AI Companion",
     "slug": "sarina",
     "owner": "8284",
-    "version": "1.4.5",
+    "version": "1.4.6",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sarina.app",
-      "buildNumber": "21",
+      "buildNumber": "23",
       "appStoreId": "6758547730",
       "config": {
         "usesNonExemptEncryption": false
@@ -23,7 +23,9 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Sarina needs access to your microphone for AI voice conversations with your companion.",
         "NSSpeechRecognitionUsageDescription": "Sarina uses speech recognition to understand your voice during conversations.",
-        "UIBackgroundModes": ["audio"],
+        "UIBackgroundModes": [
+          "audio"
+        ],
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,
           "NSExceptionDomains": {
@@ -55,7 +57,8 @@
     "plugins": [
       "expo-av",
       "expo-apple-authentication",
-      "./plugins/withPodfileModular"
+      "./plugins/withPodfileModular",
+      "./plugins/withGoogleServiceFile"
     ],
     "extra": {
       "eas": {
