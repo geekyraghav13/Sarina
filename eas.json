@@ -17,7 +17,8 @@
         "buildType": "app-bundle"
       },
       "ios": {
-        "credentialsSource": "remote"
+        "credentialsSource": "remote",
+        "prebuildCommand": "bash eas-hooks/eas-build-pre-install.sh"
       }
     },
     "local": {
