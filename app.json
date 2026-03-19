@@ -54,7 +54,8 @@
     },
     "plugins": [
       "expo-av",
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "./plugins/withPodfileModular"
     ],
     "extra": {
       "eas": {
