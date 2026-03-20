@@ -21,7 +21,7 @@
     <key>CFBundlePackageType</key>
     <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.4.5</string>
+    <string>1.4.8</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleURLTypes</key>
@@ -32,9 +32,14 @@
           <string>com.sarina.app</string>
         </array>
       </dict>
-    </array>
-    <key>CFBundleVersion</key>
-    <string>23</string>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>com.googleusercontent.apps.1051121433445-rqjvp9kqjdkqvoctr14ac57eilstg0v3</string>
+        </array>
+      </dict>
+    </array>    <key>CFBundleVersion</key>
+    <string>28</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSMinimumSystemVersion</key>
