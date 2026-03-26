@@ -4,34 +4,22 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Dimensions,
   ActivityIndicator,
   Alert,
   Platform,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { usePaymentStore } from '../store/paymentStore';
 import {
   logAdImpression,
-  logBeginCheckout,
   logPurchase,
-  logPurchaseFailed,
   logSubscriptionRestored,
-  logPlanSelected,
 } from '../services/firebaseAnalytics';
-import * as SubscriptionService from '../services/subscriptionService';
-import { getCurrentUser } from '../services/authService';
-import { getCreditAllocationForTier } from '../services/creditService';
-import { updateUserSubscriptionREST } from '../services/firestoreRestService';
+import * as RevenueCatService from '../services/revenueCatService';
+import Purchases, { PurchasesOffering } from 'react-native-purchases';
 import { useGirlfriendStore } from '../store/girlfriendStore';
-import { useUserProfile } from '../store/userProfile';
-import { getAuth } from 'firebase/auth';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -41,39 +29,17 @@ interface NewPaywallScreenProps {
   route: NewPaywallScreenRouteProp;
 }
 
-const { width, height } = Dimensions.get('window');
-
-const FEATURES = [
-  { id: '1', text: '15+ AI Girls', icon: '👸' },
-  { id: '2', text: 'Voice Calling', icon: '📞' },
-  { id: '3', text: 'Full Chat History', icon: '🧠' },
-  { id: '4', text: 'No Ads (Pure Experience)', icon: '🚫' },
-];
-
-const BACKGROUND_IMAGE =
-  'https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fakira.jpg?alt=media&token=c46eda7f-d55f-4637-842e-f8538c26b54e';
-
-// Feature flag: Set to true to use mock purchases (for testing without Play Console setup)
-// Set to false to use real IAP (production)
-const USE_MOCK_PURCHASES = false; // Real IAP enabled with react-native-iap
-
-// Use the correct backend URL matching voice call service
-const BACKEND_URL = 'https://sarina-voice-backend-1051121433445.us-central1.run.app';
-
 export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, route }) => {
-  const [selectedPlan, setSelectedPlan] = useState<'weekly' | 'yearly'>('yearly');
-  const [loading, setLoading] = useState(false);
-  const [subscriptions, setSubscriptions] = useState<SubscriptionService.Subscription[]>([]);
-  const [weeklySubscription, setWeeklySubscription] = useState<SubscriptionService.Subscription | null>(null);
-  const [yearlySubscription, setYearlySubscription] = useState<SubscriptionService.Subscription | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [restoring, setRestoring] = useState(false);
+  const [offering, setOffering] = useState<PurchasesOffering | null>(null);
 
   const { setIsPremium, setSubscriptionType } = usePaymentStore();
-  const { profile } = useUserProfile();
+  const { girlfriends } = useGirlfriendStore();
 
-  // NEW: Get navigation params
-  const { characterName, characterImageUrl, callAction, returnScreen } = route.params || {};
+  // Get navigation params
+  const { returnScreen, callAction, characterName, characterImageUrl } = route.params || {};
 
-  // Initialize IAP and load subscriptions
   useEffect(() => {
     logAdImpression({
       ad_platform: 'paywall',
@@ -84,62 +50,33 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
       ad_unit_name: 'premium_subscription_offer',
     });
 
-    initializeSubscriptions();
-
-    // Setup purchase listener (disabled in this build)
-    SubscriptionService.setupPurchaseListener();
-
-    return () => {
-      SubscriptionService.disconnectIAP();
-    };
+    initializePaywall();
   }, []);
 
-  const initializeSubscriptions = async () => {
-    setLoading(true);
+  const initializePaywall = async () => {
     try {
-      // Initialize IAP connection
-      const connected = await SubscriptionService.initializeIAP();
+      setLoading(true);
 
-      if (!connected) {
-        console.error('❌ Failed to connect to IAP - products may not be configured yet');
+      // Get offerings from RevenueCat
+      const offerings = await RevenueCatService.getOfferings();
+
+      if (!offerings || !offerings.current) {
+        console.error('❌ No offerings found');
         Alert.alert(
-          'Store Not Ready',
-          'The subscription store is not configured yet. Please use the app in free mode or contact support.',
+          'Paywall Not Available',
+          'Unable to load subscription options. Please try again later.',
           [{ text: 'OK', onPress: handleClose }]
         );
-        setLoading(false);
         return;
       }
 
-      // Fetch available subscriptions
-      const subs = await SubscriptionService.getAvailableSubscriptions();
-      console.log(`📦 Loaded ${subs.length} subscription products from store`);
-      setSubscriptions(subs);
-
-      // Find weekly and yearly subscriptions
-      const weekly = subs.find((s: any) => s.productId === SubscriptionService.SUBSCRIPTION_IDS.WEEKLY);
-      const yearly = subs.find((s: any) => s.productId === SubscriptionService.SUBSCRIPTION_IDS.YEARLY);
-
-      if (!weekly && !yearly) {
-        console.error('❌ No subscription products found - products not configured in App Store Connect');
-        Alert.alert(
-          'Subscriptions Not Available',
-          'Subscription products are not configured in the App Store yet. Please try again later or contact support.',
-          [{ text: 'OK', onPress: handleClose }]
-        );
-        setLoading(false);
-        return;
-      }
-
-      setWeeklySubscription(weekly || null);
-      setYearlySubscription(yearly || null);
-
-      console.log(`✅ Subscription products loaded successfully`);
+      setOffering(offerings.current);
+      console.log('✅ Paywall loaded with offering:', offerings.current.identifier);
     } catch (error) {
-      console.error('❌ Failed to load subscriptions:', error);
+      console.error('❌ Error loading paywall:', error);
       Alert.alert(
-        'Error Loading Subscriptions',
-        'Unable to load subscription options. Please try again later.',
+        'Error',
+        'Failed to load subscription options. Please try again.',
         [{ text: 'OK', onPress: handleClose }]
       );
     } finally {
@@ -148,244 +85,172 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
   };
 
   const handleClose = () => {
-    // Navigate to return screen (default to Chat)
     const screen = returnScreen || 'Chat';
     navigation.navigate(screen as any, { fromOnboarding: false });
   };
 
-  const handleContinue = async () => {
-    const planValue = selectedPlan === 'weekly' ? 299 : 1299;
-
-    // Log begin checkout
-    await logBeginCheckout(selectedPlan, planValue, 'INR');
-
-    setLoading(true);
-
+  const handleRestorePurchases = async () => {
+    setRestoring(true);
     try {
-      const user = getCurrentUser();
-      if (!user?.uid) {
-        Alert.alert('Error', 'You must be signed in to purchase');
-        setLoading(false);
-        return;
-      }
+      const result = await RevenueCatService.restorePurchases();
 
-      if (USE_MOCK_PURCHASES) {
-        // MOCK PURCHASE FLOW - For testing without Play Console setup
-        console.log('💳 Processing MOCK purchase via REST API...');
-        const creditsToAdd = getCreditAllocationForTier(selectedPlan);
+      await logSubscriptionRestored(result.isPremium || false);
 
-        await updateUserSubscriptionREST(user.uid, selectedPlan, creditsToAdd);
+      if (result.success && result.isPremium) {
+        // Get subscription info
+        const subInfo = await RevenueCatService.getSubscriptionInfo();
 
-        // Update local state
         await setIsPremium(true);
-        setSubscriptionType(selectedPlan);
+        setSubscriptionType(subInfo.tier as any);
 
-        console.log(`✅ MOCK Purchase successful: ${selectedPlan} plan, ${creditsToAdd}s added`);
-
-        showSuccessAndNavigate(creditsToAdd);
-      } else {
-        // REAL IAP FLOW - Production purchase
-        console.log('💳 Processing REAL IAP purchase...');
-
-        const productId = selectedPlan === 'weekly'
-          ? SubscriptionService.SUBSCRIPTION_IDS.WEEKLY
-          : SubscriptionService.SUBSCRIPTION_IDS.YEARLY;
-
-        // Initiate purchase through Play Store
-        const purchaseResult = await SubscriptionService.purchaseSubscription(productId);
-
-        if (!purchaseResult.success) {
-          // User cancelled or error occurred
-          if (purchaseResult.error !== 'Purchase cancelled') {
-            await logPurchaseFailed(selectedPlan, purchaseResult.error || 'Unknown error');
-            Alert.alert('Purchase Failed', purchaseResult.error || 'Failed to complete purchase. Please try again.');
-          }
-          setLoading(false);
-          return;
-        }
-
-        // Purchase successful, now validate with backend
-        console.log('📝 Validating purchase with backend...');
-        const purchase = purchaseResult.purchase;
-
-        // Get Firebase ID token for authentication
-        let idToken: string | undefined;
-        try {
-          const auth = getAuth();
-          if (auth && auth.currentUser) {
-            idToken = await auth.currentUser.getIdToken();
-          }
-        } catch (authError) {
-          console.error('Auth error:', authError);
-          // Continue without backend validation if auth fails
-        }
-
-        if (!idToken) {
-          console.warn('No auth token available, skipping backend validation');
-          // For iOS, we can trust Apple's receipt validation
-          // Just grant the subscription locally
-          await setIsPremium(true);
-          setSubscriptionType(selectedPlan);
-          await logPurchase({
-            transaction_id: purchase.transactionId || 'unknown',
-            value: planValue,
-            currency: 'INR',
-            items: [{
-              item_id: selectedPlan,
-              item_name: `Sarina ${selectedPlan === 'weekly' ? 'Weekly' : 'Yearly'} Plan`,
-              item_category: 'subscription',
-              quantity: 1,
-              price: planValue
-            }]
-          });
-          await SubscriptionService.finishTransaction(purchase);
-          showSuccessAndNavigate(getCreditAllocationForTier(selectedPlan));
-          return;
-        }
-
-        // Send receipt to backend for validation
-        const validationResponse = await fetch(`${BACKEND_URL}/api/validate-purchase`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${idToken}`,
+        Alert.alert('Success', 'Your subscription has been restored!', [
+          {
+            text: 'OK',
+            onPress: () => navigation.reset({
+              index: 0,
+              routes: [{ name: 'MainTabs' }],
+            }),
           },
-          body: JSON.stringify({
-            userId: user.uid,
-            platform: Platform.OS,
-            productId: purchase.productId,
-            purchaseToken: purchase.purchaseToken,
-          }),
-        });
-
-        const validationResult = await validationResponse.json();
-
-        if (!validationResult.success) {
-          console.error('❌ Backend validation failed:', validationResult.error);
-          await logPurchaseFailed(selectedPlan, validationResult.error);
-          Alert.alert('Validation Failed', 'Purchase could not be verified. Please contact support.');
-          setLoading(false);
-          return;
-        }
-
-        console.log('✅ Purchase validated! Credits:', validationResult.creditsAdded);
-
-        // Update local state
-        await setIsPremium(true);
-        setSubscriptionType(selectedPlan);
-
-        // Log successful purchase
-        await logPurchase({
-          transaction_id: purchase.transactionId || 'unknown',
-          value: planValue,
-          currency: 'INR',
-          items: [{
-            item_id: selectedPlan,
-            item_name: `Sarina ${selectedPlan === 'weekly' ? 'Weekly' : 'Yearly'} Plan`,
-            item_category: 'subscription',
-            quantity: 1,
-            price: planValue
-          }]
-        });
-
-        // Finish transaction (important for consumables)
-        await SubscriptionService.finishTransaction(purchase);
-
-        showSuccessAndNavigate(validationResult.creditsAdded);
+        ]);
+      } else {
+        Alert.alert('No Purchases Found', 'No active subscriptions found to restore.');
       }
-    } catch (error: any) {
-      console.error('Purchase failed:', error);
-      await logPurchaseFailed(selectedPlan, error.message || 'Unknown error');
-      Alert.alert('Error', 'Failed to process purchase. Please try again.');
+    } catch (error) {
+      console.error('Restore error:', error);
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
     } finally {
-      setLoading(false);
+      setRestoring(false);
     }
   };
 
-  const showSuccessAndNavigate = (creditsAdded: number) => {
-    Alert.alert(
-      'Success! 🎉',
-      `${selectedPlan === 'weekly' ? 'Weekly' : 'Yearly'} plan activated!\nYou got ${creditsAdded} seconds of voice calling.`,
-      [
-        {
-          text: 'Got it!',
-          onPress: () => {
-            // Navigate to MainTabs (Home screen) after purchase
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'MainTabs' }],
-            });
-          },
-        },
-      ]
+  // If loading, show loading screen
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#EC4899" />
+        <Text style={styles.loadingText}>Loading subscriptions...</Text>
+      </View>
     );
-  };
+  }
 
-  const handleRestorePurchases = async () => {
-    setLoading(true);
-    try {
-      if (USE_MOCK_PURCHASES) {
-        // Mock mode - just check Firestore
-        const status = await SubscriptionService.syncSubscriptionStatus();
-        await logSubscriptionRestored(status?.isPremium || false);
+  // If no offering, show error state
+  if (!offering) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Unable to load subscriptions</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={initializePaywall}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.closeErrorButton} onPress={handleClose}>
+          <Text style={styles.closeErrorText}>Close</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
-        if (status?.isPremium) {
-          await setIsPremium(true);
-          setSubscriptionType(status.subscriptionType || null);
-          Alert.alert('Success', 'Your subscription has been restored!', [
-            {
-              text: 'OK',
-              onPress: () => navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainTabs' }],
-              }),
-            },
-          ]);
-        } else {
-          Alert.alert('No Purchases Found', 'No active subscriptions found to restore.');
-        }
-      } else {
-        // Real IAP mode - restore from Play Store
-        const result = await SubscriptionService.restorePurchases();
+  // Show RevenueCat's Paywall using their presentPaywallIfNeeded
+  return (
+    <View style={styles.container}>
+      {/* Custom header with close button */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+          <Text style={styles.closeIcon}>✕</Text>
+        </TouchableOpacity>
+      </View>
 
-        // Log restoration attempt
-        await logSubscriptionRestored(result.isPremium || false);
+      {/* RevenueCat Paywall Component */}
+      <View style={styles.paywallContainer}>
+        <Purchases.PaywallView
+          offering={offering}
+          displayCloseButton={false}
+          onPurchaseCompleted={async ({ customerInfo }) => {
+            console.log('✅ Purchase completed!');
 
-        if (result.success && result.isPremium && result.purchase) {
-          // Validate the restored purchase with backend
-          const user = getCurrentUser();
-          let idToken: string | undefined;
+            // Get subscription info
+            const subInfo = await RevenueCatService.getSubscriptionInfo();
 
-          try {
-            const auth = getAuth();
-            if (auth && auth.currentUser) {
-              idToken = await auth.currentUser.getIdToken();
-            }
-          } catch (authError) {
-            console.error('Auth error during restore:', authError);
-          }
+            // Update local state
+            await setIsPremium(true);
+            setSubscriptionType(subInfo.tier as any);
 
-          if (idToken && user) {
-            const validationResponse = await fetch(`${BACKEND_URL}/api/validate-purchase`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`,
-              },
-              body: JSON.stringify({
-                userId: user.uid,
-                platform: Platform.OS,
-                productId: result.purchase.productId,
-                purchaseToken: result.purchase.purchaseToken,
-              }),
+            // Log purchase
+            await logPurchase({
+              transaction_id: customerInfo.originalAppUserId,
+              value: subInfo.tier === 'yearly' ? 1299 : 299,
+              currency: 'INR',
+              items: [{
+                item_id: subInfo.tier,
+                item_name: `Sarina ${subInfo.tier === 'weekly' ? 'Weekly' : 'Yearly'} Plan`,
+                item_category: 'subscription',
+                quantity: 1,
+                price: subInfo.tier === 'yearly' ? 1299 : 299,
+              }]
             });
 
-            const validationResult = await validationResponse.json();
+            // If user clicked "Pick" to start a call, navigate to VoiceCall
+            if (callAction === 'pick' && characterName) {
+              // Find the girlfriend by name
+              const girlfriend = girlfriends.find(gf => gf.name === characterName);
 
-            if (validationResult.success) {
+              if (girlfriend) {
+                Alert.alert(
+                  'Success! 🎉',
+                  `${subInfo.tier === 'weekly' ? 'Weekly' : 'Yearly'} plan activated! Starting your call...`,
+                  [
+                    {
+                      text: 'Start Call',
+                      onPress: () => {
+                        navigation.replace('VoiceCall', {
+                          characterName: girlfriend.name,
+                          characterImageUrl: girlfriend.imageUrl || characterImageUrl,
+                          characterId: girlfriend.id,
+                          characterProfile: {
+                            name: girlfriend.name,
+                            personality: girlfriend.personality,
+                            tone: girlfriend.tone,
+                            interests: girlfriend.interests,
+                            appearance: girlfriend.appearance,
+                          },
+                        });
+                      },
+                    },
+                  ]
+                );
+                return;
+              }
+            }
+
+            // Default: Navigate to MainTabs
+            Alert.alert(
+              'Success! 🎉',
+              `${subInfo.tier === 'weekly' ? 'Weekly' : 'Yearly'} plan activated!`,
+              [
+                {
+                  text: 'Got it!',
+                  onPress: () => {
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'MainTabs' }],
+                    });
+                  },
+                },
+              ]
+            );
+          }}
+          onPurchaseCancelled={() => {
+            console.log('⚠️ Purchase cancelled');
+          }}
+          onRestoreCompleted={async ({ customerInfo }) => {
+            console.log('✅ Restore completed!');
+
+            const isPremium = Object.keys(customerInfo.entitlements.active).length > 0;
+
+            if (isPremium) {
+              const subInfo = await RevenueCatService.getSubscriptionInfo();
               await setIsPremium(true);
-              setSubscriptionType(validationResult.subscriptionTier || null);
-              Alert.alert('Success', 'Your purchases have been restored!', [
+              setSubscriptionType(subInfo.tier as any);
+
+              Alert.alert('Success', 'Your subscription has been restored!', [
                 {
                   text: 'OK',
                   onPress: () => navigation.reset({
@@ -394,189 +259,29 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
                   }),
                 },
               ]);
-            } else {
-              Alert.alert('Validation Failed', 'Could not verify your purchase. Please try again.');
             }
-          } else {
-            // No auth token but have purchase - trust Apple's validation
-            await setIsPremium(true);
-            // Derive subscription type from productId
-            const productId = result.purchase?.productId;
-            const subType = productId === SubscriptionService.SUBSCRIPTION_IDS.WEEKLY ? 'weekly' :
-                           productId === SubscriptionService.SUBSCRIPTION_IDS.YEARLY ? 'yearly' : null;
-            setSubscriptionType(subType);
-            Alert.alert('Success', 'Your purchases have been restored!', [
-              {
-                text: 'OK',
-                onPress: () => navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'MainTabs' }],
-                }),
-              },
-            ]);
-          }
-        } else {
-          Alert.alert('No Purchases Found', 'No active subscriptions found to restore.');
-        }
-      }
-    } catch (error) {
-      console.error('Restore error:', error);
-      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+          }}
+          onRestoreFailed={(error) => {
+            console.error('❌ Restore failed:', error);
+            Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+          }}
+        />
+      </View>
 
-  const handlePlanSelect = async (plan: 'weekly' | 'yearly') => {
-    setSelectedPlan(plan);
-    const value = plan === 'weekly' ? 299 : 1299;
-    await logPlanSelected(plan, value);
-  };
-
-  return (
-    <View style={styles.container}>
-      {/* Background Image with fast caching */}
-      <Image
-        source={{ uri: BACKGROUND_IMAGE }}
-        style={styles.backgroundImage}
-        contentFit="cover"
-        cachePolicy="memory-disk"
-        priority="high"
-        placeholder={{ blurhash: 'L48g~o?bM{of~q%MWBj[9FD%ofj[' }}
-        transition={200}
-      />
-
-      {/* Gradient Overlay */}
-      <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.85)', 'rgba(0,0,0,0.98)']}
-        locations={[0, 0.25, 0.6, 0.85]}
-        style={styles.gradientOverlay}
-      >
-        {/* Close Button */}
-        <TouchableOpacity style={styles.closeButton} onPress={handleClose} activeOpacity={0.7}>
-          <BlurView intensity={80} tint="dark" style={styles.closeBlur}>
-            <Text style={styles.closeIcon}>✕</Text>
-          </BlurView>
+      {/* Restore Purchases Button */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.restoreButton}
+          onPress={handleRestorePurchases}
+          disabled={restoring}
+        >
+          {restoring ? (
+            <ActivityIndicator size="small" color="rgba(255, 255, 255, 0.5)" />
+          ) : (
+            <Text style={styles.restoreText}>Restore Purchases</Text>
+          )}
         </TouchableOpacity>
-
-        {/* Main Content - No Scroll, Compact Layout */}
-        <View style={styles.contentContainer}>
-              {/* Title */}
-              <View style={styles.titleContainer}>
-                <Text style={styles.title}>
-                  Unlock All <Text style={styles.titleAccent}>Limits 😍</Text>
-                </Text>
-              </View>
-
-              {/* Features */}
-              <View style={styles.featuresContainer}>
-                {FEATURES.map((feature) => (
-                  <View key={feature.id} style={styles.featureRow}>
-                    <BlurView intensity={40} tint="light" style={styles.featureIconContainer}>
-                      <Text style={styles.featureIcon}>{feature.icon}</Text>
-                    </BlurView>
-                    <Text style={styles.featureText}>{feature.text}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Trust Badge */}
-              <BlurView intensity={20} tint="light" style={styles.trustBadge}>
-                <Text style={styles.checkIcon}>✓</Text>
-                <Text style={styles.trustText}>NO STRINGS ATTACHED • SECURE CHECKOUT</Text>
-              </BlurView>
-
-              {/* Plan Cards */}
-              <View style={styles.plansContainer}>
-                {/* Weekly Plan */}
-                <TouchableOpacity
-                  style={[
-                    styles.planCard,
-                    selectedPlan === 'weekly' && styles.planCardSelected,
-                  ]}
-                  onPress={() => handlePlanSelect('weekly')}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.planLeft}>
-                    <Text style={styles.planTitle}>Weekly Plan</Text>
-                    <Text style={styles.planSubtitle}>per week</Text>
-                  </View>
-                  <View style={styles.planRight}>
-                    <Text style={styles.planPrice}>₹299</Text>
-                    <Text style={styles.planWeekly}>₹299</Text>
-                  </View>
-                </TouchableOpacity>
-
-                {/* Yearly Plan */}
-                <TouchableOpacity
-                  style={[
-                    styles.planCard,
-                    selectedPlan === 'yearly' && styles.planCardSelected,
-                  ]}
-                  onPress={() => handlePlanSelect('yearly')}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.saveBadge}>
-                    <Text style={styles.saveBadgeText}>SAVE 91%</Text>
-                  </View>
-                  <View style={styles.planLeft}>
-                    <Text style={styles.planTitle}>Yearly Plan</Text>
-                    <Text style={styles.planSubtitle}>billed annually</Text>
-                  </View>
-                  <View style={styles.planRight}>
-                    <Text style={styles.planPrice}>₹1299</Text>
-                    <Text style={styles.planWeekly}>₹24.98/week</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-
-              {/* Continue Button */}
-              <TouchableOpacity
-                style={styles.continueButton}
-                onPress={handleContinue}
-                activeOpacity={0.9}
-                disabled={loading}
-              >
-                <LinearGradient
-                  colors={['#EC4899', '#DB2777']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.continueGradient}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <>
-                      <Text style={styles.continueButtonText}>Continue</Text>
-                      <Text style={styles.continueArrow}>→</Text>
-                    </>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-
-              {/* Restore Purchases */}
-              <TouchableOpacity
-                style={styles.restoreButton}
-                onPress={handleRestorePurchases}
-                disabled={loading}
-              >
-                <Text style={styles.restoreText}>Restore Purchases</Text>
-              </TouchableOpacity>
-
-              {/* Footer Links */}
-              <View style={styles.footerLinks}>
-                <TouchableOpacity>
-                  <Text style={styles.footerLink}>TERMS</Text>
-                </TouchableOpacity>
-                <TouchableOpacity>
-                  <Text style={styles.footerLink}>PRIVACY</Text>
-                </TouchableOpacity>
-                <TouchableOpacity>
-                  <Text style={styles.footerLink}>HELP</Text>
-                </TouchableOpacity>
-              </View>
-          </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 };
@@ -586,233 +291,89 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  backgroundImage: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: '100%',
-    height: '100%',
-  },
-  gradientOverlay: {
-    flex: 1,
-  },
-  closeButton: {
+  header: {
     position: 'absolute',
     top: 48,
     left: 24,
     zIndex: 100,
+  },
+  closeButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    overflow: 'hidden',
-  },
-  closeBlur: {
-    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 22,
   },
   closeIcon: {
     fontSize: 24,
     color: 'rgba(255, 255, 255, 0.8)',
     fontWeight: '700',
   },
-  contentContainer: {
+  paywallContainer: {
     flex: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingBottom: 30,
-    alignItems: 'center',
   },
-  titleContainer: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    letterSpacing: -0.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-  titleAccent: {
-    color: '#EC4899',
-    textShadowColor: 'rgba(236, 72, 153, 0.7)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
-  },
-  featuresContainer: {
-    width: '100%',
-    marginBottom: 10,
-    gap: 8,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  featureIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    overflow: 'hidden',
-  },
-  featureIcon: {
-    fontSize: 20,
-  },
-  featureText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.9)',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  trustBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  checkIcon: {
-    fontSize: 14,
-    color: '#10B981',
-  },
-  trustText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: 'rgba(255, 255, 255, 0.4)',
-    letterSpacing: 1.5,
-  },
-  plansContainer: {
-    width: '100%',
-    marginBottom: 12,
-    gap: 10,
-  },
-  planCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 14,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    position: 'relative',
-  },
-  planCardSelected: {
-    backgroundColor: 'rgba(236, 72, 153, 0.2)',
-    borderColor: '#EC4899',
-    shadowColor: '#EC4899',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 25,
-    elevation: 8,
-  },
-  saveBadge: {
+  footer: {
     position: 'absolute',
-    top: -12,
-    right: 16,
-    backgroundColor: '#10B981',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  saveBadgeText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 1.5,
-  },
-  planLeft: {
-    gap: 4,
-  },
-  planTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.95)',
-  },
-  planSubtitle: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.4)',
-  },
-  planRight: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  planPrice: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  planWeekly: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.5)',
-  },
-  continueButton: {
-    width: '100%',
-    height: 56,
-    borderRadius: 14,
-    overflow: 'hidden',
-    marginBottom: 10,
-    shadowColor: '#DB2777',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.5,
-    shadowRadius: 45,
-    elevation: 12,
-  },
-  continueGradient: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
+    bottom: 40,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    gap: 12,
-  },
-  continueButtonText: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
-  continueArrow: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    zIndex: 100,
   },
   restoreButton: {
-    paddingVertical: 8,
-    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
   },
   restoreText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.6)',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000000',
+    padding: 24,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#EC4899',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  closeErrorButton: {
+    paddingVertical: 12,
+  },
+  closeErrorText: {
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.5)',
-  },
-  footerLinks: {
-    flexDirection: 'row',
-    gap: 20,
-  },
-  footerLink: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: 'rgba(255, 255, 255, 0.2)',
-    letterSpacing: 1.5,
   },
 });

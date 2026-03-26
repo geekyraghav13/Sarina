@@ -77,6 +77,9 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
       console.log('🎙️ Initializing voice call...');
       console.log('💎 Premium status:', isPremium);
 
+      // Small delay to ensure all native modules are initialized
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Check if user has premium subscription OR sufficient balance
       // After purchase, isPremium is set immediately but balance might sync later
       if (!isPremium) {
@@ -114,21 +117,41 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
       console.log('✅ User can start call - Premium or sufficient balance');
 
-      // Request audio permissions
+      // Request audio permissions with robust error handling
       try {
+        console.log('🎤 Requesting audio permissions...');
         const { status } = await Audio.requestPermissionsAsync();
+        console.log('🎤 Permission status:', status);
+
         if (status !== 'granted') {
           Alert.alert('Microphone Permission', 'Please allow microphone access to use voice calling.');
+          navigation.goBack();
           return;
         }
 
+        console.log('🎵 Setting audio mode...');
         // Set audio mode for recording
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: true,
           playsInSilentModeIOS: true,
         });
-      } catch (error) {
+        console.log('✅ Audio mode set successfully');
+      } catch (error: any) {
         console.error('❌ Error requesting audio permissions:', error);
+        console.error('❌ Error stack:', error?.stack);
+        console.error('❌ Error message:', error?.message);
+
+        Alert.alert(
+          'Audio Permission Error',
+          'Unable to initialize audio. Please restart the app and try again.',
+          [
+            {
+              text: 'Go Back',
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+        return;
       }
 
       // Connect to WebSocket
