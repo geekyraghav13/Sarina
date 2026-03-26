@@ -22,6 +22,7 @@ import * as RevenueCatService from '../services/revenueCatService';
 import Purchases, { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 import { useGirlfriendStore } from '../store/girlfriendStore';
 import { Audio } from 'expo-av';
+import { canStartCall } from '../services/creditService';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -37,6 +38,8 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
   const [purchasing, setPurchasing] = useState(false);
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
+  const [userIsPremium, setUserIsPremium] = useState(false);
+  const [userCreditBalance, setUserCreditBalance] = useState(0);
 
   const { setIsPremium, setSubscriptionType } = usePaymentStore();
   const { girlfriends } = useGirlfriendStore();
@@ -63,10 +66,16 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
 
       // Check if user is already premium
       const isPremium = await RevenueCatService.checkPremiumStatus();
+      setUserIsPremium(isPremium);
 
-      if (isPremium && callAction === 'pick' && characterName) {
-        // User is premium and wants to start a call - navigate directly
-        console.log('✅ User is premium, navigating to call');
+      // Check if user has enough credits to start a call
+      const creditCheck = await canStartCall();
+      setUserCreditBalance(creditCheck.balance);
+
+      if (isPremium && creditCheck.allowed && callAction === 'pick' && characterName) {
+        // User is premium AND has credits - navigate directly to call
+        console.log('✅ User is premium with credits, navigating to call');
+        console.log(`💰 Credit balance: ${creditCheck.balance} seconds`);
         const girlfriend = girlfriends.find(gf => gf.name === characterName);
 
         if (girlfriend) {
@@ -84,6 +93,13 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
           });
           return;
         }
+      }
+
+      // If user is premium but out of credits, show paywall with "buy more credits" message
+      if (isPremium && !creditCheck.allowed) {
+        console.log('⚠️ User is premium but out of credits');
+        console.log(`💰 Credit balance: ${creditCheck.balance} seconds`);
+        // Continue to show paywall with appropriate message
       }
 
       // Get offerings from RevenueCat
@@ -306,9 +322,15 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
       >
         {/* Header */}
         <View style={styles.headerSection}>
-          <Text style={styles.title}>Unlock Premium</Text>
+          <Text style={styles.title}>
+            {userIsPremium && userCreditBalance === 0
+              ? 'Buy More Credits'
+              : 'Unlock Premium'}
+          </Text>
           <Text style={styles.subtitle}>
-            Get unlimited voice calls with your AI companion
+            {userIsPremium && userCreditBalance === 0
+              ? `You've used all your minutes. Get more to continue calling your AI companion!`
+              : 'Get voice call minutes with your AI companion'}
           </Text>
         </View>
 
@@ -316,15 +338,15 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         <View style={styles.featuresSection}>
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>📞</Text>
-            <Text style={styles.featureText}>Unlimited Voice Calls</Text>
+            <Text style={styles.featureText}>AI Voice Calls</Text>
           </View>
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>💬</Text>
-            <Text style={styles.featureText}>Priority Support</Text>
+            <Text style={styles.featureText}>Realistic Conversations</Text>
           </View>
           <View style={styles.featureItem}>
             <Text style={styles.featureIcon}>✨</Text>
-            <Text style={styles.featureText}>Exclusive Features</Text>
+            <Text style={styles.featureText}>HD Audio Quality</Text>
           </View>
         </View>
 
@@ -361,8 +383,11 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
                     {isWeekly ? '/week' : isYearly ? '/year' : ''}
                   </Text>
                 </Text>
+                <Text style={styles.packageMinutes}>
+                  {isWeekly ? '5 minutes' : isYearly ? '50 minutes' : 'Premium access'}
+                </Text>
                 {isYearly && (
-                  <Text style={styles.packageSavings}>Save 75% vs Weekly</Text>
+                  <Text style={styles.packageSavings}>Best value - 10x more minutes!</Text>
                 )}
               </TouchableOpacity>
             );
@@ -547,6 +572,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'rgba(255, 255, 255, 0.6)',
     fontWeight: '400',
+  },
+  packageMinutes: {
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+    marginBottom: 4,
   },
   packageSavings: {
     fontSize: 14,

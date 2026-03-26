@@ -179,7 +179,7 @@ export const calculateCostPerMinute = (totalSeconds: number, price: number): num
 export const getCreditAllocationForTier = (tier: string): number => {
   switch (tier) {
     case 'weekly':
-      return 60; // 1 minute
+      return 300; // 5 minutes
     case 'yearly':
       return 3000; // 50 minutes
     case 'free':
