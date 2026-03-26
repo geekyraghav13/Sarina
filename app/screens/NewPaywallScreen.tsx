@@ -22,7 +22,7 @@ import * as RevenueCatService from '../services/revenueCatService';
 import Purchases, { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 import { useGirlfriendStore } from '../store/girlfriendStore';
 import { Audio } from 'expo-av';
-import { canStartCall } from '../services/creditService';
+import { canStartCall, getCreditBalance } from '../services/creditService';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -144,6 +144,33 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
     navigation.navigate(screen as any, { fromOnboarding: false });
   };
 
+  /**
+   * Poll credit balance until credits are allocated by backend
+   * Backend needs time to process RevenueCat webhook and allocate credits
+   */
+  const waitForCreditsAllocation = async (maxWaitSeconds: number = 30): Promise<boolean> => {
+    const startTime = Date.now();
+    const pollInterval = 2000; // Poll every 2 seconds
+
+    console.log('⏳ Waiting for backend to allocate credits...');
+
+    while ((Date.now() - startTime) / 1000 < maxWaitSeconds) {
+      const balance = await getCreditBalance();
+      console.log(`💰 Current balance: ${balance} seconds`);
+
+      if (balance > 0) {
+        console.log('✅ Credits allocated! Balance:', balance);
+        return true;
+      }
+
+      // Wait before next poll
+      await new Promise(resolve => setTimeout(resolve, pollInterval));
+    }
+
+    console.warn('⚠️ Timeout waiting for credit allocation');
+    return false;
+  };
+
   const handlePurchase = async () => {
     if (!selectedPackage) {
       Alert.alert('Error', 'Please select a subscription plan.');
@@ -178,6 +205,29 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
           price: subInfo.tier === 'yearly' ? 1299 : 299,
         }]
       });
+
+      // Wait for backend to allocate credits (RevenueCat webhook processing)
+      console.log('⏳ Waiting for backend credit allocation...');
+      const creditsAllocated = await waitForCreditsAllocation(30);
+
+      if (!creditsAllocated) {
+        Alert.alert(
+          'Subscription Activated',
+          'Your subscription is active but credits are still being processed. Please wait a moment and try again.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                navigation.reset({
+                  index: 0,
+                  routes: [{ name: 'MainTabs' }],
+                });
+              },
+            },
+          ]
+        );
+        return;
+      }
 
       // If user clicked "Pick" to start a call, navigate to VoiceCall
       if (callAction === 'pick' && characterName) {
