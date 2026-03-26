@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -18,7 +19,7 @@ import {
   logSubscriptionRestored,
 } from '../services/firebaseAnalytics';
 import * as RevenueCatService from '../services/revenueCatService';
-import Purchases, { PurchasesOffering } from 'react-native-purchases';
+import Purchases, { PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 import { useGirlfriendStore } from '../store/girlfriendStore';
 import { Audio } from 'expo-av';
 
@@ -33,7 +34,9 @@ interface NewPaywallScreenProps {
 export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [restoring, setRestoring] = useState(false);
+  const [purchasing, setPurchasing] = useState(false);
   const [offering, setOffering] = useState<PurchasesOffering | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
 
   const { setIsPremium, setSubscriptionType } = usePaymentStore();
   const { girlfriends } = useGirlfriendStore();
@@ -97,7 +100,17 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
       }
 
       setOffering(offerings.current);
+
+      // Auto-select weekly package by default
+      const packages = offerings.current.availablePackages;
+      const weeklyPackage = packages.find(pkg =>
+        pkg.identifier.toLowerCase().includes('weekly') ||
+        pkg.packageType === 'WEEKLY'
+      );
+      setSelectedPackage(weeklyPackage || packages[0] || null);
+
       console.log('✅ Paywall loaded with offering:', offerings.current.identifier);
+      console.log('📦 Available packages:', packages.map(p => p.identifier));
     } catch (error) {
       console.error('❌ Error loading paywall:', error);
       Alert.alert(
@@ -113,6 +126,108 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
   const handleClose = () => {
     const screen = returnScreen || 'Chat';
     navigation.navigate(screen as any, { fromOnboarding: false });
+  };
+
+  const handlePurchase = async () => {
+    if (!selectedPackage) {
+      Alert.alert('Error', 'Please select a subscription plan.');
+      return;
+    }
+
+    setPurchasing(true);
+    try {
+      console.log('🛒 Purchasing package:', selectedPackage.identifier);
+
+      // Purchase the package using RevenueCat's SDK
+      const purchaseResult = await Purchases.purchasePackage(selectedPackage);
+      console.log('✅ Purchase completed!', purchaseResult);
+
+      // Get subscription info
+      const subInfo = await RevenueCatService.getSubscriptionInfo();
+
+      // Update local state
+      await setIsPremium(true);
+      setSubscriptionType(subInfo.tier as any);
+
+      // Log purchase
+      await logPurchase({
+        transaction_id: purchaseResult.customerInfo.originalAppUserId,
+        value: subInfo.tier === 'yearly' ? 1299 : 299,
+        currency: 'INR',
+        items: [{
+          item_id: subInfo.tier,
+          item_name: `Sarina ${subInfo.tier === 'weekly' ? 'Weekly' : 'Yearly'} Plan`,
+          item_category: 'subscription',
+          quantity: 1,
+          price: subInfo.tier === 'yearly' ? 1299 : 299,
+        }]
+      });
+
+      // If user clicked "Pick" to start a call, navigate to VoiceCall
+      if (callAction === 'pick' && characterName) {
+        const girlfriend = girlfriends.find(gf => gf.name === characterName);
+
+        if (girlfriend) {
+          Alert.alert(
+            'Success! 🎉',
+            `${subInfo.tier === 'weekly' ? 'Weekly' : 'Yearly'} plan activated! Starting your call...`,
+            [
+              {
+                text: 'Start Call',
+                onPress: () => {
+                  navigation.replace('VoiceCall', {
+                    characterName: girlfriend.name,
+                    characterImageUrl: girlfriend.imageUrl || characterImageUrl,
+                    characterId: girlfriend.id,
+                    characterProfile: {
+                      name: girlfriend.name,
+                      personality: girlfriend.personality,
+                      tone: girlfriend.tone,
+                      interests: girlfriend.interests,
+                      appearance: girlfriend.appearance,
+                    },
+                  });
+                },
+              },
+            ]
+          );
+          return;
+        }
+      }
+
+      // Default: Navigate to MainTabs
+      Alert.alert(
+        'Success! 🎉',
+        `${subInfo.tier === 'weekly' ? 'Weekly' : 'Yearly'} plan activated!`,
+        [
+          {
+            text: 'Got it!',
+            onPress: () => {
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'MainTabs' }],
+              });
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.error('❌ Purchase error:', error);
+
+      // Check if user cancelled
+      if (error.userCancelled) {
+        console.log('⚠️ Purchase cancelled by user');
+        return;
+      }
+
+      Alert.alert(
+        'Purchase Failed',
+        error.message || 'Unable to complete purchase. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setPurchasing(false);
+    }
   };
 
   const handleRestorePurchases = async () => {
@@ -174,7 +289,7 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
     );
   }
 
-  // Show RevenueCat's Paywall using their presentPaywallIfNeeded
+  // Custom Paywall UI using RevenueCat data and purchase methods
   return (
     <View style={styles.container}>
       {/* Custom header with close button */}
@@ -184,199 +299,97 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         </TouchableOpacity>
       </View>
 
-      {/* TEMPORARY: Bypass RevenueCat Paywall UI (causes TurboModule crash) */}
-      <View style={styles.paywallContainer}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF', marginBottom: 16, textAlign: 'center' }}>
-            Subscription Required
+      <ScrollView
+        style={styles.paywallContainer}
+        contentContainerStyle={styles.paywallContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.headerSection}>
+          <Text style={styles.title}>Unlock Premium</Text>
+          <Text style={styles.subtitle}>
+            Get unlimited voice calls with your AI companion
           </Text>
-          <Text style={{ fontSize: 16, color: 'rgba(255, 255, 255, 0.7)', marginBottom: 32, textAlign: 'center' }}>
-            Subscribe to Sarina Premium to enjoy unlimited voice calls with your AI companion.
-          </Text>
-          <TouchableOpacity
-            style={{backgroundColor: '#EC4899', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 12, marginBottom: 16 }}
-            onPress={async () => {
-              // Simulate purchase completion for testing
-              console.log('✅ Simulating purchase completion...');
-
-              // Update premium status
-              await setIsPremium(true);
-              setSubscriptionType('weekly');
-
-              // Navigate to voice call
-              const girlfriend = girlfriends.find(gf => gf.name === characterName);
-              if (girlfriend && callAction === 'pick') {
-                navigation.replace('VoiceCall', {
-                  characterName: girlfriend.name,
-                  characterImageUrl: girlfriend.imageUrl || characterImageUrl,
-                  characterId: girlfriend.id,
-                  characterProfile: {
-                    name: girlfriend.name,
-                    personality: girlfriend.personality,
-                    tone: girlfriend.tone,
-                    interests: girlfriend.interests,
-                    appearance: girlfriend.appearance,
-                  },
-                });
-              } else {
-                navigation.navigate('MainTabs' as any);
-              }
-            }}
-          >
-            <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFFFFF' }}>
-              Continue to Call (Test Mode)
-            </Text>
-          </TouchableOpacity>
         </View>
 
-        {/* ORIGINAL CODE BELOW - CRASHES DUE TO RevenueCat UI Component
-        <Purchases.PaywallView
-          offering={offering}
-          displayCloseButton={false}
-          onPurchaseCompleted={async ({ customerInfo }) => {
-            console.log('✅ Purchase completed!');
+        {/* Features */}
+        <View style={styles.featuresSection}>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureIcon}>📞</Text>
+            <Text style={styles.featureText}>Unlimited Voice Calls</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureIcon}>💬</Text>
+            <Text style={styles.featureText}>Priority Support</Text>
+          </View>
+          <View style={styles.featureItem}>
+            <Text style={styles.featureIcon}>✨</Text>
+            <Text style={styles.featureText}>Exclusive Features</Text>
+          </View>
+        </View>
 
-            // Get subscription info
-            const subInfo = await RevenueCatService.getSubscriptionInfo();
+        {/* Subscription Packages */}
+        <View style={styles.packagesSection}>
+          {offering?.availablePackages.map((pkg) => {
+            const isSelected = selectedPackage?.identifier === pkg.identifier;
+            const isWeekly = pkg.identifier.toLowerCase().includes('weekly') || pkg.packageType === 'WEEKLY';
+            const isYearly = pkg.identifier.toLowerCase().includes('yearly') || pkg.packageType === 'ANNUAL';
 
-            // Update local state
-            await setIsPremium(true);
-            setSubscriptionType(subInfo.tier as any);
-
-            // Log purchase
-            await logPurchase({
-              transaction_id: customerInfo.originalAppUserId,
-              value: subInfo.tier === 'yearly' ? 1299 : 299,
-              currency: 'INR',
-              items: [{
-                item_id: subInfo.tier,
-                item_name: `Sarina ${subInfo.tier === 'weekly' ? 'Weekly' : 'Yearly'} Plan`,
-                item_category: 'subscription',
-                quantity: 1,
-                price: subInfo.tier === 'yearly' ? 1299 : 299,
-              }]
-            });
-
-            // If user clicked "Pick" to start a call, navigate to VoiceCall
-            if (callAction === 'pick' && characterName) {
-              // Find the girlfriend by name
-              const girlfriend = girlfriends.find(gf => gf.name === characterName);
-
-              if (girlfriend) {
-                // PRE-REQUEST AUDIO PERMISSIONS BEFORE NAVIGATING
-                // This prevents TurboModule crash in VoiceCallScreen
-                console.log('🎤 Pre-requesting audio permissions before voice call...');
-
-                try {
-                  // Wait a moment for RevenueCat state to settle
-                  await new Promise(resolve => setTimeout(resolve, 500));
-
-                  // Request microphone permissions
-                  const { status } = await Audio.requestPermissionsAsync();
-                  console.log('🎤 Audio permission status:', status);
-
-                  if (status !== 'granted') {
-                    Alert.alert(
-                      'Microphone Permission Required',
-                      'Please allow microphone access to make voice calls with your AI companion.',
-                      [{ text: 'OK', onPress: () => navigation.navigate('MainTabs' as any) }]
-                    );
-                    return;
-                  }
-
-                  // Set audio mode for recording
-                  console.log('🎵 Setting audio mode...');
-                  await Audio.setAudioModeAsync({
-                    allowsRecordingIOS: true,
-                    playsInSilentModeIOS: true,
-                  });
-                  console.log('✅ Audio initialized successfully');
-                } catch (error: any) {
-                  console.error('❌ Error initializing audio:', error);
-                  Alert.alert(
-                    'Audio Setup Error',
-                    'Unable to initialize audio for voice calls. Please restart the app and try again.',
-                    [{ text: 'OK', onPress: () => navigation.navigate('MainTabs' as any) }]
-                  );
-                  return;
-                }
-
-                // Audio is ready - now show success and navigate
-                Alert.alert(
-                  'Success! 🎉',
-                  `${subInfo.tier === 'weekly' ? 'Weekly' : 'Yearly'} plan activated! Starting your call...`,
-                  [
-                    {
-                      text: 'Start Call',
-                      onPress: () => {
-                        navigation.replace('VoiceCall', {
-                          characterName: girlfriend.name,
-                          characterImageUrl: girlfriend.imageUrl || characterImageUrl,
-                          characterId: girlfriend.id,
-                          characterProfile: {
-                            name: girlfriend.name,
-                            personality: girlfriend.personality,
-                            tone: girlfriend.tone,
-                            interests: girlfriend.interests,
-                            appearance: girlfriend.appearance,
-                          },
-                        });
-                      },
-                    },
-                  ]
-                );
-                return;
-              }
-            }
-
-            // Default: Navigate to MainTabs
-            Alert.alert(
-              'Success! 🎉',
-              `${subInfo.tier === 'weekly' ? 'Weekly' : 'Yearly'} plan activated!`,
-              [
-                {
-                  text: 'Got it!',
-                  onPress: () => {
-                    navigation.reset({
-                      index: 0,
-                      routes: [{ name: 'MainTabs' }],
-                    });
-                  },
-                },
-              ]
+            return (
+              <TouchableOpacity
+                key={pkg.identifier}
+                style={[styles.packageCard, isSelected && styles.packageCardSelected]}
+                onPress={() => setSelectedPackage(pkg)}
+                activeOpacity={0.7}
+              >
+                {isYearly && (
+                  <View style={styles.popularBadge}>
+                    <Text style={styles.popularBadgeText}>BEST VALUE</Text>
+                  </View>
+                )}
+                <View style={styles.packageHeader}>
+                  <Text style={styles.packageTitle}>
+                    {isWeekly ? 'Weekly' : isYearly ? 'Yearly' : 'Premium'}
+                  </Text>
+                  <View style={[styles.radioButton, isSelected && styles.radioButtonSelected]}>
+                    {isSelected && <View style={styles.radioButtonInner} />}
+                  </View>
+                </View>
+                <Text style={styles.packagePrice}>
+                  {pkg.product.priceString}
+                  <Text style={styles.packagePeriod}>
+                    {isWeekly ? '/week' : isYearly ? '/year' : ''}
+                  </Text>
+                </Text>
+                {isYearly && (
+                  <Text style={styles.packageSavings}>Save 75% vs Weekly</Text>
+                )}
+              </TouchableOpacity>
             );
-          }}
-          onPurchaseCancelled={() => {
-            console.log('⚠️ Purchase cancelled');
-          }}
-          onRestoreCompleted={async ({ customerInfo }) => {
-            console.log('✅ Restore completed!');
+          })}
+        </View>
 
-            const isPremium = Object.keys(customerInfo.entitlements.active).length > 0;
+        {/* Subscribe Button */}
+        <TouchableOpacity
+          style={[styles.subscribeButton, purchasing && styles.subscribeButtonDisabled]}
+          onPress={handlePurchase}
+          disabled={purchasing || !selectedPackage}
+          activeOpacity={0.8}
+        >
+          {purchasing ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.subscribeButtonText}>
+              Continue with {selectedPackage?.identifier.toLowerCase().includes('weekly') ? 'Weekly' : 'Yearly'}
+            </Text>
+          )}
+        </TouchableOpacity>
 
-            if (isPremium) {
-              const subInfo = await RevenueCatService.getSubscriptionInfo();
-              await setIsPremium(true);
-              setSubscriptionType(subInfo.tier as any);
-
-              Alert.alert('Success', 'Your subscription has been restored!', [
-                {
-                  text: 'OK',
-                  onPress: () => navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'MainTabs' }],
-                  }),
-                },
-              ]);
-            }
-          }}
-          onRestoreFailed={(error) => {
-            console.error('❌ Restore failed:', error);
-            Alert.alert('Error', 'Failed to restore purchases. Please try again.');
-          }}
-        />
-        */}
-      </View>
+        {/* Terms */}
+        <Text style={styles.termsText}>
+          Auto-renewable subscription. Cancel anytime in App Store settings.
+        </Text>
+      </ScrollView>
 
       {/* Restore Purchases Button */}
       <View style={styles.footer}>
@@ -424,6 +437,142 @@ const styles = StyleSheet.create({
   },
   paywallContainer: {
     flex: 1,
+  },
+  paywallContent: {
+    paddingTop: 100,
+    paddingHorizontal: 24,
+    paddingBottom: 120,
+  },
+  headerSection: {
+    marginBottom: 32,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.7)',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  featuresSection: {
+    marginBottom: 32,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  featureIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  featureText: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+  },
+  packagesSection: {
+    marginBottom: 24,
+  },
+  packageCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    position: 'relative',
+  },
+  packageCardSelected: {
+    borderColor: '#EC4899',
+    backgroundColor: 'rgba(236, 72, 153, 0.1)',
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 16,
+    backgroundColor: '#EC4899',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  popularBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+  packageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  packageTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  radioButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: '#EC4899',
+  },
+  radioButtonInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#EC4899',
+  },
+  packagePrice: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  packagePeriod: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontWeight: '400',
+  },
+  packageSavings: {
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '600',
+  },
+  subscribeButton: {
+    backgroundColor: '#EC4899',
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  subscribeButtonDisabled: {
+    opacity: 0.6,
+  },
+  subscribeButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  termsText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
+    textAlign: 'center',
+    lineHeight: 18,
   },
   footer: {
     position: 'absolute',
