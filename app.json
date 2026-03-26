@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sarina.app",
-      "buildNumber": "33",
+      "buildNumber": "34",
       "appStoreId": "6758547730",
       "config": {
         "usesNonExemptEncryption": false,

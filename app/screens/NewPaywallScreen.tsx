@@ -184,8 +184,52 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         </TouchableOpacity>
       </View>
 
-      {/* RevenueCat Paywall Component */}
+      {/* TEMPORARY: Bypass RevenueCat Paywall UI (causes TurboModule crash) */}
       <View style={styles.paywallContainer}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: '#FFFFFF', marginBottom: 16, textAlign: 'center' }}>
+            Subscription Required
+          </Text>
+          <Text style={{ fontSize: 16, color: 'rgba(255, 255, 255, 0.7)', marginBottom: 32, textAlign: 'center' }}>
+            Subscribe to Sarina Premium to enjoy unlimited voice calls with your AI companion.
+          </Text>
+          <TouchableOpacity
+            style={{backgroundColor: '#EC4899', paddingHorizontal: 32, paddingVertical: 16, borderRadius: 12, marginBottom: 16 }}
+            onPress={async () => {
+              // Simulate purchase completion for testing
+              console.log('✅ Simulating purchase completion...');
+
+              // Update premium status
+              await setIsPremium(true);
+              setSubscriptionType('weekly');
+
+              // Navigate to voice call
+              const girlfriend = girlfriends.find(gf => gf.name === characterName);
+              if (girlfriend && callAction === 'pick') {
+                navigation.replace('VoiceCall', {
+                  characterName: girlfriend.name,
+                  characterImageUrl: girlfriend.imageUrl || characterImageUrl,
+                  characterId: girlfriend.id,
+                  characterProfile: {
+                    name: girlfriend.name,
+                    personality: girlfriend.personality,
+                    tone: girlfriend.tone,
+                    interests: girlfriend.interests,
+                    appearance: girlfriend.appearance,
+                  },
+                });
+              } else {
+                navigation.navigate('MainTabs' as any);
+              }
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFFFFF' }}>
+              Continue to Call (Test Mode)
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ORIGINAL CODE BELOW - CRASHES DUE TO RevenueCat UI Component
         <Purchases.PaywallView
           offering={offering}
           displayCloseButton={false}
@@ -331,6 +375,7 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
             Alert.alert('Error', 'Failed to restore purchases. Please try again.');
           }}
         />
+        */}
       </View>
 
       {/* Restore Purchases Button */}
