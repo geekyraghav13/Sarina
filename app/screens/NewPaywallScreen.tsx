@@ -20,6 +20,7 @@ import {
 import * as RevenueCatService from '../services/revenueCatService';
 import Purchases, { PurchasesOffering } from 'react-native-purchases';
 import { useGirlfriendStore } from '../store/girlfriendStore';
+import { Audio } from 'expo-av';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -218,6 +219,45 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
               const girlfriend = girlfriends.find(gf => gf.name === characterName);
 
               if (girlfriend) {
+                // PRE-REQUEST AUDIO PERMISSIONS BEFORE NAVIGATING
+                // This prevents TurboModule crash in VoiceCallScreen
+                console.log('🎤 Pre-requesting audio permissions before voice call...');
+
+                try {
+                  // Wait a moment for RevenueCat state to settle
+                  await new Promise(resolve => setTimeout(resolve, 500));
+
+                  // Request microphone permissions
+                  const { status } = await Audio.requestPermissionsAsync();
+                  console.log('🎤 Audio permission status:', status);
+
+                  if (status !== 'granted') {
+                    Alert.alert(
+                      'Microphone Permission Required',
+                      'Please allow microphone access to make voice calls with your AI companion.',
+                      [{ text: 'OK', onPress: () => navigation.navigate('MainTabs' as any) }]
+                    );
+                    return;
+                  }
+
+                  // Set audio mode for recording
+                  console.log('🎵 Setting audio mode...');
+                  await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: true,
+                    playsInSilentModeIOS: true,
+                  });
+                  console.log('✅ Audio initialized successfully');
+                } catch (error: any) {
+                  console.error('❌ Error initializing audio:', error);
+                  Alert.alert(
+                    'Audio Setup Error',
+                    'Unable to initialize audio for voice calls. Please restart the app and try again.',
+                    [{ text: 'OK', onPress: () => navigation.navigate('MainTabs' as any) }]
+                  );
+                  return;
+                }
+
+                // Audio is ready - now show success and navigate
                 Alert.alert(
                   'Success! 🎉',
                   `${subInfo.tier === 'weekly' ? 'Weekly' : 'Yearly'} plan activated! Starting your call...`,

@@ -117,27 +117,36 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
       console.log('✅ User can start call - Premium or sufficient balance');
 
-      // Request audio permissions with robust error handling
+      // Check if audio permissions are already granted
+      // (they should be granted in PaywallScreen before navigating here)
       try {
-        console.log('🎤 Requesting audio permissions...');
-        const { status } = await Audio.requestPermissionsAsync();
-        console.log('🎤 Permission status:', status);
+        console.log('🎤 Checking audio permissions...');
+        const { status: currentStatus } = await Audio.getPermissionsAsync();
+        console.log('🎤 Current permission status:', currentStatus);
 
-        if (status !== 'granted') {
-          Alert.alert('Microphone Permission', 'Please allow microphone access to use voice calling.');
-          navigation.goBack();
-          return;
+        if (currentStatus !== 'granted') {
+          console.log('⚠️ Audio permissions not pre-granted, requesting now...');
+          const { status } = await Audio.requestPermissionsAsync();
+          console.log('🎤 Permission status:', status);
+
+          if (status !== 'granted') {
+            Alert.alert('Microphone Permission', 'Please allow microphone access to use voice calling.');
+            navigation.goBack();
+            return;
+          }
+
+          console.log('🎵 Setting audio mode...');
+          // Set audio mode for recording
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: true,
+            playsInSilentModeIOS: true,
+          });
+          console.log('✅ Audio mode set successfully');
+        } else {
+          console.log('✅ Audio permissions already granted, skipping initialization');
         }
-
-        console.log('🎵 Setting audio mode...');
-        // Set audio mode for recording
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
-        console.log('✅ Audio mode set successfully');
       } catch (error: any) {
-        console.error('❌ Error requesting audio permissions:', error);
+        console.error('❌ Error checking audio permissions:', error);
         console.error('❌ Error stack:', error?.stack);
         console.error('❌ Error message:', error?.message);
 

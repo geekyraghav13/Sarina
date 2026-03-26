@@ -13,6 +13,7 @@ const cors = require('cors');
 const GeminiClient = require('./geminiClient');
 const creditManager = require('./creditManager');
 const iapValidator = require('./iapValidator');
+const revenueCatWebhook = require('./revenueCatWebhook');
 
 // ==================== CONFIGURATION ====================
 
@@ -146,6 +147,40 @@ app.post('/api/validate-purchase', async (req, res) => {
     }
   } catch (error) {
     console.error('Error validating purchase:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// RevenueCat webhook endpoint
+app.post('/api/revenuecat-webhook', async (req, res) => {
+  try {
+    console.log('📨 RevenueCat webhook received');
+
+    // Optional: Verify webhook signature (add secret to env if needed)
+    const webhookSecret = process.env.REVENUECAT_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const isValid = revenueCatWebhook.verifyWebhookSignature(req, webhookSecret);
+      if (!isValid) {
+        return res.status(401).json({ error: 'Invalid webhook signature' });
+      }
+    }
+
+    // Process the webhook event
+    const result = await revenueCatWebhook.processRevenueCatWebhook(req.body.event);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: result.message,
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error || 'Webhook processing failed',
+      });
+    }
+  } catch (error) {
+    console.error('Error processing RevenueCat webhook:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

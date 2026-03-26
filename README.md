@@ -1,11 +1,13 @@
-# Sarina AI - AI Girlfriend Companion (Android)
+# Sarina AI - AI Girlfriend Companion
 
-An immersive Android app with 20 unique AI characters, real conversations, voice calling, and beautiful UI.
+An immersive mobile app with 20 unique AI characters, real conversations, voice calling, and beautiful UI.
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)
-![Status](https://img.shields.io/badge/status-production%20ready-success.svg)
-![Platform](https://img.shields.io/badge/platform-Android-green.svg)
+![Version](https://img.shields.io/badge/version-1.4.8-blue.svg)
+![iOS Build](https://img.shields.io/badge/iOS%20Build-31-blue.svg)
+![Status](https://img.shields.io/badge/status-production-success.svg)
+![Platform](https://img.shields.io/badge/platform-iOS%20%2B%20Android-green.svg)
 ![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-orange.svg)
+![RevenueCat](https://img.shields.io/badge/RevenueCat-Integrated-purple.svg)
 
 ---
 
@@ -52,9 +54,14 @@ npx expo run:android
 
 ## Documentation
 
+### iOS Builds
+- **[docs/ios-builds/](./docs/ios-builds/)** - All iOS build documentation
+- **[BUILD_31_REVENUECAT_INTEGRATION.md](./docs/ios-builds/BUILD_31_REVENUECAT_INTEGRATION.md)** - Latest build with RevenueCat
+
 ### Essential Guides
-1. **DEPLOYMENT_GUIDE.md** - Complete deployment instructions with Google Cloud Secret Manager
-2. **FIRESTORE_SCHEMA.md** - Firestore database structure and security rules
+1. **[docs/README.md](./docs/README.md)** - Complete project documentation
+2. **DEPLOYMENT_GUIDE.md** - Deployment instructions with Google Cloud
+3. **FIRESTORE_SCHEMA.md** - Firestore database structure and security rules
 
 ### Legal
 - **PRIVACY_POLICY.md** - Privacy policy
@@ -76,10 +83,12 @@ npx expo run:android
 - Cloud Functions (credit resets)
 - OpenRouter AI (chat)
 - Gemini 2.0 Flash (voice)
+- RevenueCat (subscriptions & IAP)
 
 **Monitoring:**
 - Sentry (crash reporting)
 - Firebase Analytics
+- RevenueCat Dashboard
 
 **Payments:**
 - Google Play In-App Purchases

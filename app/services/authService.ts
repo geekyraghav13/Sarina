@@ -16,6 +16,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Platform } from 'react-native';
 import { getDocumentREST, createUserDocumentREST } from './firestoreRestService';
+import * as RevenueCatService from './revenueCatService';
 
 // Configure Google Sign-In
 // Web Client ID from Firebase Console (google-services.json)
@@ -64,6 +65,11 @@ export const signInWithGoogle = async (): Promise<User> => {
     const user = userCredential.user;
 
     console.log('✅ Google Sign-In successful:', user.uid);
+
+    // Log in user to RevenueCat
+    RevenueCatService.loginRevenueCatUser(user.uid).catch((error) => {
+      console.warn('⚠️ Could not log in to RevenueCat:', error.message);
+    });
 
     // Initialize user document in Firestore (non-blocking)
     // Don't let Firestore errors block authentication
@@ -131,6 +137,9 @@ const initializeUserDocument = async (
  */
 export const signOut = async () => {
   try {
+    // Log out from RevenueCat
+    await RevenueCatService.logoutRevenueCatUser();
+
     await GoogleSignin.revokeAccess();
     await GoogleSignin.signOut();
     await firebaseSignOut(auth);
@@ -214,6 +223,11 @@ export const signInWithApple = async (): Promise<User> => {
     const user = userCredential.user;
 
     console.log('✅ Apple Sign-In successful:', user.uid);
+
+    // Log in user to RevenueCat
+    RevenueCatService.loginRevenueCatUser(user.uid).catch((error) => {
+      console.warn('⚠️ Could not log in to RevenueCat:', error.message);
+    });
 
     // Update user profile with Apple user info if available
     if (credential.fullName) {
