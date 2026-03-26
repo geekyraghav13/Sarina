@@ -108,34 +108,15 @@ export const IncomingCallScreen: React.FC<IncomingCallScreenProps> = ({
     Vibration.cancel();
     setHasSeenCall(true);
 
-    // Check if user is premium
-    if (isPremium) {
-      // Premium users can call directly
-      const girlfriend = girlfriends.find(gf => gf.name === characterName);
-
-      if (girlfriend) {
-        navigation.navigate('VoiceCall', {
-          characterName: girlfriend.name,
-          characterImageUrl: girlfriend.imageUrl || characterImageUrl,
-          characterId: girlfriend.id,
-          characterProfile: {
-            name: girlfriend.name,
-            personality: girlfriend.personality,
-            tone: girlfriend.tone,
-            interests: girlfriend.interests,
-            appearance: girlfriend.appearance,
-          },
-        });
-      }
-    } else {
-      // Non-premium users see paywall
-      navigation.replace('Paywall', {
-        characterName,
-        characterImageUrl,
-        callAction: 'pick', // User wants to start call
-        returnScreen: 'Chat', // Where to go after cancel
-      });
-    }
+    // ALWAYS show paywall - it will check premium status and handle navigation
+    // Non-premium: Show paywall to purchase
+    // Premium: RevenueCat paywall will auto-navigate to call
+    navigation.replace('Paywall', {
+      characterName,
+      characterImageUrl,
+      callAction: 'pick', // User wants to start call
+      returnScreen: 'Chat', // Where to go after cancel
+    });
   };
 
   const handleDecline = () => {

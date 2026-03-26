@@ -57,6 +57,31 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
     try {
       setLoading(true);
 
+      // Check if user is already premium
+      const isPremium = await RevenueCatService.checkPremiumStatus();
+
+      if (isPremium && callAction === 'pick' && characterName) {
+        // User is premium and wants to start a call - navigate directly
+        console.log('✅ User is premium, navigating to call');
+        const girlfriend = girlfriends.find(gf => gf.name === characterName);
+
+        if (girlfriend) {
+          navigation.replace('VoiceCall', {
+            characterName: girlfriend.name,
+            characterImageUrl: girlfriend.imageUrl || characterImageUrl,
+            characterId: girlfriend.id,
+            characterProfile: {
+              name: girlfriend.name,
+              personality: girlfriend.personality,
+              tone: girlfriend.tone,
+              interests: girlfriend.interests,
+              appearance: girlfriend.appearance,
+            },
+          });
+          return;
+        }
+      }
+
       // Get offerings from RevenueCat
       const offerings = await RevenueCatService.getOfferings();
 
