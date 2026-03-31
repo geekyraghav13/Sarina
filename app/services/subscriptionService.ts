@@ -3,7 +3,7 @@ import { logPurchase } from './firebaseAnalytics';
 import { Platform } from 'react-native';
 import { getCurrentUser } from './authService';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { firestore } from '../config/firebase';
 import * as RNIap from 'react-native-iap';
 
 // Product IDs - Android uses your Google Play Console IDs
@@ -214,7 +214,7 @@ export const checkPremiumStatus = async (): Promise<boolean> => {
     }
 
     // Check Firestore for subscription status
-    const userDocRef = doc(db, 'users', user.uid);
+    const userDocRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
 
     if (!userDoc.exists()) {
@@ -242,7 +242,7 @@ export const syncSubscriptionStatus = async () => {
     const user = getCurrentUser();
     if (!user?.uid) return;
 
-    const userDocRef = doc(db, 'users', user.uid);
+    const userDocRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
 
     if (userDoc.exists()) {

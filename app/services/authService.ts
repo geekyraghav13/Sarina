@@ -19,14 +19,20 @@ import { getDocumentREST, createUserDocumentREST } from './firestoreRestService'
 import * as RevenueCatService from './revenueCatService';
 
 // Configure Google Sign-In
-// Web Client ID from Firebase Console (google-services.json)
+// Web Client ID from Firebase Console (for backend authentication)
 const WEB_CLIENT_ID = '1051121433445-8sehc92iuvth1aq4ej5fb8452pcf61mt.apps.googleusercontent.com';
 
 // iOS Client ID from Firebase Console (GoogleService-Info.plist)
 const IOS_CLIENT_ID = '1051121433445-rqjvp9kqjdkqvoctr14ac57eilstg0v3.apps.googleusercontent.com';
 
+// Android OAuth Client ID from Firebase Console (for com.x8284.katrina)
+// This is auto-configured via google-services.json, but we keep it for reference
+const ANDROID_CLIENT_ID = '1051121433445-io8chm2slotm86u652ug9i7022th6hau.apps.googleusercontent.com';
+
 /**
  * Initialize Google Sign-In
+ * Note: Android OAuth client is auto-configured from google-services.json
+ * We only need to specify webClientId for Firebase Authentication
  */
 export const initializeGoogleSignIn = () => {
   GoogleSignin.configure({

@@ -7,13 +7,13 @@ import Purchases, {
 import { Platform } from 'react-native';
 import { getCurrentUser } from './authService';
 import { doc, updateDoc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../config/firebase';
+import { firestore } from '../config/firebase';
 import { logPurchase } from './firebaseAnalytics';
 
 // RevenueCat API Keys
 const REVENUECAT_API_KEYS = {
   ios: 'appl_cGMSHwaYbbRwdhOiEgBPbOPykYP',
-  android: 'appl_cGMSHwaYbbRwdhOiEgBPbOPykYP', // Replace with Android key if different
+  android: 'goog_qBISvlOBwMSdZDaSmkawISvXGII', // Android key for com.x8284.katrina
 };
 
 export interface RevenueCatPackageInfo {
@@ -161,8 +161,22 @@ export const restorePurchases = async (): Promise<PurchaseResult> => {
 
     if (isPremium) {
       console.log('✅ Purchases restored successfully');
-      // Don't add credits on restore, just sync subscription status
-      await syncCustomerInfoToFirestore(customerInfo, false);
+
+      // Check if user has 0 credits - if so, treat as new purchase to allocate credits
+      const user = getCurrentUser();
+      let shouldAllocateCredits = false;
+
+      if (user?.uid) {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const currentBalance = userDoc.exists() ? (userDoc.data()?.voice_balance_seconds || 0) : 0;
+
+        if (currentBalance === 0) {
+          console.log('⚠️ User has premium but 0 credits - allocating credits');
+          shouldAllocateCredits = true;
+        }
+      }
+
+      await syncCustomerInfoToFirestore(customerInfo, shouldAllocateCredits);
 
       return {
         success: true,
@@ -206,8 +220,12 @@ export const checkPremiumStatus = async (): Promise<boolean> => {
       return false;
     }
 
-    const isPremium = Object.keys(customerInfo.entitlements.active).length > 0;
-    console.log('✅ Premium status:', isPremium);
+    // Check both entitlements AND active subscriptions as fallback
+    const hasActiveEntitlements = Object.keys(customerInfo.entitlements.active).length > 0;
+    const hasActiveSubscriptions = customerInfo.activeSubscriptions && customerInfo.activeSubscriptions.length > 0;
+
+    const isPremium = hasActiveEntitlements || hasActiveSubscriptions;
+    console.log('✅ Premium status:', isPremium, '(entitlements:', hasActiveEntitlements, ', subscriptions:', hasActiveSubscriptions, ')');
 
     return isPremium;
   } catch (error) {
@@ -217,7 +235,7 @@ export const checkPremiumStatus = async (): Promise<boolean> => {
 };
 
 // Sync RevenueCat customer info to Firestore
-const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, isNewPurchase: boolean = false): Promise<void> => {
+export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, isNewPurchase: boolean = false): Promise<void> => {
   try {
     const user = getCurrentUser();
     if (!user?.uid) {
@@ -225,10 +243,11 @@ const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, isNewPurc
       return;
     }
 
-    const userDocRef = doc(db, 'users', user.uid);
+    const userDocRef = doc(firestore, 'users', user.uid);
 
-    // Check if user has any active entitlements
+    // Check if user has any active entitlements OR active subscriptions
     const hasActiveEntitlement = Object.keys(customerInfo.entitlements.active).length > 0;
+    const hasActiveSubscriptions = customerInfo.activeSubscriptions && customerInfo.activeSubscriptions.length > 0;
 
     let subscriptionTier = 'free';
     let expirationDate = null;
@@ -249,6 +268,32 @@ const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, isNewPurc
       }
 
       expirationDate = activeEntitlement.expirationDate;
+    } else if (hasActiveSubscriptions) {
+      // Fallback: Use active subscriptions if no entitlements
+      const firstActiveSubscription = customerInfo.activeSubscriptions[0];
+      productId = firstActiveSubscription;
+      originalTransactionId = customerInfo.originalAppUserId;
+
+      console.log('⚠️ Using active subscription as fallback (no entitlements):', productId);
+
+      // Determine subscription tier based on product ID
+      if (productId.includes('weekly')) {
+        subscriptionTier = 'weekly';
+      } else if (productId.includes('yearly') || productId.includes('annual')) {
+        subscriptionTier = 'yearly';
+      }
+
+      // Try to get expiration from subscriptions
+      if (customerInfo.allPurchaseDates && customerInfo.allPurchaseDates[productId]) {
+        // For active subscriptions, we can't get exact expiration easily
+        // Set expiration to 1 year from now for yearly, 1 week for weekly
+        const purchaseDate = new Date(customerInfo.allPurchaseDates[productId]);
+        if (subscriptionTier === 'yearly') {
+          expirationDate = new Date(purchaseDate.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
+        } else if (subscriptionTier === 'weekly') {
+          expirationDate = new Date(purchaseDate.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        }
+      }
     }
 
     // Get current user data
@@ -297,7 +342,7 @@ const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, isNewPurc
 
         // Log the credit transaction in Firestore
         const { collection, addDoc } = await import('firebase/firestore');
-        await addDoc(collection(db, 'credit_transactions'), {
+        await addDoc(collection(firestore, 'credit_transactions'), {
           userId: user.uid,
           type: 'subscription',
           amount_seconds: creditsToAdd,

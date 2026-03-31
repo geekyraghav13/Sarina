@@ -7,6 +7,7 @@ import { AppNavigator } from './app/navigation/AppNavigator';
 import { initializeAnalytics, logAppOpen } from './app/services/firebaseAnalytics';
 import { usePaymentStore } from './app/store/paymentStore';
 import * as RevenueCatService from './app/services/revenueCatService';
+import Purchases from 'react-native-purchases';
 
 // Keep splash screen visible while loading
 SplashScreen.preventAutoHideAsync();
@@ -39,6 +40,33 @@ export default function App() {
           ]);
 
           console.log('✅ RevenueCat initialized successfully');
+
+          // Set up customer info listener to auto-sync purchases to Firestore
+          Purchases.addCustomerInfoUpdateListener(async (customerInfo) => {
+            console.log('🔔 RevenueCat customer info updated!');
+            console.log('Entitlements:', JSON.stringify(customerInfo.entitlements.active));
+            console.log('Active Subscriptions:', JSON.stringify(customerInfo.activeSubscriptions));
+
+            // Check if user has active subscription
+            const hasActiveEntitlements = Object.keys(customerInfo.entitlements.active).length > 0;
+            const hasActiveSubscriptions = customerInfo.activeSubscriptions && customerInfo.activeSubscriptions.length > 0;
+
+            console.log('Has entitlements:', hasActiveEntitlements, 'Has subscriptions:', hasActiveSubscriptions);
+
+            if (hasActiveEntitlements || hasActiveSubscriptions) {
+              console.log('🔄 Active subscription detected, syncing to Firestore...');
+              // Sync to Firestore with isNewPurchase = true to allocate credits
+              await RevenueCatService.syncCustomerInfoToFirestore(customerInfo, true);
+
+              // Update local state
+              const subInfo = await RevenueCatService.getSubscriptionInfo();
+              usePaymentStore.getState().setIsPremium(true);
+              usePaymentStore.getState().setSubscriptionType(subInfo.tier as any);
+              console.log('✅ Subscription synced:', subInfo.tier);
+            } else {
+              console.log('⚠️ No active subscription found in listener');
+            }
+          });
 
           // Check premium status from RevenueCat
           const isPremium = await RevenueCatService.checkPremiumStatus();

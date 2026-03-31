@@ -18,6 +18,7 @@ import { useVoiceCall, CallState } from '../services/voiceCallService';
 import { getCurrentUser } from '../services/authService';
 import { canStartCall } from '../services/creditService';
 import { usePaymentStore } from '../store/paymentStore';
+import * as RevenueCatService from '../services/revenueCatService';
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 
@@ -75,47 +76,49 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   useEffect(() => {
     const initializeCall = async () => {
       console.log('🎙️ Initializing voice call...');
-      console.log('💎 Premium status:', isPremium);
+      console.log('💎 Premium status from store:', isPremium);
 
       // Small delay to ensure all native modules are initialized
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Check if user has premium subscription OR sufficient balance
-      // After purchase, isPremium is set immediately but balance might sync later
-      if (!isPremium) {
-        // Only check balance if not premium
-        console.log('💰 Checking credit balance...');
-        const balanceCheck = await canStartCall();
+      // Check credit balance - this is the primary check now
+      console.log('💰 Checking credit balance...');
+      const balanceCheck = await canStartCall();
+      console.log('💰 Balance check result:', {
+        allowed: balanceCheck.allowed,
+        balance: balanceCheck.balance,
+        message: balanceCheck.message
+      });
 
-        if (!balanceCheck.allowed) {
-          console.warn('❌ Insufficient balance:', balanceCheck.message);
-          Alert.alert(
-            'Insufficient Balance',
-            balanceCheck.message || 'You need at least 10 seconds to start a call.',
-            [
-              {
-                text: 'Purchase More',
-                onPress: () => {
-                  navigation.replace('Paywall', {
-                    characterName,
-                    characterImageUrl,
-                    callAction: 'pick',
-                    returnScreen: 'Chat',
-                  });
-                },
+      // If user doesn't have enough credits, redirect to paywall
+      if (!balanceCheck.allowed) {
+        console.warn('❌ Insufficient credits:', balanceCheck.message);
+        Alert.alert(
+          'Insufficient Credits',
+          balanceCheck.message || 'You need at least 10 seconds to start a call. Purchase a subscription to get more credits!',
+          [
+            {
+              text: 'Get More Credits',
+              onPress: () => {
+                navigation.replace('Paywall', {
+                  characterName,
+                  characterImageUrl,
+                  callAction: 'pick',
+                  returnScreen: 'Chat',
+                });
               },
-              {
-                text: 'Cancel',
-                onPress: () => navigation.goBack(),
-                style: 'cancel',
-              },
+            },
+            {
+              text: 'Cancel',
+              onPress: () => navigation.goBack(),
+              style: 'cancel',
+            },
           ]
         );
         return;
-        }
       }
 
-      console.log('✅ User can start call - Premium or sufficient balance');
+      console.log('✅ User has sufficient credits to start call:', balanceCheck.balance, 'seconds');
 
       // Check if audio permissions are already granted
       // (they should be granted in PaywallScreen before navigating here)
