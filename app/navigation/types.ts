@@ -28,6 +28,12 @@ export type RootStackParamList = {
     callAction?: 'pick' | 'decline'; // NEW: Why user is seeing paywall
     returnScreen?: string; // NEW: Where to go on cancel
   };
+  CustomCreditsPaywall: {
+    characterName?: string;
+    characterImageUrl?: string;
+    callAction?: 'pick' | 'decline';
+    returnScreen?: string;
+  };
   VoiceCall: {
     characterName: string;
     characterImageUrl?: string;

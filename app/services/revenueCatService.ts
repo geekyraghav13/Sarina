@@ -387,6 +387,142 @@ export const logoutRevenueCatUser = async (): Promise<void> => {
   }
 };
 
+// Sync consumable purchase to Firestore (for credit packs)
+export const syncConsumablePurchaseToFirestore = async (customerInfo: CustomerInfo): Promise<void> => {
+  try {
+    const user = getCurrentUser();
+    if (!user?.uid) {
+      console.warn('⚠️ No user authenticated, skipping Firestore sync');
+      return;
+    }
+
+    const userDocRef = doc(firestore, 'users', user.uid);
+
+    // Get all non-subscription purchases (consumables)
+    const allPurchaseIds = customerInfo.nonSubscriptionTransactions || [];
+
+    if (allPurchaseIds.length === 0) {
+      console.log('ℹ️ No consumable purchases found');
+      return;
+    }
+
+    // Get the most recent purchase
+    const latestPurchase = allPurchaseIds[allPurchaseIds.length - 1];
+    const productId = latestPurchase.productIdentifier;
+    const transactionId = latestPurchase.transactionIdentifier;
+
+    console.log('🛒 Processing consumable purchase:', productId, 'Transaction:', transactionId);
+
+    // Get current user data to check if this transaction was already processed
+    const userDoc = await getDoc(userDocRef);
+    const userData = userDoc.exists() ? userDoc.data() : {};
+    const lastTransactionId = userData?.last_consumable_transaction_id;
+
+    // Prevent duplicate processing
+    if (transactionId === lastTransactionId) {
+      console.log('ℹ️ Transaction already processed, skipping');
+      return;
+    }
+
+    // Determine credits based on product ID
+    let creditsToAdd = 0;
+    if (productId.includes('10min') || productId.includes('10_min')) {
+      creditsToAdd = 600; // 10 minutes = 600 seconds
+    }
+
+    if (creditsToAdd > 0) {
+      const currentBalance = userData?.voice_balance_seconds || 0;
+
+      await updateDoc(userDocRef, {
+        voice_balance_seconds: currentBalance + creditsToAdd,
+        last_consumable_transaction_id: transactionId,
+        last_consumable_purchase_date: serverTimestamp(),
+      });
+
+      console.log(`💰 Added ${creditsToAdd}s credits for consumable purchase`);
+
+      // Log the credit transaction
+      const { collection, addDoc } = await import('firebase/firestore');
+      await addDoc(collection(firestore, 'credit_transactions'), {
+        userId: user.uid,
+        type: 'consumable',
+        amount_seconds: creditsToAdd,
+        product_id: productId,
+        transaction_id: transactionId,
+        timestamp: serverTimestamp(),
+        metadata: {
+          source: 'revenuecat',
+        },
+      });
+
+      console.log('✅ Firestore synced with consumable purchase');
+    } else {
+      console.warn('⚠️ Unknown consumable product:', productId);
+    }
+  } catch (error) {
+    console.error('❌ Error syncing consumable purchase to Firestore:', error);
+  }
+};
+
+// Purchase credits product directly (bypass RevenueCat Paywall UI)
+export const purchaseCreditsProduct = async (): Promise<PurchaseResult> => {
+  try {
+    console.log('💳 Initiating credits purchase...');
+
+    // Get offerings to find the credits product
+    const offerings = await getOfferings();
+
+    if (!offerings?.all?.Credits) {
+      console.error('❌ Credits offering not found');
+      return {
+        success: false,
+        error: 'Credits offering not available',
+      };
+    }
+
+    const creditsOffering = offerings.all.Credits;
+    const packages = creditsOffering.availablePackages;
+
+    if (!packages || packages.length === 0) {
+      console.error('❌ No credits packages found');
+      return {
+        success: false,
+        error: 'No credits packages available',
+      };
+    }
+
+    // Get the first package (10 minutes)
+    const creditsPackage = packages[0];
+    console.log('💳 Purchasing credits package:', creditsPackage.product.identifier);
+
+    // Purchase using RevenueCat SDK directly
+    const { customerInfo } = await Purchases.purchasePackage(creditsPackage);
+
+    console.log('✅ Credits purchase successful!');
+
+    // Sync consumable purchase to Firestore
+    await syncConsumablePurchaseToFirestore(customerInfo);
+
+    return {
+      success: true,
+      customerInfo,
+    };
+  } catch (error: any) {
+    console.error('❌ Credits purchase error:', error);
+
+    // Handle user cancellation
+    if (error.userCancelled) {
+      console.log('⚠️ User cancelled purchase');
+      return { success: false, error: 'Purchase cancelled' };
+    }
+
+    return {
+      success: false,
+      error: error.message || 'Purchase failed',
+    };
+  }
+};
+
 // Get subscription info for display
 export const getSubscriptionInfo = async (): Promise<{
   tier: string;

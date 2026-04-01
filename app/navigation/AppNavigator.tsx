@@ -20,6 +20,7 @@ import { ChatSettingsScreen } from '../screens/ChatSettingsScreen';
 import { IncomingCallScreen } from '../screens/IncomingCallScreen';
 import { VoiceCallScreen } from '../screens/VoiceCallScreen';
 import { NewPaywallScreen } from '../screens/NewPaywallScreen';
+import { CustomCreditsPaywallScreen } from '../screens/CustomCreditsPaywallScreen';
 import { ReportScreen } from '../screens/ReportScreen';
 import { BottomTabNavigator } from './BottomTabNavigator';
 import { RootStackParamList } from './types';
@@ -150,6 +151,14 @@ export const AppNavigator: React.FC = () => {
               }}
             />
             <Stack.Screen
+              name="CustomCreditsPaywall"
+              component={CustomCreditsPaywallScreen}
+              options={{
+                presentation: 'transparentModal',
+                cardStyleInterpolator: CardStyleInterpolators.forFadeFromCenter,
+              }}
+            />
+            <Stack.Screen
               name="VoiceCall"
               component={VoiceCallScreen}
               options={{
@@ -182,6 +191,14 @@ export const AppNavigator: React.FC = () => {
             <Stack.Screen
               name="Paywall"
               component={NewPaywallScreen}
+              options={{
+                presentation: 'transparentModal',
+                cardStyleInterpolator: CardStyleInterpolators.forFadeFromCenter,
+              }}
+            />
+            <Stack.Screen
+              name="CustomCreditsPaywall"
+              component={CustomCreditsPaywallScreen}
               options={{
                 presentation: 'transparentModal',
                 cardStyleInterpolator: CardStyleInterpolators.forFadeFromCenter,

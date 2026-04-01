@@ -67,42 +67,74 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
 
       // User doesn't have enough credits, show paywall to purchase more
       console.log('⚠️ Not enough credits, showing paywall. Current balance:', creditCheck.balance, 'seconds');
+
+      // Check if user has an active subscription
+      const isPremium = await RevenueCatService.checkPremiumStatus();
+
       setLoading(false);
-      presentRevenueCatPaywall();
+
+      // Show different paywall based on subscription status
+      if (isPremium) {
+        // User has subscription but ran out of credits - show custom credits screen
+        console.log('✅ Premium status: true - Navigating to custom credits paywall');
+        navigation.replace('CustomCreditsPaywall', {
+          returnScreen,
+          callAction,
+          characterName,
+          characterImageUrl,
+        });
+      } else {
+        // User has no subscription - show main subscription paywall
+        console.log('✅ Premium status: false - Showing main subscription paywall');
+        presentRevenueCatPaywall('Main');
+      }
     } catch (error) {
       console.error('❌ Error checking credits:', error);
       setLoading(false);
-      presentRevenueCatPaywall();
+      presentRevenueCatPaywall('Main');
     }
   };
 
-  const presentRevenueCatPaywall = async () => {
+  const presentRevenueCatPaywall = async (offeringType: 'Main' | 'Credits' = 'Main') => {
     try {
-      console.log('🎨 Presenting RevenueCat Paywall with offering: Main');
+      console.log('🎨 Presenting RevenueCat Paywall with offering:', offeringType);
       setPaywallVisible(true);
 
       // Present the paywall using RevenueCat's native UI
-      // This will use the offering associated with the "premium" entitlement
-      const result = await RevenueCatUI.presentPaywall({
-        requiredEntitlementIdentifier: 'premium',
-      });
+      // For Main offering: use "premium" entitlement (subscriptions)
+      // For Credits offering: use specific offering identifier for consumables
+      let paywallOptions;
+
+      if (offeringType === 'Credits') {
+        // Show credits paywall (consumable purchases)
+        paywallOptions = {
+          offering: 'Credits', // This must match your RevenueCat Dashboard offering identifier
+        };
+      } else {
+        // Show main subscription paywall
+        paywallOptions = {
+          requiredEntitlementIdentifier: 'premium',
+        };
+      }
+
+      const result = await RevenueCatUI.presentPaywall(paywallOptions);
 
       console.log('📊 Paywall result:', result);
 
-      handlePaywallResult(result);
+      handlePaywallResult(result, offeringType);
     } catch (error) {
       console.error('❌ Error presenting paywall:', error);
       setPaywallVisible(false);
 
       Alert.alert(
         'Error',
-        'Unable to load subscription options. Please try again.',
+        'Unable to load purchase options. Please try again.',
         [{ text: 'OK', onPress: handleClose }]
       );
     }
   };
 
-  const handlePaywallResult = async (result: PAYWALL_RESULT) => {
+  const handlePaywallResult = async (result: PAYWALL_RESULT, offeringType: 'Main' | 'Credits' = 'Main') => {
     setPaywallVisible(false);
 
     switch (result) {
@@ -117,13 +149,19 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         const customerInfo = await RevenueCatService.getCustomerInfo();
         if (customerInfo) {
           console.log('🔄 Syncing customer info to Firestore...');
-          // Force sync with isNewPurchase = true to allocate credits
-          await RevenueCatService.syncCustomerInfoToFirestore(customerInfo, true);
+
+          if (offeringType === 'Credits') {
+            // Consumable purchase - add credits directly
+            await RevenueCatService.syncConsumablePurchaseToFirestore(customerInfo);
+          } else {
+            // Subscription purchase - sync as before
+            await RevenueCatService.syncCustomerInfoToFirestore(customerInfo, true);
+          }
         }
 
         // Update local state
         const subInfo = await RevenueCatService.getSubscriptionInfo();
-        setIsPremium(true);
+        setIsPremium(subInfo.isPremium);
         setSubscriptionType(subInfo.tier as any);
 
         // If user was trying to make a call, navigate to call screen
