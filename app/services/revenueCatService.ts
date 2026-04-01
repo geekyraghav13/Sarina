@@ -237,17 +237,24 @@ export const checkPremiumStatus = async (): Promise<boolean> => {
 // Sync RevenueCat customer info to Firestore
 export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, isNewPurchase: boolean = false): Promise<void> => {
   try {
+    console.log('🔄 [CREDIT SYNC] Starting syncCustomerInfoToFirestore...');
+    console.log('🔄 [CREDIT SYNC] isNewPurchase:', isNewPurchase);
+
     const user = getCurrentUser();
     if (!user?.uid) {
-      console.warn('⚠️ No user authenticated, skipping Firestore sync');
+      console.warn('⚠️ [CREDIT SYNC] No user authenticated, skipping Firestore sync');
       return;
     }
 
+    console.log('🔄 [CREDIT SYNC] User ID:', user.uid);
     const userDocRef = doc(firestore, 'users', user.uid);
 
     // Check if user has any active entitlements OR active subscriptions
     const hasActiveEntitlement = Object.keys(customerInfo.entitlements.active).length > 0;
     const hasActiveSubscriptions = customerInfo.activeSubscriptions && customerInfo.activeSubscriptions.length > 0;
+
+    console.log('🔄 [CREDIT SYNC] hasActiveEntitlement:', hasActiveEntitlement);
+    console.log('🔄 [CREDIT SYNC] hasActiveSubscriptions:', hasActiveSubscriptions);
 
     let subscriptionTier = 'free';
     let expirationDate = null;
@@ -260,12 +267,17 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
       productId = activeEntitlement.productIdentifier;
       originalTransactionId = customerInfo.originalAppUserId;
 
+      console.log('🔄 [CREDIT SYNC] Product ID from entitlement:', productId);
+      console.log('🔄 [CREDIT SYNC] Transaction ID:', originalTransactionId);
+
       // Determine subscription tier based on product ID
       if (productId.includes('weekly')) {
         subscriptionTier = 'weekly';
       } else if (productId.includes('yearly') || productId.includes('annual')) {
         subscriptionTier = 'yearly';
       }
+
+      console.log('🔄 [CREDIT SYNC] Detected tier:', subscriptionTier);
 
       expirationDate = activeEntitlement.expirationDate;
     } else if (hasActiveSubscriptions) {
@@ -274,7 +286,7 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
       productId = firstActiveSubscription;
       originalTransactionId = customerInfo.originalAppUserId;
 
-      console.log('⚠️ Using active subscription as fallback (no entitlements):', productId);
+      console.log('⚠️ [CREDIT SYNC] Using active subscription as fallback (no entitlements):', productId);
 
       // Determine subscription tier based on product ID
       if (productId.includes('weekly')) {
@@ -282,6 +294,8 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
       } else if (productId.includes('yearly') || productId.includes('annual')) {
         subscriptionTier = 'yearly';
       }
+
+      console.log('🔄 [CREDIT SYNC] Detected tier from subscription:', subscriptionTier);
 
       // Try to get expiration from subscriptions
       if (customerInfo.allPurchaseDates && customerInfo.allPurchaseDates[productId]) {
@@ -300,7 +314,13 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
     const userDoc = await getDoc(userDocRef);
     const userData = userDoc.exists() ? userDoc.data() : {};
     const currentTier = userData?.subscription_tier || 'free';
+    const currentBalance = userData?.voice_balance_seconds || 0;
     const lastTransactionId = userData?.last_transaction_id;
+
+    console.log('🔄 [CREDIT SYNC] Current Firestore data:');
+    console.log('   - Current tier:', currentTier);
+    console.log('   - Current balance:', currentBalance, 'seconds');
+    console.log('   - Last transaction ID:', lastTransactionId);
 
     // Update Firestore
     const updateData: any = {
@@ -324,21 +344,29 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
                             (currentTier === 'free' && subscriptionTier !== 'free') ||
                             (originalTransactionId && originalTransactionId !== lastTransactionId);
 
+    console.log('🔄 [CREDIT SYNC] Should add credits?', shouldAddCredits);
+    console.log('   - isNewPurchase:', isNewPurchase);
+    console.log('   - Tier change (free → paid):', currentTier === 'free' && subscriptionTier !== 'free');
+    console.log('   - Different transaction:', originalTransactionId && originalTransactionId !== lastTransactionId);
+
     if (shouldAddCredits && subscriptionTier !== 'free') {
-      const currentBalance = userData?.voice_balance_seconds || 0;
       let creditsToAdd = 0;
 
       if (subscriptionTier === 'weekly') {
-        creditsToAdd = 60; // 60 seconds for weekly
+        creditsToAdd = 60; // 60 seconds (1 minute) for weekly
       } else if (subscriptionTier === 'yearly') {
-        creditsToAdd = 3000; // 3000 seconds for yearly
+        creditsToAdd = 3000; // 3000 seconds (50 minutes) for yearly
       }
+
+      console.log(`💰 [CREDIT SYNC] Credits to add: ${creditsToAdd}s for ${subscriptionTier} subscription`);
+      console.log(`💰 [CREDIT SYNC] Current balance: ${currentBalance}s`);
+      console.log(`💰 [CREDIT SYNC] New balance will be: ${currentBalance + creditsToAdd}s`);
 
       if (creditsToAdd > 0) {
         updateData.voice_balance_seconds = currentBalance + creditsToAdd;
         updateData.last_transaction_id = originalTransactionId;
 
-        console.log(`💰 Adding ${creditsToAdd}s credits for ${subscriptionTier} subscription`);
+        console.log(`✅ [CREDIT SYNC] Adding ${creditsToAdd}s credits for ${subscriptionTier} subscription`);
 
         // Log the credit transaction in Firestore
         const { collection, addDoc } = await import('firebase/firestore');
@@ -354,16 +382,20 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
             originalTransactionId,
           },
         });
+
+        console.log('✅ [CREDIT SYNC] Credit transaction logged to Firestore');
       }
     } else {
-      console.log('ℹ️ Skipping credit addition (already processed or restore)');
+      console.log('ℹ️ [CREDIT SYNC] Skipping credit addition (already processed or restore)');
     }
 
+    console.log('🔄 [CREDIT SYNC] Updating Firestore with data:', updateData);
     await updateDoc(userDocRef, updateData);
 
-    console.log('✅ Firestore synced with subscription:', subscriptionTier);
+    console.log('✅ [CREDIT SYNC] Firestore synced with subscription:', subscriptionTier);
+    console.log('✅ [CREDIT SYNC] Final balance in Firestore:', updateData.voice_balance_seconds || currentBalance, 'seconds');
   } catch (error) {
-    console.error('❌ Error syncing to Firestore:', error);
+    console.error('❌ [CREDIT SYNC] Error syncing to Firestore:', error);
   }
 };
 
@@ -390,19 +422,24 @@ export const logoutRevenueCatUser = async (): Promise<void> => {
 // Sync consumable purchase to Firestore (for credit packs)
 export const syncConsumablePurchaseToFirestore = async (customerInfo: CustomerInfo): Promise<void> => {
   try {
+    console.log('🛒 [CONSUMABLE SYNC] Starting syncConsumablePurchaseToFirestore...');
+
     const user = getCurrentUser();
     if (!user?.uid) {
-      console.warn('⚠️ No user authenticated, skipping Firestore sync');
+      console.warn('⚠️ [CONSUMABLE SYNC] No user authenticated, skipping Firestore sync');
       return;
     }
 
+    console.log('🛒 [CONSUMABLE SYNC] User ID:', user.uid);
     const userDocRef = doc(firestore, 'users', user.uid);
 
     // Get all non-subscription purchases (consumables)
     const allPurchaseIds = customerInfo.nonSubscriptionTransactions || [];
 
+    console.log('🛒 [CONSUMABLE SYNC] Total consumable transactions:', allPurchaseIds.length);
+
     if (allPurchaseIds.length === 0) {
-      console.log('ℹ️ No consumable purchases found');
+      console.log('ℹ️ [CONSUMABLE SYNC] No consumable purchases found');
       return;
     }
 
@@ -411,16 +448,23 @@ export const syncConsumablePurchaseToFirestore = async (customerInfo: CustomerIn
     const productId = latestPurchase.productIdentifier;
     const transactionId = latestPurchase.transactionIdentifier;
 
-    console.log('🛒 Processing consumable purchase:', productId, 'Transaction:', transactionId);
+    console.log('🛒 [CONSUMABLE SYNC] Latest purchase:');
+    console.log('   - Product ID:', productId);
+    console.log('   - Transaction ID:', transactionId);
 
     // Get current user data to check if this transaction was already processed
     const userDoc = await getDoc(userDocRef);
     const userData = userDoc.exists() ? userDoc.data() : {};
+    const currentBalance = userData?.voice_balance_seconds || 0;
     const lastTransactionId = userData?.last_consumable_transaction_id;
+
+    console.log('🛒 [CONSUMABLE SYNC] Current Firestore data:');
+    console.log('   - Current balance:', currentBalance, 'seconds');
+    console.log('   - Last consumable transaction ID:', lastTransactionId);
 
     // Prevent duplicate processing
     if (transactionId === lastTransactionId) {
-      console.log('ℹ️ Transaction already processed, skipping');
+      console.log('ℹ️ [CONSUMABLE SYNC] Transaction already processed, skipping');
       return;
     }
 
@@ -430,8 +474,11 @@ export const syncConsumablePurchaseToFirestore = async (customerInfo: CustomerIn
       creditsToAdd = 600; // 10 minutes = 600 seconds
     }
 
+    console.log('🛒 [CONSUMABLE SYNC] Credits to add:', creditsToAdd, 'seconds');
+
     if (creditsToAdd > 0) {
-      const currentBalance = userData?.voice_balance_seconds || 0;
+      console.log(`💰 [CONSUMABLE SYNC] Current balance: ${currentBalance}s`);
+      console.log(`💰 [CONSUMABLE SYNC] New balance will be: ${currentBalance + creditsToAdd}s`);
 
       await updateDoc(userDocRef, {
         voice_balance_seconds: currentBalance + creditsToAdd,
@@ -439,7 +486,7 @@ export const syncConsumablePurchaseToFirestore = async (customerInfo: CustomerIn
         last_consumable_purchase_date: serverTimestamp(),
       });
 
-      console.log(`💰 Added ${creditsToAdd}s credits for consumable purchase`);
+      console.log(`✅ [CONSUMABLE SYNC] Added ${creditsToAdd}s credits for consumable purchase`);
 
       // Log the credit transaction
       const { collection, addDoc } = await import('firebase/firestore');
@@ -455,12 +502,14 @@ export const syncConsumablePurchaseToFirestore = async (customerInfo: CustomerIn
         },
       });
 
-      console.log('✅ Firestore synced with consumable purchase');
+      console.log('✅ [CONSUMABLE SYNC] Credit transaction logged to Firestore');
+      console.log('✅ [CONSUMABLE SYNC] Firestore synced with consumable purchase');
+      console.log('✅ [CONSUMABLE SYNC] Final balance in Firestore:', currentBalance + creditsToAdd, 'seconds');
     } else {
-      console.warn('⚠️ Unknown consumable product:', productId);
+      console.warn('⚠️ [CONSUMABLE SYNC] Unknown consumable product:', productId);
     }
   } catch (error) {
-    console.error('❌ Error syncing consumable purchase to Firestore:', error);
+    console.error('❌ [CONSUMABLE SYNC] Error syncing consumable purchase to Firestore:', error);
   }
 };
 

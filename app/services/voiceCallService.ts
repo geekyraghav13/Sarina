@@ -327,14 +327,23 @@ export const useVoiceCall = (): VoiceCallHookReturn => {
         break;
 
       case 'call_ended':
-        console.log('📴 Call ended:', data?.reason || 'Unknown reason');
+        const endReason = data?.reason || 'credits_depleted';
+        const endMessage = data?.message || 'Your credits have ended';
+        console.log('📴 Call ended - Reason:', endReason);
+        console.log('📴 Call ended - Message:', endMessage);
+        console.log('📴 Call ended - Full data:', JSON.stringify(data));
+        console.log('📴 onCutOffRef.current exists:', !!onCutOffRef.current);
+
         setState(CallState.READY);
 
-        // Handle out of credits (CUT_OFF event)
-        if (data && data.reason === 'out_of_credits') {
-          if (onCutOffRef.current) {
-            onCutOffRef.current(data.message || 'Out of credits');
-          }
+        // ALWAYS trigger cutoff callback when call ends - regardless of reason
+        // This ensures the user sees the "Out of Credits" alert
+        if (onCutOffRef.current) {
+          console.log('🔔 Triggering cutoff callback with message:', endMessage);
+          onCutOffRef.current(endMessage);
+        } else {
+          console.error('❌ CRITICAL: onCutOffRef.current is null - callback was not set!');
+          console.error('❌ This means the user will NOT see the "Out of Credits" alert!');
         }
         break;
 

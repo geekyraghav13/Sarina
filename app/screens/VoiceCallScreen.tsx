@@ -170,17 +170,41 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
       await connect();
 
       // Set cutoff callback
-      setOnCutOff((reason) => {
+      setOnCutOff(async (reason) => {
         console.log('📵 Call cut off:', reason);
+        console.log('💎 Checking premium status for paywall navigation...');
+
+        // Check premium status to determine which paywall to show
+        const premium = await RevenueCatService.checkPremiumStatus();
+        console.log('💎 Premium status result:', premium);
+
         Alert.alert(
-          'Time Limit Reached! ⏱️',
-          `Your voice call time has ended. All your voice minutes have been used up.\n\nPurchase more minutes to continue talking with ${characterName}!`,
+          'Out of Credits! ⏱️',
+          `Your voice call credits have ended.\n\nPurchase more credits to continue talking with ${characterName}!`,
           [
             {
-              text: 'Buy More Minutes',
+              text: 'Buy More Credits',
               onPress: () => {
                 disconnect();
-                navigation.replace('Paywall', { characterName, characterImageUrl });
+
+                // Navigate to appropriate paywall based on premium status
+                if (premium) {
+                  console.log('💎 Premium user - Navigating to CustomCreditsPaywall');
+                  navigation.replace('CustomCreditsPaywall', {
+                    characterName,
+                    characterImageUrl,
+                    callAction: 'pick',
+                    returnScreen: 'Chat',
+                  });
+                } else {
+                  console.log('💎 Non-premium user - Navigating to Paywall');
+                  navigation.replace('Paywall', {
+                    characterName,
+                    characterImageUrl,
+                    callAction: 'pick',
+                    returnScreen: 'Chat',
+                  });
+                }
               },
               style: 'default',
             },
