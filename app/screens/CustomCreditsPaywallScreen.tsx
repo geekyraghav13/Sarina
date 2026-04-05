@@ -142,8 +142,14 @@ export const CustomCreditsPaywallScreen: React.FC<CustomCreditsPaywallProps> = (
   };
 
   const handleClose = () => {
-    const screen = returnScreen || 'Chat';
-    navigation.navigate(screen as any, { fromOnboarding: false });
+    // Use goBack() to properly dismiss modal
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // Fallback to navigating to Chat if can't go back
+      const screen = returnScreen || 'Chat';
+      navigation.navigate(screen as any, { fromOnboarding: false });
+    }
   };
 
   if (loading && !productInfo) {

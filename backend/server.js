@@ -10,11 +10,6 @@ const { WebSocketServer } = require('ws');
 const admin = require('firebase-admin');
 const cors = require('cors');
 
-const GeminiClient = require('./geminiClient');
-const creditManager = require('./creditManager');
-const iapValidator = require('./iapValidator');
-const revenueCatWebhook = require('./revenueCatWebhook');
-
 // ==================== CONFIGURATION ====================
 
 const PORT = process.env.PORT || 8080;
@@ -25,7 +20,7 @@ if (!GEMINI_API_KEY) {
   process.exit(1);
 }
 
-// Initialize Firebase Admin SDK
+// Initialize Firebase Admin SDK FIRST (before requiring modules that use it)
 try {
   admin.initializeApp({
     credential: admin.credential.cert({
@@ -39,6 +34,12 @@ try {
   console.error('❌ Failed to initialize Firebase Admin SDK:', error);
   process.exit(1);
 }
+
+// Require modules that depend on Firebase AFTER initialization
+const GeminiClient = require('./geminiClient');
+const creditManager = require('./creditManager');
+const iapValidator = require('./iapValidator');
+const revenueCatWebhook = require('./revenueCatWebhook');
 
 // Initialize Gemini Client
 const geminiClient = new GeminiClient(GEMINI_API_KEY);

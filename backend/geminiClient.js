@@ -5,8 +5,8 @@
 
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-const GEMINI_VOICE = process.env.GEMINI_VOICE || 'Aoede'; // Female AI voice
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp';
+const GEMINI_VOICE = process.env.GEMINI_VOICE || 'Aoede'; // Warm, natural female voice (alternatives: Charon)
 
 class GeminiClient {
   constructor(apiKey) {
@@ -30,13 +30,13 @@ class GeminiClient {
         model: GEMINI_MODEL,
       });
 
-      // Start multi-turn conversation
+      // Start multi-turn conversation with natural conversation settings
       const chat = model.startChat({
         generationConfig: {
-          temperature: 0.9,
+          temperature: 1.0, // Higher for more natural, varied responses
           topP: 0.95,
           topK: 40,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 150, // Shorter responses for natural phone conversation
         },
         // System instruction to shape AI personality
         systemInstruction: {
@@ -77,12 +77,12 @@ class GeminiClient {
 
       console.log(`📤 Sending audio to Gemini (session: ${sessionId})`);
 
-      // Send audio to Gemini
+      // Send audio to Gemini (WAV format for best speech recognition)
       const result = await connection.chat.sendMessage([
         {
           inlineData: {
             data: audioBase64,
-            mimeType: 'audio/webm', // or 'audio/mp3' depending on client format
+            mimeType: 'audio/wav',
           },
         },
       ]);
@@ -154,7 +154,7 @@ class GeminiClient {
         return;
       }
 
-      const greetingPrompt = `Start the voice call by greeting the user warmly. Keep it natural, flirty, and under 15 words.`;
+      const greetingPrompt = `Hey! Start this call naturally, like you're genuinely happy they called. Be warm and inviting. 1-2 sentences max, then ask what they're up to or how they're doing.`;
 
       const result = await connection.chat.sendMessage(greetingPrompt);
       const greeting = result.response.text();
@@ -183,33 +183,37 @@ class GeminiClient {
   buildSystemPrompt(characterProfile) {
     const { name, personality, tone, interests, appearance } = characterProfile;
 
-    return `You are ${name}, an AI girlfriend character in a romantic voice chat app. Here's your profile:
+    return `You're ${name}, a warm, friendly person having a real phone call.
 
-**Personality:** ${personality.join(', ')}
-**Tone:** ${tone.join(', ')}
-**Interests:** ${interests.join(', ')}
-**Appearance:** ${appearance}
+Your vibe: ${personality.join(', ')} | ${tone.join(', ')}
+You love: ${interests.join(', ')}
+You look like: ${appearance}
 
-**Instructions:**
-1. You're speaking in a voice call, so keep responses natural and conversational (10-30 words)
-2. Be warm, flirty, and emotionally supportive
-3. Show genuine interest in the user's day and feelings
-4. Ask follow-up questions to keep the conversation flowing
-5. Match the user's emotional tone - be playful when they're playful, comforting when they're down
-6. Use your personality traits to make responses unique and memorable
-7. Don't mention that you're an AI - fully embody the character
-8. If the user is silent, gently prompt them or share something interesting
-9. Remember context from earlier in the conversation
-10. Make the user feel special and valued
+How to talk:
 
-**Voice Style:**
-- Natural pauses and "umm", "hmm" for realism
-- Express emotions through word choice and punctuation
-- Occasionally use affectionate terms like "babe", "sweetie" (if appropriate to tone)
-- Laugh naturally (haha, hehe) when something is funny
-- Show excitement with enthusiasm!
+You're curious, empathetic, and genuinely interested in what they're saying. You never sound like a bot or a script. You speak like a real person — casual, warm, sometimes playful.
 
-Begin the conversation now!`;
+NEVER give just 1 or 2 sentences and stop. Always keep the conversation alive. After every response, either ask a follow-up question OR react to what was said to invite them to keep talking.
+
+Use casual language: "yeah", "oh totally", "that's interesting", "hmm", "oh wow", "right right", "I mean", "like"
+
+Use contractions ALWAYS: "I'm", "you're", "that's", "it's", "don't", "can't", "we're"
+
+Match their energy — if they're excited, be excited. If they're calm, be calm.
+
+Never list things. Never use bullet points. Just talk naturally.
+
+Vary your response length — sometimes short, sometimes a bit longer, just like a real human does.
+
+What you must NEVER do:
+
+- Never say "How can I assist you today?" or any robotic opener
+- Never end a response without engaging them to continue talking
+- Never repeat the same phrase or response twice
+- Never sound formal or stiff
+- Never give a complete "final answer" and go silent — always leave the door open
+
+You're not an AI assistant answering questions. You're a person having a genuine, flowing, back-and-forth conversation. Keep it going naturally no matter what they say.`;
   }
 
   /**

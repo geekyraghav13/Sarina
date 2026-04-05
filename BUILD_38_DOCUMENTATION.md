@@ -1,44 +1,227 @@
-# Build 38 - Credit System & Purchase Flow Fixes
+# Build 38 Documentation - Voice Audio Conversion Fix (ANDROID)
 
-**Build Number**: 38
-**Version**: 1.4.8
-**Date**: March 27, 2026
-**Status**: Submitted to TestFlight
-**Build ID**: caa790cf-fa2c-402b-9e6b-987bd13b1204
+**Date:** April 2, 2026
+**Version:** 2.6.1
+**Build Number:** 38
+**Platform:** Android
+**Status:** IN PROGRESS - JavaScript bundle caching issue
+
+---
+
+## CRITICAL: Build 38 iOS vs Android
+
+**NOTE**: There are TWO different Build 38s:
+- **Build 38 iOS** (March 27, 2026) - Credit system fixes (see bottom of this file for details)
+- **Build 38 Android** (April 2, 2026) - Voice audio conversion fix (this document)
+
+This documentation covers the ANDROID build.
 
 ---
 
 ## Issue Summary
 
-**Critical Fixes**: Multiple issues with credit allocation, paywall routing, and backend synchronization that prevented users from successfully purchasing subscriptions and making voice calls.
+**Critical Bug**: Voice calling completely broken - when users speak during a call, the audio fails to convert to base64 and send to backend, resulting in AI responding with generic "I couldn't hear you" messages.
 
 **Impact**:
-- Users receiving incorrect credit amounts (60s instead of 300s for weekly)
-- Premium users forced to see paywall even with valid credits
-- Calls rejected immediately after purchase due to backend sync delays
-- Confusing UI for premium users when credits run out
+- Voice calls completely non-functional
+- User cannot have conversations with AI
+- Audio recording works but fails at base64 conversion step
+- AI always responds with "I couldn't hear you"
+
+**Error in logs:**
+```
+❌ Failed to convert audio to base64: TypeError: Cannot read property 'Base64' of undefined
+```
 
 ---
 
-## Issues Fixed
+## Root Cause Analysis
 
-### Issue 1: Incorrect Weekly Credit Allocation
-**Problem**: Weekly subscription tier was allocating only 60 seconds (1 minute) instead of 300 seconds (5 minutes).
+### The Bug
+Audio recording was successful, but conversion to base64 format was failing with:
+```
+TypeError: Cannot read property 'Base64' of undefined
+```
 
-**Root Cause**: Hardcoded value in `creditService.ts` was set to 60 instead of 300.
+### Why It Failed
+The code was importing FileSystem as a namespace but then trying to access `FileSystem.EncodingType.Base64`, which doesn't exist on the default export. The `EncodingType` enum requires an explicit named import from `expo-file-system`.
 
-**Fix**: Updated `getCreditAllocationForTier()` function to return 300 seconds for weekly tier.
+**Broken Code (Build 37):**
+```typescript
+import * as FileSystem from 'expo-file-system';
 
-**File**: `app/services/creditService.ts:182`
+// Later in stopRecording function (line 471):
+const base64Audio = await FileSystem.readAsStringAsync(uri, {
+  encoding: FileSystem.EncodingType.Base64,  // ❌ EncodingType is undefined
+});
+```
 
-### Issue 2: Premium Users Seeing Paywall Unnecessarily
-**Problem**: Users with active premium subscriptions AND sufficient credits were still shown the paywall when trying to make calls.
+### The Fix
+Added explicit import of `EncodingType` and updated the usage.
 
-**Root Cause**: `NewPaywallScreen.tsx` only checked premium status, not credit balance.
+**Fixed Code (Build 38):**
+```typescript
+import * as FileSystem from 'expo-file-system';
+import { EncodingType } from 'expo-file-system';  // ✅ Line 26
 
-**Fix**: Added `canStartCall()` credit check in `initializePaywall()` function. Premium users with credits now skip paywall and go directly to VoiceCall screen.
+// Later in stopRecording function (lines 469-472):
+console.log('🔄 Converting audio to base64...');
+const base64Audio = await FileSystem.readAsStringAsync(uri, {
+  encoding: EncodingType.Base64,  // ✅ Use imported EncodingType
+});
+```
 
-**File**: `app/screens/NewPaywallScreen.tsx:61-103`
+---
+
+## Files Modified
+
+### `/home/raghav/Vibe COded Apps/sarina/app/screens/VoiceCallScreen.tsx`
+
+**Line 26:** Added explicit import
+```typescript
+import { EncodingType } from 'expo-file-system';
+```
+
+**Line 471:** Updated encoding parameter in `stopRecording` function
+```typescript
+encoding: EncodingType.Base64,  // Changed from FileSystem.EncodingType.Base64
+```
+
+### `/home/raghav/Vibe COded Apps/sarina/android/app/build.gradle`
+
+**Lines 95-96:** Incremented version
+```gradle
+versionCode 38
+versionName "2.6.1"
+```
+
+---
+
+## CRITICAL ISSUE: JavaScript Bundle Caching
+
+### Problem
+Even after fixing the code, the APK still contains the old broken JavaScript due to Expo's aggressive bundle caching.
+
+**Attempted Solutions (all failed):**
+1. Regular `./android/gradlew -p android assembleRelease`
+2. Using `--rerun-tasks` flag
+3. Clearing `android/app/build/generated/assets`
+4. Clearing `android/app/build/intermediates/merged_assets`
+5. Clearing `.expo` and `node_modules/.cache`
+
+**Test Result:**
+- Installed APK still shows the error: `❌ Failed to convert audio to base64: TypeError: Cannot read property 'Base64' of undefined`
+- This proves the JavaScript bundle is cached somewhere in Expo's build pipeline
+
+### Required Solution
+A complete deep clean rebuild is necessary:
+
+```bash
+# 1. Clean all build caches
+rm -rf android/app/build/generated/assets \
+       android/app/build/intermediates/merged_assets \
+       android/app/build/intermediates/assets \
+       .expo \
+       node_modules/.cache
+
+# 2. Gradle clean
+./android/gradlew -p android clean
+
+# 3. Fresh build
+./android/gradlew -p android assembleRelease
+
+# 4. Install
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+```
+
+---
+
+## Current Status
+
+**Code Status:** ✅ Fixed (source code contains correct imports)
+**Build Status:** ❌ JavaScript bundle still cached with old code
+**Testing Status:** ⏳ Waiting for clean rebuild
+
+### Evidence from Logs (April 2, 2026 15:07):
+```
+04-02 15:07:36.235 I/ReactNativeJS( 7593): ✅ Recording started
+04-02 15:07:37.620 I/ReactNativeJS( 7593): '✅ Recording stopped. URI:', 'file:///data/user/0/com.x8284.katrina/cache/Audio/recording-cdbd690a-fcf3-44c2-bb76-c06a4486fda4.wav'
+04-02 15:07:37.620 I/ReactNativeJS( 7593): 🔄 Converting audio to base64...
+04-02 15:07:37.623 E/ReactNativeJS( 7593): '❌ Failed to convert audio to base64:', [TypeError: Cannot read property 'Base64' of undefined]
+```
+
+This proves the installed APK still has the old code despite source files being updated.
+
+---
+
+## Expected Behavior After Successful Build
+
+1. User starts call → WebSocket connects ✅
+2. User taps mic button → Recording starts ✅
+3. User speaks → Audio captured to WAV file ✅
+4. User releases mic → Recording stops ✅
+5. **Audio successfully converts to base64** ✅ (Currently fails here)
+6. Base64 audio sent to backend via WebSocket
+7. Backend forwards audio to Gemini 2.0 Flash
+8. Gemini processes audio and responds with relevant answer
+9. Response converted to speech via TTS
+10. User hears relevant response to what they said
+
+---
+
+## Previous Build Context
+
+**Build 37 (v2.6.0):**
+- Fixed audio recording format (WAV, 16kHz, mono)
+- Added earpiece/speaker toggle
+- Updated Gemini prompts for natural conversation
+- Fixed TTS and UI issues
+- **BUT: Audio base64 conversion was broken due to missing EncodingType import**
+
+**Build 38 (v2.6.1):**
+- Fixed the audio base64 conversion bug in source code
+- Incremented version numbers
+- **BUT: JavaScript bundle caching prevented fix from being included in APK**
+
+---
+
+## Next Steps
+
+1. ✅ Update documentation (this file)
+2. ⏳ Perform deep clean of all caches
+3. ⏳ Run gradle clean
+4. ⏳ Build fresh APK
+5. ⏳ Install and test
+6. ⏳ Verify logs show successful base64 conversion
+7. ⏳ Confirm AI responds to actual user speech
+
+---
+
+## Related Files
+
+- `app/screens/VoiceCallScreen.tsx` - Main voice call screen with audio recording
+- `backend/geminiClient.js` - Gemini AI integration for processing audio
+- `app/services/voiceCallService.ts` - WebSocket service for voice calls
+- `android/app/build.gradle` - Version configuration
+
+---
+
+## Premium Purchase Status (User Context)
+
+User successfully purchased premium subscription before this build:
+- Premium status: ✅ Active
+- Voice credits: 6000 seconds (100 minutes)
+- Credits never expire for premium users
+
+---
+
+---
+
+# BELOW: ORIGINAL BUILD 38 iOS DOCUMENTATION (March 27, 2026)
+
+**NOTE:** The content below refers to the iOS Build 38 which fixed credit system issues. The Android Build 38 (above) is a completely different build fixing voice audio conversion.
+
+---
 
 ### Issue 3: "Call Rejected Unknown Reason" Error
 **Problem**: Backend rejected calls immediately after purchase with error message "Call rejected: Unknown reason".

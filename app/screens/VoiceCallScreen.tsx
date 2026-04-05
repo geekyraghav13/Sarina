@@ -8,6 +8,7 @@ import {
   Dimensions,
   SafeAreaView,
   Alert,
+  Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -21,6 +22,8 @@ import { usePaymentStore } from '../store/paymentStore';
 import * as RevenueCatService from '../services/revenueCatService';
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
+import * as FileSystem from 'expo-file-system';
+import { EncodingType } from 'expo-file-system';
 
 type VoiceCallScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -63,6 +66,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [lastAIMessage, setLastAIMessage] = useState<string>('');
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false); // Track speaker mode
 
   const recordingRef = useRef<Audio.Recording | null>(null);
 
@@ -139,10 +143,13 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
           }
 
           console.log('🎵 Setting audio mode...');
-          // Set audio mode for recording
+          // Set audio mode for earpiece (like a real phone call)
           await Audio.setAudioModeAsync({
             allowsRecordingIOS: true,
             playsInSilentModeIOS: true,
+            staysActiveInBackground: true,
+            shouldDuckAndroid: true,
+            playThroughEarpieceAndroid: !isSpeakerOn, // Use earpiece by default
           });
           console.log('✅ Audio mode set successfully');
         } else {
@@ -369,9 +376,12 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
       await Speech.speak(text, {
         language: 'en-US',
-        pitch: 1.1,
-        rate: 0.95,
-        voice: 'com.apple.ttsbundle.Samantha-compact', // Female voice on iOS
+        pitch: 0.95, // Slightly lower pitch for more natural sound
+        rate: 1.0, // Normal speaking rate
+        // Use better quality voices - these sound more human
+        voice: Platform.OS === 'ios'
+          ? 'com.apple.ttsbundle.Samantha-compact' // iOS: Samantha
+          : 'en-us-x-sfg#female_1-local', // Android: high quality female voice
         onDone: () => {
           setIsSpeaking(false);
           console.log('✅ Finished speaking');
@@ -400,7 +410,31 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
       }
 
       const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      // Use WAV format for best compatibility with Gemini AI
+      await recording.prepareToRecordAsync({
+        android: {
+          extension: '.wav',
+          outputFormat: Audio.AndroidOutputFormat.DEFAULT,
+          audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
+          sampleRate: 16000, // 16kHz is optimal for speech recognition
+          numberOfChannels: 1, // Mono
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.wav',
+          audioQuality: Audio.IOSAudioQuality.HIGH,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/wav',
+          bitsPerSecond: 128000,
+        },
+      });
       await recording.startAsync();
 
       recordingRef.current = recording;
@@ -429,9 +463,23 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
       if (uri) {
         console.log('✅ Recording stopped. URI:', uri);
-        // For now, send a text message instead of audio
-        // TODO: Implement audio-to-base64 conversion and send via sendAudio
-        sendText('Hello! (Audio recording feature coming soon)');
+
+        // Convert audio file to base64
+        try {
+          console.log('🔄 Converting audio to base64...');
+          const base64Audio = await FileSystem.readAsStringAsync(uri, {
+            encoding: EncodingType.Base64,
+          });
+
+          console.log(`📤 Sending ${base64Audio.length} characters of audio data to server`);
+
+          // Send actual audio to backend
+          sendAudio(base64Audio);
+        } catch (conversionError) {
+          console.error('❌ Failed to convert audio to base64:', conversionError);
+          // Fallback to text if conversion fails
+          sendText('(Audio conversion failed - please try again)');
+        }
       }
     } catch (error) {
       console.error('❌ Failed to stop recording:', error);
@@ -454,6 +502,26 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         return 'Connection error';
       default:
         return 'Connecting...';
+    }
+  };
+
+  // Toggle speaker mode
+  const toggleSpeaker = async () => {
+    try {
+      const newSpeakerState = !isSpeakerOn;
+      setIsSpeakerOn(newSpeakerState);
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: !newSpeakerState, // true = earpiece, false = speaker
+      });
+
+      console.log(`🔊 Audio mode: ${newSpeakerState ? 'Speaker' : 'Earpiece'}`);
+    } catch (error) {
+      console.error('❌ Failed to toggle speaker:', error);
     }
   };
 
@@ -589,6 +657,22 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
       {/* Bottom Controls */}
       <View style={styles.bottomControls}>
+        {/* Speaker Toggle Button */}
+        {state === CallState.CALLING && (
+          <TouchableOpacity
+            style={styles.speakerButton}
+            onPress={toggleSpeaker}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.speakerButtonCircle, isSpeakerOn && styles.speakerButtonActive]}>
+              <Text style={styles.speakerIcon}>{isSpeakerOn ? '🔊' : '🎧'}</Text>
+            </View>
+            <Text style={styles.speakerLabel}>
+              {isSpeakerOn ? 'Speaker' : 'Earpiece'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Microphone Button */}
         {state === CallState.CALLING && (
           <TouchableOpacity
@@ -822,6 +906,34 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '600',
     marginTop: 12,
+    textAlign: 'center',
+  },
+  speakerButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  speakerButtonCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  speakerButtonActive: {
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+    borderColor: '#8B5CF6',
+  },
+  speakerIcon: {
+    fontSize: 28,
+  },
+  speakerLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '600',
+    marginTop: 8,
     textAlign: 'center',
   },
   endCallButton: {
