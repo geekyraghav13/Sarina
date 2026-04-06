@@ -437,9 +437,12 @@ export const syncConsumablePurchaseToFirestore = async (customerInfo: CustomerIn
     const allPurchaseIds = customerInfo.nonSubscriptionTransactions || [];
 
     console.log('🛒 [CONSUMABLE SYNC] Total consumable transactions:', allPurchaseIds.length);
+    console.log('🛒 [CONSUMABLE SYNC] Active entitlements:', Object.keys(customerInfo.entitlements.active));
+    console.log('🛒 [CONSUMABLE SYNC] Active subscriptions:', customerInfo.activeSubscriptions);
 
     if (allPurchaseIds.length === 0) {
-      console.log('ℹ️ [CONSUMABLE SYNC] No consumable purchases found');
+      console.warn('⚠️ [CONSUMABLE SYNC] No consumable purchases found - product might be configured as subscription!');
+      console.log('ℹ️ [CONSUMABLE SYNC] Check RevenueCat dashboard - product should be type "Consumable", not "Subscription"');
       return;
     }
 
@@ -470,8 +473,11 @@ export const syncConsumablePurchaseToFirestore = async (customerInfo: CustomerIn
 
     // Determine credits based on product ID
     let creditsToAdd = 0;
-    if (productId.includes('10min') || productId.includes('10_min')) {
+    if (productId.includes('10min') || productId.includes('10_min') || productId.includes('credits')) {
       creditsToAdd = 600; // 10 minutes = 600 seconds
+      console.log('✅ [CONSUMABLE SYNC] Matched credits product pattern in product ID:', productId);
+    } else {
+      console.warn('⚠️ [CONSUMABLE SYNC] Unknown product ID pattern:', productId);
     }
 
     console.log('🛒 [CONSUMABLE SYNC] Credits to add:', creditsToAdd, 'seconds');

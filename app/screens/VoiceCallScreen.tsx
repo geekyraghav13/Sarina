@@ -5,25 +5,22 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
-  Dimensions,
-  SafeAreaView,
   Alert,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useVoiceCall, CallState } from '../services/voiceCallService';
-import { getCurrentUser } from '../services/authService';
 import { canStartCall } from '../services/creditService';
 import { usePaymentStore } from '../store/paymentStore';
 import * as RevenueCatService from '../services/revenueCatService';
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
-import * as FileSystem from 'expo-file-system';
-import { EncodingType } from 'expo-file-system';
+import { ExpoPlayAudioStream, type Subscription, type RecordingConfig, type AudioDataEvent } from '@saltmango/expo-audio-stream';
 
 type VoiceCallScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -37,7 +34,6 @@ interface VoiceCallScreenProps {
   route: VoiceCallScreenRouteProp;
 }
 
-const { width, height } = Dimensions.get('window');
 
 export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   navigation,
@@ -56,19 +52,22 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
     disconnect,
     startCall,
     endCall,
-    sendText,
+    sendAudio,
     setOnCutOff,
     setOnTextResponse,
+    setOnAudioResponse,
   } = useVoiceCall();
 
   const [callDuration, setCallDuration] = useState(0);
   const [isCallActive, setIsCallActive] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [lastAIMessage, setLastAIMessage] = useState<string>('');
-  const [isSpeakerOn, setIsSpeakerOn] = useState(false); // Track speaker mode
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false);
 
-  const recordingRef = useRef<Audio.Recording | null>(null);
+  // Audio streaming refs
+  const audioStreamRef = useRef<Subscription | null>(null);
+  const audioChunksRef = useRef<string[]>([]);
+  const isStreamingRef = useRef<boolean>(false);
 
   // Animation refs
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -85,7 +84,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
       // Small delay to ensure all native modules are initialized
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Check credit balance - this is the primary check now
+      // Check credit balance
       console.log('💰 Checking credit balance...');
       const balanceCheck = await canStartCall();
       console.log('💰 Balance check result:', {
@@ -124,8 +123,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
       console.log('✅ User has sufficient credits to start call:', balanceCheck.balance, 'seconds');
 
-      // Check if audio permissions are already granted
-      // (they should be granted in PaywallScreen before navigating here)
+      // Check audio permissions
       try {
         console.log('🎤 Checking audio permissions...');
         const { status: currentStatus } = await Audio.getPermissionsAsync();
@@ -141,27 +139,27 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
             navigation.goBack();
             return;
           }
-
-          console.log('🎵 Setting audio mode...');
-          // Set audio mode for earpiece (like a real phone call)
-          await Audio.setAudioModeAsync({
-            allowsRecordingIOS: true,
-            playsInSilentModeIOS: true,
-            staysActiveInBackground: true,
-            shouldDuckAndroid: true,
-            playThroughEarpieceAndroid: !isSpeakerOn, // Use earpiece by default
-          });
-          console.log('✅ Audio mode set successfully');
-        } else {
-          console.log('✅ Audio permissions already granted, skipping initialization');
         }
+
+        console.log('🎵 Setting audio mode...');
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: !isSpeakerOn,
+        });
+        console.log('✅ Audio mode set successfully');
+
+        console.log('✅ Audio recording ready for streaming');
+
       } catch (error: any) {
-        console.error('❌ Error checking audio permissions:', error);
+        console.error('❌ Error initializing audio:', error);
         console.error('❌ Error stack:', error?.stack);
         console.error('❌ Error message:', error?.message);
 
         Alert.alert(
-          'Audio Permission Error',
+          'Audio Initialization Error',
           'Unable to initialize audio. Please restart the app and try again.',
           [
             {
@@ -181,7 +179,6 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         console.log('📵 Call cut off:', reason);
         console.log('💎 Checking premium status for paywall navigation...');
 
-        // Check premium status to determine which paywall to show
         const premium = await RevenueCatService.checkPremiumStatus();
         console.log('💎 Premium status result:', premium);
 
@@ -194,7 +191,6 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
               onPress: () => {
                 disconnect();
 
-                // Navigate to appropriate paywall based on premium status
                 if (premium) {
                   console.log('💎 Premium user - Navigating to CustomCreditsPaywall');
                   navigation.replace('CustomCreditsPaywall', {
@@ -231,8 +227,13 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
       // Set text response callback for TTS
       setOnTextResponse((text) => {
         console.log('🗣️ AI response:', text);
-        setLastAIMessage(text);
         speakText(text);
+      });
+
+      // Set audio response callback (if backend sends PCM audio)
+      setOnAudioResponse((audioData) => {
+        console.log('🔊 Received audio response from backend');
+        playAudioResponse(audioData);
       });
     };
 
@@ -241,9 +242,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
     // Cleanup on unmount
     return () => {
       disconnect();
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync();
-      }
+      stopAudioStream();
       Speech.stop();
     };
   }, []);
@@ -293,7 +292,6 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   // Waveform animations
   useEffect(() => {
     if (state === CallState.CALLING) {
-      // Wave 1
       Animated.loop(
         Animated.sequence([
           Animated.timing(waveAnim1, {
@@ -309,7 +307,6 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         ])
       ).start();
 
-      // Wave 2 (delayed)
       setTimeout(() => {
         Animated.loop(
           Animated.sequence([
@@ -327,7 +324,6 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         ).start();
       }, 100);
 
-      // Wave 3 (more delayed)
       setTimeout(() => {
         Animated.loop(
           Animated.sequence([
@@ -355,7 +351,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // NEW: Task 2.3 - Get balance color based on remaining time
+  // Get balance color based on remaining time
   const getBalanceColor = (seconds: number | null) => {
     if (seconds === null) return '#FFFFFF';
     if (seconds > 30) return '#10B981'; // Green: >30 seconds
@@ -363,7 +359,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
     return '#EF4444'; // Red: ≤10 seconds
   };
 
-  // NEW: Task 2.3 - Check if low balance warning should show
+  // Check if low balance warning should show
   const shouldShowLowBalanceWarning = (seconds: number | null) => {
     return seconds !== null && seconds <= 10 && seconds > 0;
   };
@@ -374,14 +370,13 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
       setIsSpeaking(true);
       console.log('🔊 Speaking:', text);
 
-      await Speech.speak(text, {
+      Speech.speak(text, {
         language: 'en-US',
-        pitch: 0.95, // Slightly lower pitch for more natural sound
-        rate: 1.0, // Normal speaking rate
-        // Use better quality voices - these sound more human
+        pitch: 0.95,
+        rate: 1.0,
         voice: Platform.OS === 'ios'
-          ? 'com.apple.ttsbundle.Samantha-compact' // iOS: Samantha
-          : 'en-us-x-sfg#female_1-local', // Android: high quality female voice
+          ? 'com.apple.ttsbundle.Samantha-compact'
+          : 'en-us-x-sfg#female_1-local',
         onDone: () => {
           setIsSpeaking(false);
           console.log('✅ Finished speaking');
@@ -397,11 +392,23 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
     }
   };
 
-  // Start recording audio
-  const startRecording = async () => {
+  // Play audio response from backend (PCM data)
+  const playAudioResponse = async (_audioData: any) => {
     try {
-      console.log('🎙️ Starting recording...');
+      console.log('🎵 Playing audio response...');
+      // TODO: Implement PCM audio playback if backend sends audio
+      // For now, we're using TTS on the client side
+    } catch (error) {
+      console.error('❌ Error playing audio:', error);
+    }
+  };
+
+  // Start PCM audio streaming
+  const startAudioStream = async () => {
+    try {
+      console.log('🎙️ Starting PCM audio stream...');
       setIsRecording(true);
+      isStreamingRef.current = true;
 
       // Stop TTS if speaking
       if (isSpeaking) {
@@ -409,81 +416,79 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         setIsSpeaking(false);
       }
 
-      const recording = new Audio.Recording();
-      // Use WAV format for best compatibility with Gemini AI
-      await recording.prepareToRecordAsync({
-        android: {
-          extension: '.wav',
-          outputFormat: Audio.AndroidOutputFormat.DEFAULT,
-          audioEncoder: Audio.AndroidAudioEncoder.DEFAULT,
-          sampleRate: 16000, // 16kHz is optimal for speech recognition
-          numberOfChannels: 1, // Mono
-          bitRate: 128000,
-        },
-        ios: {
-          extension: '.wav',
-          audioQuality: Audio.IOSAudioQuality.HIGH,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 128000,
-          linearPCMBitDepth: 16,
-          linearPCMIsBigEndian: false,
-          linearPCMIsFloat: false,
-        },
-        web: {
-          mimeType: 'audio/wav',
-          bitsPerSecond: 128000,
-        },
-      });
-      await recording.startAsync();
+      // Clear previous chunks
+      audioChunksRef.current = [];
 
-      recordingRef.current = recording;
-      console.log('✅ Recording started');
+      // Configure recording for 16kHz PCM with audio callback
+      const recordingConfig: RecordingConfig = {
+        interval: 250,  // Send chunks every 250ms
+        sampleRate: 16000,
+        channels: 1,
+        encoding: 'pcm_16bit',
+        pointsPerSecond: 16000,
+        onAudioStream: async (event: AudioDataEvent) => {
+          if (isStreamingRef.current && event.data) {
+            // Collect base64 PCM chunks at 16kHz
+            console.log(`🎤 Audio chunk received: ${event.eventDataSize} bytes, soundLevel: ${event.soundLevel}`);
+            audioChunksRef.current.push(event.data);
+          }
+        },
+      };
+
+      // Start streaming with callback
+      const { subscription } = await ExpoPlayAudioStream.startMicrophone(recordingConfig);
+
+      // Store subscription for cleanup
+      if (subscription) {
+        audioStreamRef.current = subscription;
+      }
+
+      console.log('✅ Audio stream started');
     } catch (error) {
-      console.error('❌ Failed to start recording:', error);
+      console.error('❌ Failed to start audio stream:', error);
       setIsRecording(false);
+      isStreamingRef.current = false;
     }
   };
 
-  // Stop recording and send audio
-  const stopRecording = async () => {
+  // Stop PCM audio streaming and send to backend
+  const stopAudioStream = async () => {
     try {
-      if (!recordingRef.current) {
-        console.warn('⚠️ No active recording');
-        return;
-      }
+      console.log('🛑 Stopping audio stream...');
 
-      console.log('🛑 Stopping recording...');
+      // Mark as not streaming
+      isStreamingRef.current = false;
 
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
+      // Stop microphone
+      await ExpoPlayAudioStream.stopMicrophone();
 
       setIsRecording(false);
-      recordingRef.current = null;
 
-      if (uri) {
-        console.log('✅ Recording stopped. URI:', uri);
+      // Combine all PCM chunks into one base64 string
+      if (audioChunksRef.current.length > 0) {
+        const combinedAudio = audioChunksRef.current.join('');
+        console.log(`📤 Sending ${combinedAudio.length} characters of PCM audio data to server`);
 
-        // Convert audio file to base64
-        try {
-          console.log('🔄 Converting audio to base64...');
-          const base64Audio = await FileSystem.readAsStringAsync(uri, {
-            encoding: EncodingType.Base64,
-          });
+        // Send PCM audio to backend
+        sendAudio(combinedAudio);
 
-          console.log(`📤 Sending ${base64Audio.length} characters of audio data to server`);
-
-          // Send actual audio to backend
-          sendAudio(base64Audio);
-        } catch (conversionError) {
-          console.error('❌ Failed to convert audio to base64:', conversionError);
-          // Fallback to text if conversion fails
-          sendText('(Audio conversion failed - please try again)');
-        }
+        // Clear chunks
+        audioChunksRef.current = [];
+      } else {
+        console.warn('⚠️ No audio data collected');
       }
+
+      // Remove listener
+      if (audioStreamRef.current) {
+        audioStreamRef.current.remove();
+        audioStreamRef.current = null;
+      }
+
+      console.log('✅ Audio stream stopped');
     } catch (error) {
-      console.error('❌ Failed to stop recording:', error);
+      console.error('❌ Failed to stop audio stream:', error);
       setIsRecording(false);
+      isStreamingRef.current = false;
     }
   };
 
@@ -516,7 +521,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         playsInSilentModeIOS: true,
         staysActiveInBackground: true,
         shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: !newSpeakerState, // true = earpiece, false = speaker
+        playThroughEarpieceAndroid: !newSpeakerState,
       });
 
       console.log(`🔊 Audio mode: ${newSpeakerState ? 'Speaker' : 'Earpiece'}`);
@@ -543,7 +548,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
     ]);
   };
 
-  // Wave height animation - using opacity instead of height for native driver support
+  // Wave height animation
   const wave1Height = waveAnim1.interpolate({
     inputRange: [0, 1],
     outputRange: [0.3, 1],
@@ -565,7 +570,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Main Content - Centered Layout */}
+      {/* Main Content */}
       <View style={styles.content}>
         {/* Large Avatar with Glow Effect */}
         <Animated.View
@@ -607,7 +612,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         {/* Character Name */}
         <Text style={styles.characterName}>{characterName}</Text>
 
-        {/* Call Status with Icon */}
+        {/* Call Status */}
         <View style={styles.statusContainer}>
           {state === CallState.CALLING && (
             <View style={styles.statusDotActive} />
@@ -615,12 +620,12 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
           <Text style={styles.statusText}>{getStatusText()}</Text>
         </View>
 
-        {/* Call Duration - Large Display */}
+        {/* Call Duration */}
         <Text style={styles.durationText}>
           {formatTime(callDuration)}
         </Text>
 
-        {/* Waveform Visualization - Bigger & Better */}
+        {/* Waveform Visualization */}
         {state === CallState.CALLING && (
           <View style={styles.waveformContainer}>
             <Animated.View style={[styles.wavebar, styles.wavebarTall, { opacity: wave1Height }]} />
@@ -634,7 +639,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
           </View>
         )}
 
-        {/* Balance Display - Modern Card */}
+        {/* Balance Display */}
         <View style={styles.balanceContainer}>
           <Text style={styles.balanceLabel}>CREDITS REMAINING</Text>
           <Text style={[styles.balanceTime, { color: getBalanceColor(balance) }]}>
@@ -677,8 +682,8 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         {state === CallState.CALLING && (
           <TouchableOpacity
             style={[styles.micButton, isRecording && styles.micButtonActive]}
-            onPressIn={startRecording}
-            onPressOut={stopRecording}
+            onPressIn={startAudioStream}
+            onPressOut={stopAudioStream}
             activeOpacity={0.8}
           >
             <LinearGradient
@@ -693,7 +698,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
           </TouchableOpacity>
         )}
 
-        {/* End Call Button - Always enabled to allow user to exit even if connection lost */}
+        {/* End Call Button */}
         <TouchableOpacity
           style={styles.endCallButton}
           onPress={handleEndCall}

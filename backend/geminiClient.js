@@ -76,12 +76,18 @@ class GeminiClient {
       }
 
       console.log(`📤 Sending audio to Gemini (session: ${sessionId})`);
+      console.log(`📏 Audio data size: ${audioBase64.length} characters`);
 
-      // Send audio to Gemini (WAV format for best speech recognition)
+      // CRITICAL: Handle concatenated WAV chunks
+      // expo-audio-stream sends multiple chunks, each with a WAV header
+      // We need to merge them into a single valid WAV file
+      const mergedAudio = this.mergeWavChunks(audioBase64);
+
+      // Send merged WAV audio to Gemini (16kHz, 16-bit, mono WAV format)
       const result = await connection.chat.sendMessage([
         {
           inlineData: {
-            data: audioBase64,
+            data: mergedAudio,
             mimeType: 'audio/wav',
           },
         },
@@ -107,6 +113,119 @@ class GeminiClient {
       onError(error);
       return null;
     }
+  }
+
+  /**
+   * Merge multiple WAV chunks into a single valid WAV file
+   * expo-audio-stream sends concatenated WAV chunks with malformed headers
+   */
+  mergeWavChunks(audioBase64) {
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+
+    // Check if this is a WAV file
+    if (audioBuffer.toString('utf8', 0, 4) !== 'RIFF') {
+      console.log('⚠️ Not a WAV file, sending as-is');
+      return audioBase64;
+    }
+
+    // expo-audio-stream concatenates multiple WAV chunks
+    // Each chunk has structure: RIFF header (12 bytes) + fmt chunk + data chunk
+    // We need to extract ALL PCM data and rebuild ONE valid WAV file
+
+    const pcmChunks = [];
+    let fmtChunk = null;
+    let offset = 0;
+
+    // Find all WAV chunks by scanning for RIFF markers
+    while (offset < audioBuffer.length - 11) {
+      // Check if this is a RIFF header
+      if (audioBuffer.toString('utf8', offset, offset + 4) === 'RIFF') {
+        const chunkStart = offset;
+
+        // Get the chunk size from RIFF header
+        const riffChunkSize = audioBuffer.readUInt32LE(offset + 4);
+
+        // Skip empty/invalid RIFF chunks
+        if (riffChunkSize === 0 || riffChunkSize > audioBuffer.length) {
+          console.log(`⚠️ Skipping invalid RIFF chunk (size=${riffChunkSize})`);
+          offset += 12; // Skip just the RIFF header
+          continue;
+        }
+
+        const chunkEnd = offset + 8 + riffChunkSize;
+
+        // Skip RIFF header (12 bytes: "RIFF" + size + "WAVE")
+        offset += 12;
+
+        // Parse sub-chunks (fmt and data) within this RIFF chunk
+        let foundData = false;
+        while (offset < chunkEnd && offset < audioBuffer.length - 7 && !foundData) {
+          const subChunkId = audioBuffer.toString('utf8', offset, offset + 4);
+          const subChunkSize = audioBuffer.readUInt32LE(offset + 4);
+
+          if (subChunkId === 'fmt ') {
+            // Save the format chunk (only once)
+            if (!fmtChunk) {
+              fmtChunk = audioBuffer.slice(offset, offset + 8 + subChunkSize);
+              console.log(`📋 Found fmt chunk: ${subChunkSize} bytes`);
+            }
+            offset += 8 + subChunkSize;
+          } else if (subChunkId === 'data') {
+            // Extract PCM data (skip size=0 chunks)
+            if (subChunkSize > 0) {
+              const pcmData = audioBuffer.slice(offset + 8, offset + 8 + subChunkSize);
+              pcmChunks.push(pcmData);
+              console.log(`📦 Found PCM data chunk: ${subChunkSize} bytes`);
+            } else {
+              console.log(`⚠️ Skipping empty data chunk (size=0)`);
+            }
+            offset += 8 + subChunkSize;
+            foundData = true;
+          } else {
+            // Unknown chunk, skip it
+            offset += 8 + subChunkSize;
+          }
+        }
+
+        // Move to the end of this RIFF chunk to find the next one
+        if (offset < chunkEnd) {
+          offset = chunkEnd;
+        }
+      } else {
+        // Not a RIFF header, move to next byte
+        offset++;
+      }
+    }
+
+    if (!fmtChunk) {
+      console.error('❌ No valid fmt chunk found');
+      return audioBase64;
+    }
+
+    if (pcmChunks.length === 0) {
+      console.error('❌ No PCM data found');
+      return audioBase64;
+    }
+
+    // Combine all PCM data
+    const combinedPcm = Buffer.concat(pcmChunks);
+    console.log(`✂️ Merged ${pcmChunks.length} WAV chunks: ${combinedPcm.length} bytes of PCM data`);
+
+    // Build new WAV file: RIFF header + fmt chunk + data chunk
+    const wavHeader = Buffer.alloc(12);
+    wavHeader.write('RIFF', 0);
+    wavHeader.writeUInt32LE(4 + fmtChunk.length + 8 + combinedPcm.length, 4); // File size
+    wavHeader.write('WAVE', 8);
+
+    const dataHeader = Buffer.alloc(8);
+    dataHeader.write('data', 0);
+    dataHeader.writeUInt32LE(combinedPcm.length, 4); // PCM data size
+
+    const mergedWav = Buffer.concat([wavHeader, fmtChunk, dataHeader, combinedPcm]);
+    const mergedBase64 = mergedWav.toString('base64');
+
+    console.log(`✅ Built valid WAV: ${mergedWav.length} bytes (was ${audioBuffer.length} bytes)`);
+    return mergedBase64;
   }
 
   /**

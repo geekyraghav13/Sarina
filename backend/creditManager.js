@@ -5,8 +5,9 @@
 
 const admin = require('firebase-admin');
 
-const HEARTBEAT_INTERVAL = parseInt(process.env.HEARTBEAT_INTERVAL_SECONDS || '5') * 1000;
+const HEARTBEAT_INTERVAL = parseInt(process.env.HEARTBEAT_INTERVAL_SECONDS || '10') * 1000;
 const MINIMUM_BALANCE = parseInt(process.env.MINIMUM_CALL_BALANCE_SECONDS || '10');
+const DEDUCTION_AMOUNT = 10; // Deduct 10 seconds every heartbeat
 
 class CreditManager {
   constructor() {
@@ -98,8 +99,8 @@ class CreditManager {
         return;
       }
 
-      // Determine how much to deduct (5 seconds or remaining balance)
-      const deductionAmount = Math.min(5, currentBalance);
+      // Determine how much to deduct (10 seconds or remaining balance)
+      const deductionAmount = Math.min(DEDUCTION_AMOUNT, currentBalance);
 
       // Deduct credits using Firestore increment (atomic operation)
       await userRef.update({

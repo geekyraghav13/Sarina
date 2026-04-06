@@ -40,7 +40,7 @@ steps:
       - '--timeout'
       - '3600'
       - '--set-env-vars'
-      - 'NODE_ENV=production,HEARTBEAT_INTERVAL_SECONDS=5,MINIMUM_CALL_BALANCE_SECONDS=10,GEMINI_MODEL=gemini-2.0-flash,GEMINI_VOICE=Aoede'
+      - 'NODE_ENV=production,HEARTBEAT_INTERVAL_SECONDS=10,MINIMUM_CALL_BALANCE_SECONDS=10,GEMINI_MODEL=gemini-2.0-flash,GEMINI_VOICE=Aoede'
       - '--set-secrets'
       - 'GEMINI_API_KEY=gemini-api-key:latest,FIREBASE_PROJECT_ID=firebase-project-id:latest,FIREBASE_PRIVATE_KEY=firebase-private-key:latest,FIREBASE_CLIENT_EMAIL=firebase-client-email:latest'
 
