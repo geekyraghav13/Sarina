@@ -1,0 +1,27 @@
+{
+  "displayName": "Sarina - Zero Balance Accounts Flagged",
+  "documentation": {
+    "content": "Alert when multiple accounts flagged for zero balance (>5 in 5 minutes)",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "displayName": "Multiple accounts flagged for zero balance",
+      "conditionThreshold": {
+        "filter": "resource.type=\"cloud_function\" AND resource.labels.function_name=\"reconcileCrashedCalls\" AND jsonPayload.event=\"zero_balance_flagged\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "300s",
+            "perSeriesAligner": "ALIGN_COUNT",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 5,
+        "duration": "0s"
+      }
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true
+}

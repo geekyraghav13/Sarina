@@ -392,8 +392,15 @@ export async function recordCallStart(
 
   // All retries failed - log to analytics for monitoring
   console.error(`❌ CRITICAL: Failed to record call start after ${MAX_RETRIES} attempts:`, lastError);
-  // TODO: Log to analytics service (e.g., Firebase Analytics, Sentry)
-  // logToAnalytics('call_start_record_failed', { uid, callId, error: lastError.message });
+
+  // Log to Firebase Analytics for monitoring
+  const { logCallStartRecordFailed } = await import('./analyticsService');
+  logCallStartRecordFailed(
+    uid,
+    callId,
+    lastError?.message || 'Unknown error',
+    MAX_RETRIES
+  );
 
   return false; // Failure
 }

@@ -7,7 +7,7 @@
  */
 
 const { onSchedule } = require('firebase-functions/v2/scheduler');
-const { onCall } = require('firebase-functions/v2/https');
+const { onCall, onRequest } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore, Timestamp, FieldValue } = require('firebase-admin/firestore');
 
@@ -439,6 +439,18 @@ exports.reconcileCrashedCalls = onSchedule(
             // ZERO-BALANCE POLICY: Cap at current balance, never go negative
             if (currentBalance <= 0) {
               console.warn(`⚠️ User ${userId} has zero balance, flagging account`);
+
+              // Structured log for Cloud Monitoring
+              console.log(JSON.stringify({
+                severity: 'WARNING',
+                event: 'zero_balance_flagged',
+                user_id: userId,
+                call_id: callId,
+                unpaid_seconds: callDurationSeconds,
+                reason: 'Crashed call with zero balance',
+                timestamp: new Date().toISOString(),
+              }));
+
               transaction.update(userRef, {
                 active_call: null,
                 flagged_for_review: true,
@@ -470,6 +482,18 @@ exports.reconcileCrashedCalls = onSchedule(
             results.totalSecondsReconciled += finalDeduction;
 
             console.log(`✅ Successfully reconciled ${finalDeduction}s for user ${userId}`);
+
+            // Structured log for Cloud Monitoring
+            console.log(JSON.stringify({
+              severity: 'INFO',
+              event: 'crash_recovery_triggered',
+              user_id: userId,
+              call_id: callId,
+              seconds_reconciled: finalDeduction,
+              stale_minutes: Math.floor((now - callStartTime) / 60000),
+              new_balance: newBalance,
+              timestamp: new Date().toISOString(),
+            }));
           });
         } catch (error) {
           console.error(`❌ Error reconciling call for user ${userId}:`, error);
@@ -496,4 +520,15 @@ exports.reconcileCrashedCalls = onSchedule(
       throw error;
     }
   }
+);
+
+// ==================== FLAGGED ACCOUNTS REVIEW DASHBOARD ====================
+
+const { reviewDashboard } = require('./reviewDashboard');
+
+exports.reviewDashboard = onRequest(
+  {
+    cors: true,
+  },
+  reviewDashboard
 );

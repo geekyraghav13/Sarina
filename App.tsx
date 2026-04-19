@@ -42,6 +42,8 @@ export default function App() {
           console.log('✅ RevenueCat initialized successfully');
 
           // Set up customer info listener to auto-sync purchases to Firestore
+          // IMPORTANT: This listener fires on ANY customer info change (purchase, restore, app reopen)
+          // We should NOT treat every update as a new purchase to avoid duplicate credit allocation
           Purchases.addCustomerInfoUpdateListener(async (customerInfo) => {
             console.log('🔔 RevenueCat customer info updated!');
             console.log('Entitlements:', JSON.stringify(customerInfo.entitlements.active));
@@ -55,8 +57,10 @@ export default function App() {
 
             if (hasActiveEntitlements || hasActiveSubscriptions) {
               console.log('🔄 Active subscription detected, syncing to Firestore...');
-              // Sync to Firestore with isNewPurchase = true to allocate credits
-              await RevenueCatService.syncCustomerInfoToFirestore(customerInfo, true);
+              // Sync to Firestore with isNewPurchase = FALSE
+              // This prevents duplicate credit allocation on app reopen/restore
+              // Credits are only allocated in NewPaywallScreen.tsx after actual purchase
+              await RevenueCatService.syncCustomerInfoToFirestore(customerInfo, false);
 
               // Update local state
               const subInfo = await RevenueCatService.getSubscriptionInfo();
@@ -71,10 +75,24 @@ export default function App() {
           // Check premium status from RevenueCat
           const isPremium = await RevenueCatService.checkPremiumStatus();
           if (isPremium) {
-            const subInfo = await RevenueCatService.getSubscriptionInfo();
-            await usePaymentStore.getState().setIsPremium(true);
-            usePaymentStore.getState().setSubscriptionType(subInfo.tier as any);
-            console.log('✅ Premium status loaded:', subInfo.tier);
+            console.log('✅ User has premium subscription');
+
+            // Call restorePurchases to ensure credits are properly allocated
+            // This handles the case where user reinstalled the app and has 0 credits
+            // restorePurchases() has smart logic to allocate credits only if balance is 0
+            console.log('🔄 Restoring purchases to ensure credits are allocated...');
+            const restoreResult = await RevenueCatService.restorePurchases();
+
+            if (restoreResult.success && restoreResult.isPremium) {
+              // Update local state
+              const subInfo = await RevenueCatService.getSubscriptionInfo();
+              await usePaymentStore.getState().setIsPremium(true);
+              usePaymentStore.getState().setSubscriptionType(subInfo.tier as any);
+              console.log('✅ Premium status and credits restored:', subInfo.tier);
+            } else {
+              console.warn('⚠️ Restore failed, but user is premium. Using basic premium status.');
+              await usePaymentStore.getState().setIsPremium(true);
+            }
           } else {
             console.log('ℹ️ User is not premium');
           }

@@ -98,39 +98,53 @@ export const IncomingCallScreen: React.FC<IncomingCallScreenProps> = ({
       ])
     ).start();
 
+    // Add navigation listener to stop vibration when screen loses focus
+    const unsubscribeFocus = navigation.addListener('blur', () => {
+      Vibration.cancel();
+    });
+
     // Cleanup: Stop vibration on unmount
     return () => {
       Vibration.cancel();
+      unsubscribeFocus();
     };
-  }, []);
+  }, [navigation]);
 
   const handlePickUp = () => {
+    // Stop vibration IMMEDIATELY before any navigation
     Vibration.cancel();
     setHasSeenCall(true);
 
-    // ALWAYS show paywall - it will check premium status and handle navigation
-    // Non-premium: Show paywall to purchase
-    // Premium: RevenueCat paywall will auto-navigate to call
-    navigation.replace('Paywall', {
-      characterName,
-      characterImageUrl,
-      callAction: 'pick', // User wants to start call
-      returnScreen: 'Chat', // Where to go after cancel
-    });
+    // Use setTimeout to ensure vibration is fully cancelled before navigation
+    setTimeout(() => {
+      // ALWAYS show paywall - it will check premium status and handle navigation
+      // Non-premium: Show paywall to purchase
+      // Premium: RevenueCat paywall will auto-navigate to call
+      navigation.replace('Paywall', {
+        characterName,
+        characterImageUrl,
+        callAction: 'pick', // User wants to start call
+        returnScreen: 'Chat', // Where to go after cancel
+      });
+    }, 100);
   };
 
   const handleDecline = () => {
+    // Stop vibration IMMEDIATELY before any navigation
     Vibration.cancel();
     setHasSeenCall(true);
     setLastDeclinedTime(Date.now()); // Track when user declined
 
-    // Show paywall even on decline
-    navigation.replace('Paywall', {
-      characterName,
-      characterImageUrl,
-      callAction: 'decline', // User declined but see paywall anyway
-      returnScreen: 'Chat',
-    });
+    // Use setTimeout to ensure vibration is fully cancelled before navigation
+    setTimeout(() => {
+      // Show paywall even on decline
+      navigation.replace('Paywall', {
+        characterName,
+        characterImageUrl,
+        callAction: 'decline', // User declined but see paywall anyway
+        returnScreen: 'Chat',
+      });
+    }, 100);
   };
 
   return (

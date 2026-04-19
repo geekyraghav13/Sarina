@@ -181,7 +181,7 @@ export const getCreditAllocationForTier = (tier: string): number => {
     case 'weekly':
       return 60; // 60 seconds (1 minute)
     case 'yearly':
-      return 3000; // 3000 seconds (50 minutes)
+      return 1800; // 1800 seconds (30 minutes)
     case 'free':
     default:
       return 0; // No free credits

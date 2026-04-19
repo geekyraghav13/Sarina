@@ -21,6 +21,12 @@ import * as RevenueCatService from '../services/revenueCatService';
 import { startCall, stopCall, onCallStart, onCallEnd, onError } from '../services/vapiService';
 import { setDocumentREST, decrementVoiceBalanceAtomic, recordCallStart, clearActiveCall } from '../services/firestoreRestService';
 import { getCurrentUser } from '../services/authService';
+import {
+  logVoiceCallStarted,
+  logVoiceCallEnded,
+  logCreditDeductionBatch,
+  logCreditsExhausted,
+} from '../services/analyticsService';
 
 type VoiceCallScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -59,6 +65,8 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   const creditsExhaustedShownRef = useRef<boolean>(false);
   const secondsAccumulatedRef = useRef<number>(0); // BATCHING: Track seconds since last deduction
   const callStartTimeRef = useRef<number | null>(null); // CRASH RECOVERY: Track call start time
+  const initialBalanceRef = useRef<number | null>(null); // ANALYTICS: Track initial balance for call
+  const totalCallSecondsRef = useRef<number>(0); // ANALYTICS: Track total call duration
 
   // Animation refs
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -170,6 +178,20 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         setIsCallActive(true);
         setIsConnecting(false);
         setErrorMessage(null);
+
+        // Log voice call started to analytics
+        const user = getCurrentUser();
+        if (user) {
+          initialBalanceRef.current = balanceRef.current;
+          totalCallSecondsRef.current = 0;
+          logVoiceCallStarted(
+            user.uid,
+            characterName,
+            balanceRef.current ?? 0,
+            isPremium
+          );
+        }
+
         startCreditDeduction();
       });
 
@@ -177,6 +199,20 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         console.log('📴 Vapi call ended');
         setIsCallActive(false);
         stopCreditDeduction();
+
+        // Log voice call ended to analytics
+        const user = getCurrentUser();
+        if (user) {
+          const creditsUsed = (initialBalanceRef.current ?? 0) - (balanceRef.current ?? 0);
+          logVoiceCallEnded(
+            user.uid,
+            characterName,
+            totalCallSecondsRef.current,
+            creditsUsed,
+            balanceRef.current ?? 0,
+            'normal'
+          );
+        }
       });
 
       onError((error: any) => {
@@ -316,6 +352,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
         // Accumulate 1 second
         secondsAccumulatedRef.current += 1;
+        totalCallSecondsRef.current += 1; // Track total call duration for analytics
 
         // Check local balance estimate
         const estimatedBalance = (balanceRef.current || 0) - secondsAccumulatedRef.current;
@@ -345,6 +382,14 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
           // Update local ref with server-confirmed balance
           balanceRef.current = newBalance;
           console.log(`✅ Batch deducted ${secondsToDeduct}s atomically. New balance: ${newBalance}s`);
+
+          // Log batch deduction to analytics
+          logCreditDeductionBatch(
+            user.uid,
+            secondsToDeduct,
+            newBalance,
+            totalCallSecondsRef.current
+          );
 
           // CRITICAL: If balance hit 0 or negative, end call immediately
           if (newBalance <= 0) {
@@ -395,6 +440,22 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
   const handleCreditsExhausted = async () => {
     console.log('📵 Credits exhausted, ending call');
+
+    // Log credits exhausted to analytics
+    const user = getCurrentUser();
+    if (user) {
+      logCreditsExhausted(user.uid, characterName, totalCallSecondsRef.current);
+      const creditsUsed = (initialBalanceRef.current ?? 0) - (balanceRef.current ?? 0);
+      logVoiceCallEnded(
+        user.uid,
+        characterName,
+        totalCallSecondsRef.current,
+        creditsUsed,
+        0,
+        'credits_exhausted'
+      );
+    }
+
     // CRITICAL: Stop credit deduction FIRST, before stopping call
     stopCreditDeduction();
     stopCall();

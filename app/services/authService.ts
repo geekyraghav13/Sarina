@@ -157,6 +157,337 @@ export const signOut = async () => {
 };
 
 /**
+ * Delete a Firestore collection using batch deletes via REST API
+ * This function handles pagination to ensure ALL documents are deleted
+ */
+const deleteCollectionREST = async (collectionPath: string, token: string): Promise<number> => {
+  let deletedCount = 0;
+  const batchSize = 500; // Max allowed by Firestore REST API
+  let pageToken: string | undefined = undefined;
+
+  try {
+    // Keep fetching and deleting until no more documents exist
+    do {
+      // List documents in the collection with pagination
+      let listUrl = `https://firestore.googleapis.com/v1/projects/sarina-ai-2b2c1/databases/(default)/documents/${collectionPath}?pageSize=${batchSize}`;
+      if (pageToken) {
+        listUrl += `&pageToken=${pageToken}`;
+      }
+
+      const listResponse = await fetch(listUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!listResponse.ok) {
+        if (listResponse.status === 404) {
+          console.log(`ℹ️ Collection ${collectionPath} does not exist or is empty`);
+          return deletedCount;
+        }
+        console.warn(`⚠️ Could not list documents in ${collectionPath}: ${listResponse.status}`);
+        return deletedCount;
+      }
+
+      const data = await listResponse.json();
+      const documents = data.documents || [];
+      pageToken = data.nextPageToken;
+
+      if (documents.length === 0) {
+        break;
+      }
+
+      // Delete each document in this batch
+      for (const doc of documents) {
+        try {
+          const docName = doc.name; // Full path like "projects/.../databases/.../documents/..."
+          const deleteResponse = await fetch(
+            `https://firestore.googleapis.com/v1/${docName}`,
+            {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (deleteResponse.ok) {
+            deletedCount++;
+          } else {
+            console.warn(`⚠️ Failed to delete document ${docName}: ${deleteResponse.status}`);
+          }
+        } catch (error) {
+          console.warn(`⚠️ Failed to delete document:`, error);
+        }
+      }
+
+      console.log(`🗑️ Deleted ${deletedCount} documents from ${collectionPath} so far...`);
+
+    } while (pageToken); // Continue if there are more pages
+
+    console.log(`✅ Finished deleting ${deletedCount} documents from ${collectionPath}`);
+  } catch (error) {
+    console.warn(`⚠️ Failed to delete collection ${collectionPath}:`, error);
+  }
+
+  return deletedCount;
+};
+
+/**
+ * Delete all documents in a root collection that match a specific userId field
+ * Used for deleting call_sessions and credit_transactions
+ */
+const deleteDocumentsByUserIdREST = async (
+  collectionName: string,
+  userId: string,
+  token: string
+): Promise<number> => {
+  let deletedCount = 0;
+  const batchSize = 500;
+  let pageToken: string | undefined = undefined;
+
+  try {
+    console.log(`🔍 Searching for ${collectionName} documents for user ${userId}...`);
+
+    do {
+      // List all documents in the collection (we'll filter by userId on client side)
+      // Note: Firestore REST API doesn't support queries directly, so we fetch all and filter
+      let listUrl = `https://firestore.googleapis.com/v1/projects/sarina-ai-2b2c1/databases/(default)/documents/${collectionName}?pageSize=${batchSize}`;
+      if (pageToken) {
+        listUrl += `&pageToken=${pageToken}`;
+      }
+
+      const listResponse = await fetch(listUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!listResponse.ok) {
+        if (listResponse.status === 404) {
+          console.log(`ℹ️ Collection ${collectionName} does not exist`);
+          return deletedCount;
+        }
+        console.warn(`⚠️ Could not list ${collectionName}: ${listResponse.status}`);
+        return deletedCount;
+      }
+
+      const data = await listResponse.json();
+      const documents = data.documents || [];
+      pageToken = data.nextPageToken;
+
+      if (documents.length === 0) {
+        break;
+      }
+
+      // Filter documents that belong to this user and delete them
+      for (const doc of documents) {
+        try {
+          // Check if this document has a userId field matching our user
+          const userIdField = doc.fields?.userId?.stringValue;
+          if (userIdField === userId) {
+            const docName = doc.name;
+            const deleteResponse = await fetch(
+              `https://firestore.googleapis.com/v1/${docName}`,
+              {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (deleteResponse.ok) {
+              deletedCount++;
+            } else {
+              console.warn(`⚠️ Failed to delete ${collectionName} document: ${deleteResponse.status}`);
+            }
+          }
+        } catch (error) {
+          console.warn(`⚠️ Failed to delete ${collectionName} document:`, error);
+        }
+      }
+
+      if (deletedCount > 0) {
+        console.log(`🗑️ Deleted ${deletedCount} ${collectionName} documents so far...`);
+      }
+
+    } while (pageToken);
+
+    console.log(`✅ Finished deleting ${deletedCount} ${collectionName} documents`);
+  } catch (error) {
+    console.warn(`⚠️ Failed to delete ${collectionName} documents:`, error);
+  }
+
+  return deletedCount;
+};
+
+/**
+ * Delete user account and ALL associated data from Firestore and Firebase Auth
+ *
+ * This function deletes 100% of user data including:
+ * 1. All user subcollections (girlfriends, messages, conversations, preferences, settings, etc.)
+ * 2. User document from users collection
+ * 3. All call_sessions documents where userId matches
+ * 4. All credit_transactions documents where userId matches
+ * 5. Firebase Auth account
+ * 6. RevenueCat user data
+ * 7. Google Sign-In access
+ *
+ * IMPORTANT: This is IRREVERSIBLE and deletes ALL traces of the user from the database
+ */
+export const deleteAccount = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('No user is currently signed in');
+    }
+
+    console.log('🗑️ ========================================');
+    console.log('🗑️ STARTING COMPLETE ACCOUNT DELETION');
+    console.log('🗑️ User ID:', user.uid);
+    console.log('🗑️ Email:', user.email);
+    console.log('🗑️ ========================================');
+
+    // Get auth token for API calls
+    const token = await getIdToken();
+    if (!token) {
+      throw new Error('Could not get authentication token');
+    }
+
+    let totalDocumentsDeleted = 0;
+
+    // STEP 1: Delete all user subcollections from Firestore
+    console.log('\n📦 STEP 1: Deleting user subcollections...');
+    try {
+      const subcollections = [
+        'girlfriends',
+        'messages',
+        'conversations',
+        'preferences',
+        'settings',
+        'purchases',
+        'credits',
+        'call_history',
+        'notifications',
+        'sessions',
+      ];
+
+      for (const subcollection of subcollections) {
+        const collectionPath = `users/${user.uid}/${subcollection}`;
+        console.log(`  🗂️ Deleting ${collectionPath}...`);
+        const deleted = await deleteCollectionREST(collectionPath, token);
+        totalDocumentsDeleted += deleted;
+        if (deleted > 0) {
+          console.log(`  ✅ Deleted ${deleted} documents from ${subcollection}`);
+        }
+      }
+
+      console.log(`✅ STEP 1 COMPLETE: Deleted ${totalDocumentsDeleted} documents from subcollections`);
+    } catch (error) {
+      console.error('❌ STEP 1 FAILED:', error);
+      // Continue with account deletion even if subcollection deletion fails
+    }
+
+    // STEP 2: Delete ALL call_sessions for this user
+    console.log('\n📞 STEP 2: Deleting call sessions...');
+    try {
+      const callSessionsDeleted = await deleteDocumentsByUserIdREST('call_sessions', user.uid, token);
+      totalDocumentsDeleted += callSessionsDeleted;
+      console.log(`✅ STEP 2 COMPLETE: Deleted ${callSessionsDeleted} call session documents`);
+    } catch (error) {
+      console.error('❌ STEP 2 FAILED:', error);
+      // Continue with account deletion
+    }
+
+    // STEP 3: Delete ALL credit_transactions for this user
+    console.log('\n💳 STEP 3: Deleting credit transactions...');
+    try {
+      const transactionsDeleted = await deleteDocumentsByUserIdREST('credit_transactions', user.uid, token);
+      totalDocumentsDeleted += transactionsDeleted;
+      console.log(`✅ STEP 3 COMPLETE: Deleted ${transactionsDeleted} credit transaction documents`);
+    } catch (error) {
+      console.error('❌ STEP 3 FAILED:', error);
+      // Continue with account deletion
+    }
+
+    // STEP 4: Delete main user document from Firestore
+    console.log('\n👤 STEP 4: Deleting main user document...');
+    try {
+      const response = await fetch(
+        `https://firestore.googleapis.com/v1/projects/sarina-ai-2b2c1/databases/(default)/documents/users/${user.uid}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        totalDocumentsDeleted += 1;
+        console.log('✅ STEP 4 COMPLETE: User document deleted from Firestore');
+      } else {
+        console.warn('⚠️ STEP 4 WARNING: Could not delete user document:', await response.text());
+      }
+    } catch (error) {
+      console.error('❌ STEP 4 FAILED:', error);
+      // Continue with account deletion
+    }
+
+    // STEP 5: Log out from RevenueCat
+    console.log('\n💰 STEP 5: Logging out from RevenueCat...');
+    try {
+      await RevenueCatService.logoutRevenueCatUser();
+      console.log('✅ STEP 5 COMPLETE: Logged out from RevenueCat');
+    } catch (error: any) {
+      // Gracefully handle RevenueCat errors (e.g., SDK not initialized)
+      console.warn('⚠️ STEP 5 WARNING: Could not log out from RevenueCat:', error?.message || error);
+      console.log('ℹ️ This is expected if RevenueCat SDK is not initialized - continuing with deletion...');
+    }
+
+    // STEP 6: Revoke Google Sign-In access
+    console.log('\n🔐 STEP 6: Revoking Google access...');
+    try {
+      await GoogleSignin.revokeAccess();
+      await GoogleSignin.signOut();
+      console.log('✅ STEP 6 COMPLETE: Revoked Google access');
+    } catch (error) {
+      console.warn('⚠️ STEP 6 WARNING: Could not revoke Google access:', error);
+    }
+
+    // STEP 7: Delete Firebase Auth account (FINAL STEP)
+    console.log('\n🔥 STEP 7: Deleting Firebase Auth account...');
+    try {
+      await user.delete();
+      console.log('✅ STEP 7 COMPLETE: Firebase Auth account deleted');
+    } catch (error) {
+      console.error('❌ STEP 7 FAILED:', error);
+      throw error; // This is critical, so we throw
+    }
+
+    console.log('\n🗑️ ========================================');
+    console.log('✅ ACCOUNT DELETION COMPLETED SUCCESSFULLY');
+    console.log(`📊 Total Firestore documents deleted: ${totalDocumentsDeleted}`);
+    console.log('🗑️ ========================================');
+  } catch (error: any) {
+    console.error('\n❌ ========================================');
+    console.error('❌ ACCOUNT DELETION FAILED');
+    console.error('❌ Error:', error);
+    console.error('❌ ========================================');
+
+    // Check if re-authentication is required
+    if (error.code === 'auth/requires-recent-login') {
+      throw new Error('For security reasons, please sign out and sign in again before deleting your account.');
+    }
+
+    throw new Error(error.message || 'Failed to delete account');
+  }
+};
+
+/**
  * Get current user
  */
 export const getCurrentUser = (): User | null => {

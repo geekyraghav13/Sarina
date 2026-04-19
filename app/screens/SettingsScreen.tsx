@@ -8,12 +8,16 @@ import {
   Linking,
   Share,
   Platform,
+  Alert,
 } from 'react-native';
 import { logScreenView } from '../services/analyticsService';
+import { deleteAccount } from '../services/authService';
 
 interface SettingsScreenProps {}
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
   React.useEffect(() => {
     logScreenView('Settings');
   }, []);
@@ -67,6 +71,104 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
     } catch (error) {
       console.error('Failed to share app:', error);
     }
+  };
+
+  const handleSignOut = async () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { signOut } = await import('../services/authService');
+              await signOut();
+              Alert.alert(
+                'Signed Out',
+                'You have been successfully signed out.',
+                [{ text: 'OK' }]
+              );
+              // Navigation will be handled automatically by auth state change
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to sign out.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This will permanently delete all your data including:\n\n• Your profile and settings\n• Voice call credits\n• Subscription information\n• Chat history\n• All girlfriends and conversations\n• All messages and preferences\n\nThis action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              await deleteAccount();
+              Alert.alert(
+                'Account Deleted',
+                'Your account and all associated data have been permanently deleted.',
+                [{ text: 'OK' }]
+              );
+              // Navigation will be handled automatically by auth state change
+            } catch (error: any) {
+              setIsDeleting(false);
+
+              // Handle re-authentication required error
+              if (error.message?.includes('sign out and sign in again')) {
+                Alert.alert(
+                  'Re-authentication Required',
+                  'For security reasons, please sign out and sign back in before deleting your account.\n\nWould you like to sign out now?',
+                  [
+                    {
+                      text: 'Cancel',
+                      style: 'cancel',
+                    },
+                    {
+                      text: 'Sign Out',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          const { signOut } = await import('../services/authService');
+                          await signOut();
+                          Alert.alert(
+                            'Signed Out',
+                            'Please sign in again and then delete your account from Settings.',
+                            [{ text: 'OK' }]
+                          );
+                        } catch (signOutError: any) {
+                          Alert.alert('Error', signOutError.message || 'Failed to sign out.');
+                        }
+                      },
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert(
+                  'Error',
+                  error.message || 'Failed to delete account. Please try again.'
+                );
+              }
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderSettingItem = (
@@ -141,6 +243,52 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
             'Share with your friends',
             handleShareApp
           )}
+        </View>
+
+        {/* Account Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+
+          {/* Sign Out Button */}
+          <TouchableOpacity
+            style={[styles.settingItem, styles.signOutButton]}
+            onPress={handleSignOut}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.settingIcon, styles.signOutIcon]}>
+              <Text style={styles.iconText}>🚪</Text>
+            </View>
+            <View style={styles.settingContent}>
+              <Text style={[styles.settingTitle, styles.signOutText]}>
+                Sign Out
+              </Text>
+              <Text style={styles.settingSubtitle}>
+                Sign out of your account
+              </Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+
+          {/* Delete Account Button */}
+          <TouchableOpacity
+            style={[styles.settingItem, styles.deleteButton]}
+            onPress={handleDeleteAccount}
+            activeOpacity={0.7}
+            disabled={isDeleting}
+          >
+            <View style={[styles.settingIcon, styles.deleteIcon]}>
+              <Text style={styles.iconText}>🗑️</Text>
+            </View>
+            <View style={styles.settingContent}>
+              <Text style={[styles.settingTitle, styles.deleteText]}>
+                {isDeleting ? 'Deleting Account...' : 'Delete Account'}
+              </Text>
+              <Text style={styles.settingSubtitle}>
+                Permanently delete your account and all data
+              </Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
         </View>
 
         {/* App Info */}
@@ -260,5 +408,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.4)',
     textAlign: 'center',
+  },
+  signOutButton: {
+    borderColor: 'rgba(255, 159, 10, 0.3)',
+    backgroundColor: 'rgba(255, 159, 10, 0.05)',
+  },
+  signOutIcon: {
+    backgroundColor: 'rgba(255, 159, 10, 0.2)',
+    borderColor: '#FF9F0A',
+  },
+  signOutText: {
+    color: '#FF9F0A',
+  },
+  deleteButton: {
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+    backgroundColor: 'rgba(255, 59, 48, 0.05)',
+  },
+  deleteIcon: {
+    backgroundColor: 'rgba(255, 59, 48, 0.2)',
+    borderColor: '#FF3B30',
+  },
+  deleteText: {
+    color: '#FF3B30',
   },
 });

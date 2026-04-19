@@ -11,6 +11,7 @@ import {
   Animated,
   Keyboard,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -91,7 +92,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
   const { shouldShowCall } = useCallStore();
 
   // Payment store for freemium model
-  const { isPremium, freeMessagesCount, loadSubscriptionStatus } = usePaymentStore();
+  const {
+    isPremium,
+    freeMessagesCount,
+    loadSubscriptionStatus,
+    canSendMessage,
+    incrementMessageCount,
+    getRemainingMessages,
+  } = usePaymentStore();
 
   // Load subscription status on mount
   useEffect(() => {
@@ -218,6 +226,29 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
 
   const handleSend = async () => {
     if (inputText.trim() && !isAITyping) {
+      // Check message limit for non-premium users
+      if (!canSendMessage()) {
+        const remaining = getRemainingMessages();
+        Alert.alert(
+          'Message Limit Reached',
+          `You've reached your daily limit of 50 messages. Upgrade to premium for unlimited messaging!`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Upgrade',
+              onPress: () => {
+                navigation.navigate('Paywall', {
+                  characterName: girlfriendName,
+                  characterImageUrl: selectedGirlfriend?.imageUrl,
+                  returnScreen: 'Chat', // CRITICAL: This triggers post-onboarding popup
+                });
+              },
+            },
+          ]
+        );
+        return;
+      }
+
       const userMessageText = inputText.trim();
       const newMessage: Message = {
         id: Date.now().toString(),
@@ -227,6 +258,9 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
       };
 
       addMessage(girlfriendId, newMessage);
+
+      // Increment message count for limit tracking
+      await incrementMessageCount();
 
       // Track message sent
       const newCount = messageCount + 1;
@@ -354,16 +388,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
       <VideoBackground source={videoSource} />
 
       {/* Header with AI name and status */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
+      <View style={styles.header} pointerEvents="box-none">
+        <View style={styles.headerLeft} pointerEvents="box-none">
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => {
-              // Always navigate to MainTabs (Home screen)
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'MainTabs' }],
-              });
+              console.log('🏠 Back/Home button pressed - navigating to MainTabs');
+              // Navigate back to MainTabs (Home screen)
+              navigation.navigate('MainTabs' as any);
             }}
             activeOpacity={0.7}
           >
@@ -488,7 +520,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    zIndex: 10,
+    zIndex: 1000,
+    elevation: 1000, // Android shadow/elevation ensures it's above other elements
   },
   headerLeft: {
     flexDirection: 'row',

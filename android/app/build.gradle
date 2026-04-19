@@ -92,8 +92,8 @@ android {
         applicationId 'com.x8284.katrina'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 39
-        versionName "2.6.2"
+        versionCode 52
+        versionName "2.8.2"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
     }
@@ -105,12 +105,10 @@ android {
             keyPassword 'android'
         }
         release {
-            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
-                storeFile file(MYAPP_UPLOAD_STORE_FILE)
-                storePassword MYAPP_UPLOAD_STORE_PASSWORD
-                keyAlias MYAPP_UPLOAD_KEY_ALIAS
-                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
-            }
+            storeFile file('katrina-release.jks')
+            storePassword 'a143b5cfe4ecd6dab8634e3534c7aa8b'
+            keyAlias 'bbabcdda9c8eb0477e426fe11be469b7'
+            keyPassword '494b078f33042e97e86675b3436ac1f2'
         }
     }
     buildTypes {

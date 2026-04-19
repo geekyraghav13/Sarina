@@ -1,98 +1,37 @@
-# Sarina AI - AI Girlfriend Companion
+# Sarina AI - AI Companion Mobile App
 
-An immersive mobile app with 20 unique AI characters, real conversations, voice calling, and beautiful UI.
+A React Native mobile application featuring AI-powered conversations and voice calling with multiple AI characters.
 
-![Version](https://img.shields.io/badge/version-1.4.8-blue.svg)
-![iOS Build](https://img.shields.io/badge/iOS%20Build-31-blue.svg)
-![Status](https://img.shields.io/badge/status-production-success.svg)
+![Version](https://img.shields.io/badge/version-2.8.2-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-iOS%20%2B%20Android-green.svg)
-![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-orange.svg)
-![RevenueCat](https://img.shields.io/badge/RevenueCat-Integrated-purple.svg)
+![Status](https://img.shields.io/badge/status-production-success.svg)
 
 ---
 
 ## Features
 
-### Core Features
-- 🤖 **20 AI Characters** - Realistic, Anime, Fantasy styles with unique personalities
-- 💬 **Real AI Chat** - Context-aware conversations with OpenRouter AI (Qwen 2.5)
-- 💾 **Persistent Chats** - Messages saved across app restarts
-- 🎨 **Beautiful UI** - Video backgrounds, glassmorphism, smooth animations
-
-### Voice Calling (NEW!)
-- 🎙️ **AI Voice Conversations** - Real-time voice chat with Gemini 2.0 Flash
-- ⏱️ **Credit System** - Pre-paid minutes with 5-second deduction
-- 💰 **Voice Packs** - $1.99 (5min), $4.99 (15min), $8.99 (30min)
-- 🔒 **Google Sign-In** - Secure authentication with Firebase
-
-### Analytics & Monitoring
-- 📊 **Firebase Analytics** - Complete integration with all mandatory events
-- 🔴 **Crash Reporting** - Sentry monitoring (free tier)
-- ⚡ **Performance** - expo-image with disk caching
-
----
-
-## Quick Start
-
-### Installation
-```bash
-# Install dependencies
-npm install
-
-# Build Android app
-npx expo prebuild --platform android --clean
-npx expo run:android
-```
-
-### First Run
-1. App opens to Google Sign-In screen
-2. Sign in with your Google account
-3. Explore characters and chat
-4. Purchase voice minutes to enable calling
-
----
-
-## Documentation
-
-### iOS Builds
-- **[docs/ios-builds/](./docs/ios-builds/)** - All iOS build documentation
-- **[BUILD_31_REVENUECAT_INTEGRATION.md](./docs/ios-builds/BUILD_31_REVENUECAT_INTEGRATION.md)** - Latest build with RevenueCat
-
-### Essential Guides
-1. **[docs/README.md](./docs/README.md)** - Complete project documentation
-2. **DEPLOYMENT_GUIDE.md** - Deployment instructions with Google Cloud
-3. **FIRESTORE_SCHEMA.md** - Firestore database structure and security rules
-
-### Legal
-- **PRIVACY_POLICY.md** - Privacy policy
-- **TERMS_OF_USE.md** - Terms of service
+- 💬 **AI Chat** - Real-time conversations with AI characters
+- 🎙️ **Voice Calling** - AI voice calls with credit system
+- 🔐 **Authentication** - Google Sign-In with Firebase
+- 💰 **Monetization** - Subscription + credit-based voice calls
+- 📊 **Analytics** - Firebase Analytics integration
+- ☁️ **Cloud Functions** - Automated credit management and crash recovery
 
 ---
 
 ## Tech Stack
 
 **Frontend:**
-- React Native 0.81.5 (Expo SDK 54)
+- React Native (Expo SDK 54)
 - TypeScript
-- React Navigation 7
-- Zustand (state management)
+- React Navigation
+- Zustand (State Management)
 
 **Backend:**
-- Firebase (Auth, Firestore, Analytics)
-- Google Cloud Run (WebSocket server)
-- Cloud Functions (credit resets)
-- OpenRouter AI (chat)
-- Gemini 2.0 Flash (voice)
-- RevenueCat (subscriptions & IAP)
-
-**Monitoring:**
-- Sentry (crash reporting)
-- Firebase Analytics
-- RevenueCat Dashboard
-
-**Payments:**
-- Google Play In-App Purchases
-- expo-in-app-purchases v14.5.0
+- Firebase (Auth, Firestore, Analytics, Cloud Functions)
+- Vapi (Voice AI)
+- RevenueCat (Subscriptions)
+- Google Cloud Monitoring
 
 ---
 
@@ -101,191 +40,121 @@ npx expo run:android
 ```
 sarina/
 ├── app/
-│   ├── components/          # UI components
-│   ├── config/             # Firebase, Sentry config
-│   ├── navigation/         # React Navigation setup
-│   ├── screens/            # App screens
-│   │   ├── GoogleSignInScreen.tsx      # NEW: Sign-in screen
-│   │   ├── VoiceCallScreen.tsx         # NEW: Voice calling UI
-│   │   └── CreditPurchaseScreen.tsx    # NEW: Purchase voice packs
-│   ├── services/           # API services
-│   │   ├── authService.ts              # NEW: Google Sign-In
-│   │   ├── creditService.ts            # NEW: Firestore credit ops
-│   │   ├── voiceCallService.ts         # NEW: WebSocket client
-│   │   └── subscriptionService.ts      # UPDATED: Voice packs
-│   ├── store/              # Zustand state
-│   └── utils/              # Helper functions
-├── backend/                # NEW: WebSocket server
-│   ├── server.js           # Main server
-│   ├── geminiClient.js     # Gemini AI integration
-│   ├── creditManager.js    # 5-second credit deduction
-│   └── .env                # Credentials (configured)
-├── functions/              # NEW: Cloud Functions
-│   └── index.js            # Credit resets
-├── android/                # Android native code
-├── assets/                 # Images, videos, icons
-├── firestore.rules         # NEW: Security rules
-└── *.md                    # Documentation
+│   ├── components/      # Reusable UI components
+│   ├── screens/         # App screens
+│   ├── services/        # API and Firebase services
+│   ├── store/           # Zustand state management
+│   └── config/          # Configuration files
+├── functions/           # Cloud Functions
+├── docs/                # Documentation
+├── android/             # Android native code
+└── ios/                 # iOS native code
 ```
 
 ---
 
-## Configuration Status
+## Getting Started
 
-| Component | Status | Notes |
-|-----------|--------|-------|
-| **google-services.json** | ✅ | Placed in `/android/app/` |
-| **Web Client ID** | ✅ | Configured in authService.ts |
-| **SHA-1 Fingerprint** | ✅ | Added to Firebase Console |
-| **Gemini API Key** | ✅ | Configured in backend/.env |
-| **Firebase Admin SDK** | ✅ | Configured in backend/.env |
-| **Firestore Rules** | ⏳ | Need to deploy |
-| **Cloud Run Backend** | ⏳ | Need to deploy |
-| **Cloud Functions** | ⏳ | Need to deploy |
-| **IAP Products** | ⏳ | Need to configure in Play Console |
+### Prerequisites
+
+- Node.js 20+
+- npm or yarn
+- Expo CLI
+- Firebase project
+- Android Studio / Xcode
+
+### Installation
+
+```bash
+# Clone repository
+git clone <repository-url>
+cd sarina
+
+# Install dependencies
+npm install
+
+# Run on Android
+npx expo run:android
+
+# Run on iOS
+npx expo run:ios
+```
 
 ---
 
-## Voice Calling Overview
+## Documentation
 
-### How It Works
-1. User signs in with Google
-2. User purchases voice minutes ($1.99, $4.99, or $8.99)
-3. Credits added to Firestore (300, 900, or 1800 seconds)
-4. User starts voice call with AI character
-5. Every 5 seconds, credits deducted from Firestore
-6. Call auto-ends when balance reaches 0
-7. User prompted to purchase more minutes
+All documentation is organized in the `/docs` folder:
 
-### Pricing
-| Pack | Price | Minutes | Cost/Min | Savings |
-|------|-------|---------|----------|---------|
-| 5 min | $1.99 | 5 | $0.40 | - |
-| 15 min | $4.99 | 15 | $0.33 | 17% |
-| 30 min | $8.99 | 30 | $0.30 | 25% |
+- **[docs/INDEX.md](./docs/INDEX.md)** - Complete documentation index
+- **[docs/current/](./docs/current/)** - Current production documentation
+- **[docs/guides/](./docs/guides/)** - Implementation guides
+
+### Key Documents
+
+- **[ANALYTICS_MONITORING_COMPLETE.md](./docs/current/ANALYTICS_MONITORING_COMPLETE.md)** - Analytics & monitoring implementation
+- **[DEPLOYMENT_READY.md](./docs/current/DEPLOYMENT_READY.md)** - Production deployment guide
+- **[IMPLEMENTATION_SUMMARY.md](./docs/current/IMPLEMENTATION_SUMMARY.md)** - Technical implementation details
+
+---
+
+## Features Overview
+
+### Voice Credit System
+
+- Batched credit deduction (10s intervals)
+- Atomic Firestore operations
+- Crash recovery mechanism
+- Zero-balance policy (no negative credits)
+- 90% cost reduction vs per-second billing
+
+### Analytics & Monitoring
+
+- Firebase Analytics with 10+ monetization events
+- Cloud Monitoring with automated alerts
+- Flagged accounts review system
+- Real-time dashboard for operations
 
 ### Security
-- All credits stored server-side in Firestore
-- Client cannot modify balance (security rules)
-- Backend validates every transaction
-- Impossible to hack credits
+
+- Server-side credit validation
+- Firestore security rules
+- Atomic transactions prevent double-charge
+- Encrypted authentication with Firebase
 
 ---
 
-## Testing Checklist
+## Deployment
 
-### Google Sign-In
-- [ ] Run `npx expo run:android`
-- [ ] App opens to Google Sign-In screen
-- [ ] Tap "Continue with Google"
-- [ ] Sign in succeeds
-- [ ] Console shows: `✅ Google Sign-In successful`
-- [ ] User document created in Firestore
+### Cloud Functions
 
-### Voice Calling (After Backend Deployment)
-- [ ] Purchase voice minutes
-- [ ] Verify credits added to Firestore
-- [ ] Start voice call
-- [ ] AI responds to voice
-- [ ] Credits deduct every 5 seconds
-- [ ] Call ends at 0 balance
-- [ ] Purchase modal appears
-
----
-
-## Deployment Steps
-
-### 1. Deploy Firestore Security Rules
-```bash
-firebase deploy --only firestore:rules
-```
-
-### 2. Deploy WebSocket Backend to Cloud Run
-```bash
-cd backend
-./deploy.sh
-```
-
-### 3. Deploy Cloud Functions
 ```bash
 cd functions
 npm install
 firebase deploy --only functions
 ```
 
-### 4. Configure IAP Products in Play Console
-See **PLAY_CONSOLE_IAP_SETUP.md** for step-by-step instructions.
+### Mobile App
 
-### 5. Update WebSocket URL in App
-After backend deployment, update `/app/services/voiceCallService.ts` with your Cloud Run URL.
+```bash
+# Android Release
+cd android && ./gradlew assembleRelease
 
----
-
-## Cost Breakdown
-
-### Monthly Infrastructure Costs (1,000 users)
-- Google Cloud Run: ~$10-20/month
-- Firestore: ~$5-10/month
-- Gemini API: ~$0.002/minute
-- Cloud Functions: ~$0-5/month
-- **Total: ~$35-51/month**
-
-### Revenue Potential
-- 100 purchases × $1.99 = $199
-- 50 purchases × $4.99 = $249
-- 30 purchases × $8.99 = $270
-- **Total: ~$718/month**
-- **After Google's 15% fee: ~$610/month**
-- **Net Profit: ~$560-575/month**
+# iOS Release (via Xcode or EAS)
+eas build --platform ios
+```
 
 ---
 
-## API Keys & Services
+## Configuration
 
-| Service | Cost | Usage |
-|---------|------|-------|
-| Firebase Auth | FREE | Google Sign-In |
-| Firestore | FREE* | User data + credits |
-| Cloud Run | ~$10-20/mo | WebSocket server |
-| Cloud Functions | FREE* | Credit resets |
-| Gemini 2.0 Flash | ~$0.002/min | Voice AI |
-| OpenRouter | FREE | Chat AI |
-| Sentry | FREE | Crash reports |
-| Play Console IAP | 15% fee | Voice packs |
+Required configuration files (not included in repository):
 
-*FREE tier sufficient for < 10k users
+- `google-services.json` - Firebase config for Android
+- `GoogleService-Info.plist` - Firebase config for iOS
+- `.env` files - API keys and secrets
 
----
-
-## Troubleshooting
-
-### "Developer Error" on Google Sign-In
-**Solution:** SHA-1 not added to Firebase Console
-- Add SHA-1: `DB:17:8B:87:60:19:06:42:62:DB:01:50:43:50:4A:0D:9D:BC:69:A3`
-- Download fresh `google-services.json`
-- Rebuild: `npx expo run:android`
-
-### "Product not found" for voice packs
-**Solution:** IAP products not configured in Play Console
-- See **PLAY_CONSOLE_IAP_SETUP.md**
-
-### Voice call doesn't connect
-**Solution:** Backend not deployed
-- Deploy to Cloud Run: `cd backend && ./deploy.sh`
-- Update WebSocket URL in app
-
-### Credits not deducting
-**Solution:** Firestore rules not deployed
-- Deploy rules: `firebase deploy --only firestore:rules`
-
----
-
-## Support
-
-- **Documentation:** See `VOICE_CALL_README.md` for complete guide
-- **Firebase Console:** https://console.firebase.google.com/
-- **Play Console:** https://play.google.com/console
-- **Sentry Dashboard:** https://sentry.io/issues/
+See [docs/guides/](./docs/guides/) for setup instructions.
 
 ---
 
@@ -295,7 +164,6 @@ Private project - All rights reserved
 
 ---
 
-**Status:** Production Ready (Voice Calling in Testing) ✅
-**Version:** 1.3.0
-**Platform:** Android Only
-**Last Updated:** February 4, 2026
+## Support
+
+For detailed documentation and guides, see the `/docs` folder.

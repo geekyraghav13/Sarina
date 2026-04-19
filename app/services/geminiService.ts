@@ -7,7 +7,7 @@ import { Girlfriend } from '../store/girlfriendStore';
 
 // Gemini Configuration
 const GEMINI_API_KEY = 'AIzaSyBNDpbvXpCv7y3nVbDa13S3a5sOQIl7-PM';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 interface ChatHistoryItem {
   sender: string;
@@ -76,7 +76,7 @@ export const generateAIResponse = async (
     const recentHistory = chatHistory.slice(-10);
     const historyMessages = formatChatHistory(recentHistory, character.name, userName);
 
-    // Build the request payload
+    // Build the request payload with safety settings
     const payload = {
       contents: [
         ...historyMessages,
@@ -94,6 +94,24 @@ export const generateAIResponse = async (
         topP: 0.95,
         maxOutputTokens: 200,
       },
+      safetySettings: [
+        {
+          category: 'HARM_CATEGORY_HARASSMENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+        },
+        {
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+        },
+        {
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+        },
+        {
+          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+        },
+      ],
     };
 
     console.log('🤖 Sending request to Gemini...');
@@ -115,14 +133,25 @@ export const generateAIResponse = async (
 
     const data = await response.json();
 
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error('No response from Gemini');
+    // Check if content was blocked by safety filters
+    if (data.candidates && data.candidates.length > 0) {
+      const candidate = data.candidates[0];
+
+      // Check if response was blocked for safety reasons
+      if (candidate.finishReason === 'SAFETY' || !candidate.content) {
+        console.log('⚠️ Content blocked by safety filters');
+        return 'Sorry';
+      }
+
+      const aiResponse = candidate.content.parts[0].text.trim();
+      console.log('✅ Gemini Response received:', aiResponse.substring(0, 50) + '...');
+
+      return aiResponse;
     }
 
-    const aiResponse = data.candidates[0].content.parts[0].text.trim();
-    console.log('✅ Gemini Response received:', aiResponse.substring(0, 50) + '...');
-
-    return aiResponse;
+    // No candidates in response
+    console.log('⚠️ No response from Gemini');
+    throw new Error('No response from Gemini');
   } catch (error) {
     console.error('Error generating AI response:', error);
 

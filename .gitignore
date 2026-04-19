@@ -60,3 +60,21 @@ service-account-key.json
 
 # Sensitive credentials - DO NOT COMMIT
 IMPORTANT_CREDENTIALS.md
+serviceAccountKey.json
+google-services.json
+GoogleService-Info.plist
+**/GoogleService-Info.plist
+**/google-services.json
+
+# Build artifacts
+*.aab
+*.apk
+*.ipa
+
+# Local documentation
+DOCUMENTATION_ORGANIZATION_COMPLETE.md
+CLAUDE.md
+
+# Backend environment
+backend/.env
+functions/.env

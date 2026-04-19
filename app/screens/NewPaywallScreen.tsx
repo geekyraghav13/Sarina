@@ -8,6 +8,8 @@ import { useGirlfriendStore } from '../store/girlfriendStore';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import * as RevenueCatService from '../services/revenueCatService';
 import { canStartCall } from '../services/creditService';
+import { logPaywallShown, logSubscriptionPurchased } from '../services/analyticsService';
+import { getCurrentUser } from '../services/authService';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -169,6 +171,16 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
     try {
       console.log('🎨 Presenting RevenueCat Native Paywall');
 
+      // Log paywall shown to analytics
+      const user = getCurrentUser();
+      if (user) {
+        logPaywallShown(
+          callAction ? 'call_credits_required' : 'manual_navigation',
+          characterName,
+          undefined // balance not available in this context
+        );
+      }
+
       // Present the RevenueCat native paywall
       // This will show the paywall you configured in RevenueCat dashboard
       const result = await RevenueCatUI.presentPaywall({
@@ -207,6 +219,19 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         const subInfo = await RevenueCatService.getSubscriptionInfo();
         setIsPremium(subInfo.isPremium);
         setSubscriptionType(subInfo.tier as any);
+
+        // Log subscription purchase to analytics
+        const user = getCurrentUser();
+        if (user && customerInfo) {
+          const activeEntitlement = customerInfo.entitlements.active['premium'];
+          const productIdentifier = activeEntitlement?.productIdentifier || 'unknown';
+          logSubscriptionPurchased(
+            user.uid,
+            subInfo.tier || 'premium',
+            0, // price not available from RevenueCat
+            'USD'
+          );
+        }
 
         // EXACT FLOW AS REQUIRED:
         // Show alert: "You have been subscribed"

@@ -1,0 +1,27 @@
+{
+  "displayName": "Sarina - Reconciliation Function Errors",
+  "documentation": {
+    "content": "Alert when reconcileCrashedCalls function has high error rate (>5 errors in 5 minutes)",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "displayName": "High error rate in reconcileCrashedCalls",
+      "conditionThreshold": {
+        "filter": "resource.type=\"cloud_function\" AND resource.labels.function_name=\"reconcileCrashedCalls\" AND metric.type=\"cloudfunctions.googleapis.com/function/execution_count\" AND metric.labels.status!=\"ok\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "60s",
+            "perSeriesAligner": "ALIGN_RATE",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 5,
+        "duration": "300s"
+      }
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true
+}

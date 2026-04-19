@@ -167,7 +167,7 @@ export const restorePurchases = async (): Promise<PurchaseResult> => {
       let shouldAllocateCredits = false;
 
       if (user?.uid) {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userDoc = await getDoc(doc(firestore, 'users', user.uid));
         const currentBalance = userDoc.exists() ? (userDoc.data()?.voice_balance_seconds || 0) : 0;
 
         if (currentBalance === 0) {
@@ -315,12 +315,12 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
     const userData = userDoc.exists() ? userDoc.data() : {};
     const currentTier = userData?.subscription_tier || 'free';
     const currentBalance = userData?.voice_balance_seconds || 0;
-    const lastTransactionId = userData?.last_transaction_id;
+    const processedTransactions = userData?.processed_transactions || [];
 
     console.log('🔄 [CREDIT SYNC] Current Firestore data:');
     console.log('   - Current tier:', currentTier);
     console.log('   - Current balance:', currentBalance, 'seconds');
-    console.log('   - Last transaction ID:', lastTransactionId);
+    console.log('   - Processed transactions:', processedTransactions.length, 'total');
 
     // Update Firestore
     const updateData: any = {
@@ -338,16 +338,16 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
 
     // Only add credits if:
     // 1. It's a new purchase (isNewPurchase = true)
-    // 2. OR the tier changed from free to paid
-    // 3. OR it's a different transaction (prevent duplicates)
-    const shouldAddCredits = isNewPurchase ||
-                            (currentTier === 'free' && subscriptionTier !== 'free') ||
-                            (originalTransactionId && originalTransactionId !== lastTransactionId);
+    // 2. AND transaction ID has NOT been processed before (check array)
+    // This prevents duplicate allocations on app reopen/reinstall
+    const isTransactionProcessed = originalTransactionId && processedTransactions.includes(originalTransactionId);
+    const shouldAddCredits = isNewPurchase && originalTransactionId && !isTransactionProcessed;
 
-    console.log('🔄 [CREDIT SYNC] Should add credits?', shouldAddCredits);
+    console.log('🔄 [CREDIT SYNC] Transaction check:');
+    console.log('   - Transaction ID:', originalTransactionId);
+    console.log('   - Already processed?', isTransactionProcessed);
+    console.log('   - Should add credits?', shouldAddCredits);
     console.log('   - isNewPurchase:', isNewPurchase);
-    console.log('   - Tier change (free → paid):', currentTier === 'free' && subscriptionTier !== 'free');
-    console.log('   - Different transaction:', originalTransactionId && originalTransactionId !== lastTransactionId);
 
     if (shouldAddCredits && subscriptionTier !== 'free') {
       let creditsToAdd = 0;
@@ -355,7 +355,7 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
       if (subscriptionTier === 'weekly') {
         creditsToAdd = 60; // 60 seconds (1 minute) for weekly
       } else if (subscriptionTier === 'yearly') {
-        creditsToAdd = 3000; // 3000 seconds (50 minutes) for yearly
+        creditsToAdd = 1800; // 1800 seconds (30 minutes) for yearly
       }
 
       console.log(`💰 [CREDIT SYNC] Credits to add: ${creditsToAdd}s for ${subscriptionTier} subscription`);
@@ -364,9 +364,13 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
 
       if (creditsToAdd > 0) {
         updateData.voice_balance_seconds = currentBalance + creditsToAdd;
-        updateData.last_transaction_id = originalTransactionId;
+
+        // Add transaction ID to processed array (bulletproof duplicate prevention)
+        const updatedProcessedTransactions = [...processedTransactions, originalTransactionId];
+        updateData.processed_transactions = updatedProcessedTransactions;
 
         console.log(`✅ [CREDIT SYNC] Adding ${creditsToAdd}s credits for ${subscriptionTier} subscription`);
+        console.log(`✅ [CREDIT SYNC] Marking transaction as processed:`, originalTransactionId);
 
         // Log the credit transaction in Firestore
         const { collection, addDoc } = await import('firebase/firestore');
@@ -414,8 +418,10 @@ export const logoutRevenueCatUser = async (): Promise<void> => {
   try {
     await Purchases.logOut();
     console.log('✅ RevenueCat user logged out');
-  } catch (error) {
-    console.error('❌ Error logging out RevenueCat user:', error);
+  } catch (error: any) {
+    console.error('❌ Error logging out RevenueCat user:', error?.message || error);
+    // Re-throw the error so caller can handle it appropriately
+    throw error;
   }
 };
 
@@ -459,22 +465,22 @@ export const syncConsumablePurchaseToFirestore = async (customerInfo: CustomerIn
     const userDoc = await getDoc(userDocRef);
     const userData = userDoc.exists() ? userDoc.data() : {};
     const currentBalance = userData?.voice_balance_seconds || 0;
-    const lastTransactionId = userData?.last_consumable_transaction_id;
+    const processedTransactions = userData?.processed_transactions || [];
 
     console.log('🛒 [CONSUMABLE SYNC] Current Firestore data:');
     console.log('   - Current balance:', currentBalance, 'seconds');
-    console.log('   - Last consumable transaction ID:', lastTransactionId);
+    console.log('   - Processed transactions:', processedTransactions.length, 'total');
 
-    // Prevent duplicate processing
-    if (transactionId === lastTransactionId) {
-      console.log('ℹ️ [CONSUMABLE SYNC] Transaction already processed, skipping');
+    // Prevent duplicate processing using transaction array
+    if (processedTransactions.includes(transactionId)) {
+      console.log('ℹ️ [CONSUMABLE SYNC] Transaction already processed, skipping:', transactionId);
       return;
     }
 
     // Determine credits based on product ID
     let creditsToAdd = 0;
-    if (productId.includes('10min') || productId.includes('10_min') || productId.includes('credits')) {
-      creditsToAdd = 600; // 10 minutes = 600 seconds
+    if (productId.includes('5min') || productId.includes('5_min') || productId.includes('credits')) {
+      creditsToAdd = 300; // 5 minutes = 300 seconds
       console.log('✅ [CONSUMABLE SYNC] Matched credits product pattern in product ID:', productId);
     } else {
       console.warn('⚠️ [CONSUMABLE SYNC] Unknown product ID pattern:', productId);
@@ -486,13 +492,17 @@ export const syncConsumablePurchaseToFirestore = async (customerInfo: CustomerIn
       console.log(`💰 [CONSUMABLE SYNC] Current balance: ${currentBalance}s`);
       console.log(`💰 [CONSUMABLE SYNC] New balance will be: ${currentBalance + creditsToAdd}s`);
 
+      // Add transaction ID to processed array (bulletproof duplicate prevention)
+      const updatedProcessedTransactions = [...processedTransactions, transactionId];
+
       await updateDoc(userDocRef, {
         voice_balance_seconds: currentBalance + creditsToAdd,
-        last_consumable_transaction_id: transactionId,
+        processed_transactions: updatedProcessedTransactions,
         last_consumable_purchase_date: serverTimestamp(),
       });
 
       console.log(`✅ [CONSUMABLE SYNC] Added ${creditsToAdd}s credits for consumable purchase`);
+      console.log(`✅ [CONSUMABLE SYNC] Marking transaction as processed:`, transactionId);
 
       // Log the credit transaction
       const { collection, addDoc } = await import('firebase/firestore');

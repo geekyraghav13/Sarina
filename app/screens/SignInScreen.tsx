@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -20,6 +21,26 @@ import {
 export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [appleSignInAvailable, setAppleSignInAvailable] = useState(false);
+
+  const handleOpenLink = async (url: string, linkName: string) => {
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(
+          'Link Not Available',
+          `We're working on setting up our ${linkName}. Please try again later.`
+        );
+      }
+    } catch (error) {
+      console.error(`Error opening ${linkName}:`, error);
+      Alert.alert(
+        'Link Not Available',
+        `We're working on setting up our ${linkName}. Please try again later.`
+      );
+    }
+  };
 
   useEffect(() => {
     // Initialize Google Sign-In on mount
@@ -121,27 +142,37 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
               />
             )}
 
-            {/* Google Sign In Button */}
+            {/* Google Sign In Button - Following Google Brand Guidelines */}
             <TouchableOpacity
               style={[styles.googleButton, appleSignInAvailable && styles.googleButtonSpacing]}
               onPress={handleGoogleSignIn}
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#000000" />
+                <ActivityIndicator color="#1F1F1F" />
               ) : (
                 <>
                   <View style={styles.googleIcon}>
                     <Text style={styles.googleIconText}>G</Text>
                   </View>
-                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                  <Text style={styles.googleButtonText}>Sign in with Google</Text>
                 </>
               )}
             </TouchableOpacity>
 
-            <Text style={styles.disclaimer}>
-              By signing in, you agree to our Terms of Service and Privacy Policy
-            </Text>
+            {/* Terms and Privacy Policy - Separate clickable links */}
+            <View style={styles.legalContainer}>
+              <Text style={styles.legalText}>By continuing, you agree to our{'\n'}</Text>
+              <View style={styles.legalLinksRow}>
+                <TouchableOpacity onPress={() => handleOpenLink('https://sarina-ai-companion.lovable.app/terms', 'Terms of Service')}>
+                  <Text style={styles.legalLink}>Terms of Service</Text>
+                </TouchableOpacity>
+                <Text style={styles.legalText}> and </Text>
+                <TouchableOpacity onPress={() => handleOpenLink('https://sarina-ai-companion.lovable.app/privacy', 'Privacy Policy')}>
+                  <Text style={styles.legalLink}>Privacy Policy</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         </View>
       </LinearGradient>
@@ -221,15 +252,31 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   googleButtonText: {
-    color: '#000000',
-    fontSize: 18,
-    fontWeight: '600',
+    color: '#1F1F1F',
+    fontSize: 16,
+    fontWeight: '500',
+    letterSpacing: 0.25,
   },
-  disclaimer: {
-    marginTop: 20,
-    color: 'rgba(255,255,255,0.5)',
+  legalContainer: {
+    marginTop: 24,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  legalLinksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  legalText: {
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 12,
     textAlign: 'center',
-    paddingHorizontal: 20,
+  },
+  legalLink: {
+    color: '#8B5CF6',
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 });
