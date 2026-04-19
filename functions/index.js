@@ -328,3 +328,172 @@ exports.handleCreditPurchase = onCall(
     }
   }
 );
+
+// ==================== CRASHED CALL RECONCILIATION ====================
+
+/**
+ * Reconcile Crashed Calls Function
+ * Runs every 5 minutes to find stale active_call records and deduct missing credits
+ *
+ * CRITICAL FEATURES:
+ * 1. Firestore transaction for atomic read + deduct (prevents double-charge)
+ * 2. Cap deduction at credits_at_call_start (prevents over-deduction)
+ * 3. Zero-balance policy (no negative balances, flag for review)
+ * 4. Comprehensive logging for monitoring
+ */
+exports.reconcileCrashedCalls = onSchedule(
+  {
+    schedule: 'every 5 minutes',
+    timeZone: 'UTC',
+    memory: '256MiB',
+    maxInstances: 1,
+  },
+  async (event) => {
+    console.log('🔍 Starting crashed call reconciliation...');
+
+    const now = Date.now();
+    const STALE_CALL_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+    const MAX_CALL_DURATION_SECONDS = 60 * 60; // 1 hour (safety cap)
+    const staleThreshold = now - STALE_CALL_THRESHOLD_MS;
+
+    try {
+      // Query for users with stale active_call records
+      const staleCallsSnapshot = await db.collection('users')
+        .where('active_call.start_timestamp', '<', staleThreshold)
+        .get();
+
+      if (staleCallsSnapshot.empty) {
+        console.log('✅ No stale calls found');
+        return { success: 0, failed: 0, skipped: 0 };
+      }
+
+      console.log(`📞 Found ${staleCallsSnapshot.size} stale call(s) to reconcile`);
+
+      const results = {
+        success: 0,
+        failed: 0,
+        skipped: 0,
+        totalSecondsReconciled: 0,
+        errors: [],
+      };
+
+      // Process each stale call with transaction
+      for (const userDoc of staleCallsSnapshot.docs) {
+        const userId = userDoc.id;
+        const userData = userDoc.data();
+        const activeCall = userData.active_call;
+
+        try {
+          // Validate active_call data
+          if (!activeCall || !activeCall.start_timestamp || !activeCall.call_id) {
+            console.warn(`⚠️ Invalid active_call data for user ${userId}, clearing record`);
+            await db.collection('users').doc(userId).update({ active_call: null });
+            results.skipped++;
+            continue;
+          }
+
+          const {
+            call_id: callId,
+            start_timestamp: callStartTime,
+            credits_at_call_start: creditsAtStart,
+          } = activeCall;
+
+          // Calculate call duration
+          const callDurationSeconds = Math.floor((now - callStartTime) / 1000);
+
+          // Safety cap: Ignore calls longer than MAX_CALL_DURATION_SECONDS
+          if (callDurationSeconds > MAX_CALL_DURATION_SECONDS) {
+            console.warn(`⚠️ Call duration exceeds safety cap (${callDurationSeconds}s), skipping user ${userId}`);
+            await db.collection('users').doc(userId).update({ active_call: null });
+            results.skipped++;
+            continue;
+          }
+
+          // Use Firestore transaction for atomic read + deduct
+          await db.runTransaction(async (transaction) => {
+            const userRef = db.collection('users').doc(userId);
+            const userSnapshot = await transaction.get(userRef);
+
+            if (!userSnapshot.exists) {
+              throw new Error(`User document not found: ${userId}`);
+            }
+
+            const currentData = userSnapshot.data();
+            const currentBalance = currentData.voice_balance_seconds || 0;
+            const currentActiveCall = currentData.active_call;
+
+            // Double-check active_call still exists
+            if (!currentActiveCall || currentActiveCall.call_id !== callId) {
+              console.log(`⚠️ Active call already cleared for user ${userId}, skipping`);
+              results.skipped++;
+              return;
+            }
+
+            // Calculate credits to deduct (capped at credits_at_call_start)
+            let creditsToDeduct = callDurationSeconds;
+            if (creditsAtStart !== undefined && creditsAtStart !== null) {
+              creditsToDeduct = Math.min(creditsToDeduct, creditsAtStart);
+              console.log(`💰 Capping deduction at credits_at_call_start: ${creditsToDeduct}s`);
+            }
+
+            // ZERO-BALANCE POLICY: Cap at current balance, never go negative
+            if (currentBalance <= 0) {
+              console.warn(`⚠️ User ${userId} has zero balance, flagging account`);
+              transaction.update(userRef, {
+                active_call: null,
+                flagged_for_review: true,
+                flagged_reason: `Crashed call with zero balance: ${callDurationSeconds}s unpaid`,
+                flagged_at: FieldValue.serverTimestamp(),
+              });
+              results.skipped++;
+              return;
+            }
+
+            // Calculate final deduction (cannot exceed current balance)
+            const finalDeduction = Math.min(creditsToDeduct, currentBalance);
+            const newBalance = currentBalance - finalDeduction;
+
+            console.log(`💳 Deducting ${finalDeduction}s from user ${userId} (${currentBalance}s → ${newBalance}s)`);
+
+            // Atomic update: deduct credits + clear active_call
+            transaction.update(userRef, {
+              voice_balance_seconds: newBalance,
+              active_call: null,
+              last_reconciliation: {
+                call_id: callId,
+                seconds_deducted: finalDeduction,
+                reconciled_at: FieldValue.serverTimestamp(),
+              },
+            });
+
+            results.success++;
+            results.totalSecondsReconciled += finalDeduction;
+
+            console.log(`✅ Successfully reconciled ${finalDeduction}s for user ${userId}`);
+          });
+        } catch (error) {
+          console.error(`❌ Error reconciling call for user ${userId}:`, error);
+          results.failed++;
+          results.errors.push({
+            userId,
+            error: error.message,
+            callId: activeCall?.call_id,
+          });
+        }
+      }
+
+      // Log summary
+      console.log('📊 Reconciliation Summary:', {
+        success: results.success,
+        failed: results.failed,
+        skipped: results.skipped,
+        totalSecondsReconciled: results.totalSecondsReconciled,
+      });
+
+      return results;
+    } catch (error) {
+      console.error('❌ Fatal error in reconciliation job:', error);
+      throw error;
+    }
+  }
+);

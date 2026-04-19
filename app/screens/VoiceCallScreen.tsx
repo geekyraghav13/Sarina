@@ -7,6 +7,7 @@ import {
   Animated,
   Alert,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -14,13 +15,12 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useVoiceCall, CallState } from '../services/voiceCallService';
-import { canStartCall } from '../services/creditService';
+import { canStartCall, subscribeToBalance } from '../services/creditService';
 import { usePaymentStore } from '../store/paymentStore';
 import * as RevenueCatService from '../services/revenueCatService';
-import { Audio } from 'expo-av';
-import * as Speech from 'expo-speech';
-import { ExpoPlayAudioStream, type Subscription, type RecordingConfig, type AudioDataEvent } from '@saltmango/expo-audio-stream';
+import { startCall, stopCall, onCallStart, onCallEnd, onError } from '../services/vapiService';
+import { setDocumentREST, decrementVoiceBalanceAtomic, recordCallStart, clearActiveCall } from '../services/firestoreRestService';
+import { getCurrentUser } from '../services/authService';
 
 type VoiceCallScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -44,30 +44,21 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   // Get premium status from store
   const { isPremium } = usePaymentStore();
 
-  const {
-    state,
-    balance,
-    error,
-    connect,
-    disconnect,
-    startCall,
-    endCall,
-    sendAudio,
-    setOnCutOff,
-    setOnTextResponse,
-    setOnAudioResponse,
-  } = useVoiceCall();
-
+  // State management
   const [callDuration, setCallDuration] = useState(0);
   const [isCallActive, setIsCallActive] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isSpeakerOn, setIsSpeakerOn] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Audio streaming refs
-  const audioStreamRef = useRef<Subscription | null>(null);
-  const audioChunksRef = useRef<string[]>([]);
-  const isStreamingRef = useRef<boolean>(false);
+  // Refs for credit deduction
+  const creditDeductionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const premiumCheckIntervalRef = useRef<NodeJS.Timeout | null>(null); // SCENARIO 8 FIX: Track premium check interval
+  const balanceUnsubscribeRef = useRef<(() => void) | null>(null);
+  const balanceRef = useRef<number | null>(null);
+  const creditsExhaustedShownRef = useRef<boolean>(false);
+  const secondsAccumulatedRef = useRef<number>(0); // BATCHING: Track seconds since last deduction
+  const callStartTimeRef = useRef<number | null>(null); // CRASH RECOVERY: Track call start time
 
   // Animation refs
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -75,92 +66,142 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   const waveAnim2 = useRef(new Animated.Value(0)).current;
   const waveAnim3 = useRef(new Animated.Value(0)).current;
 
-  // Initialize WebSocket connection
+  // Initialize call and Vapi listeners
   useEffect(() => {
     const initializeCall = async () => {
-      console.log('🎙️ Initializing voice call...');
-      console.log('💎 Premium status from store:', isPremium);
+      console.log('🎙️ Initializing Vapi voice call...');
 
-      // Small delay to ensure all native modules are initialized
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Check credit balance
-      console.log('💰 Checking credit balance...');
-      const balanceCheck = await canStartCall();
-      console.log('💰 Balance check result:', {
-        allowed: balanceCheck.allowed,
-        balance: balanceCheck.balance,
-        message: balanceCheck.message
-      });
-
-      // If user doesn't have enough credits, redirect to paywall
-      if (!balanceCheck.allowed) {
-        console.warn('❌ Insufficient credits:', balanceCheck.message);
-        Alert.alert(
-          'Insufficient Credits',
-          balanceCheck.message || 'You need at least 10 seconds to start a call. Purchase a subscription to get more credits!',
-          [
+      // Request microphone permission on Android
+      if (Platform.OS === 'android') {
+        try {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
             {
-              text: 'Get More Credits',
-              onPress: () => {
-                navigation.replace('Paywall', {
-                  characterName,
-                  characterImageUrl,
-                  callAction: 'pick',
-                  returnScreen: 'Chat',
-                });
-              },
-            },
-            {
-              text: 'Cancel',
-              onPress: () => navigation.goBack(),
-              style: 'cancel',
-            },
-          ]
-        );
-        return;
-      }
-
-      console.log('✅ User has sufficient credits to start call:', balanceCheck.balance, 'seconds');
-
-      // Check audio permissions
-      try {
-        console.log('🎤 Checking audio permissions...');
-        const { status: currentStatus } = await Audio.getPermissionsAsync();
-        console.log('🎤 Current permission status:', currentStatus);
-
-        if (currentStatus !== 'granted') {
-          console.log('⚠️ Audio permissions not pre-granted, requesting now...');
-          const { status } = await Audio.requestPermissionsAsync();
-          console.log('🎤 Permission status:', status);
-
-          if (status !== 'granted') {
-            Alert.alert('Microphone Permission', 'Please allow microphone access to use voice calling.');
-            navigation.goBack();
+              title: 'Microphone Permission',
+              message: 'This app needs access to your microphone for voice calls.',
+              buttonNeutral: 'Ask Me Later',
+              buttonNegative: 'Cancel',
+              buttonPositive: 'OK',
+            }
+          );
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            Alert.alert(
+              'Permission Required',
+              'Microphone permission is required for voice calls.',
+              [{ text: 'OK', onPress: () => navigation.goBack() }]
+            );
             return;
           }
+          console.log('🎤 Microphone permission granted');
+        } catch (err) {
+          console.error('❌ Error requesting microphone permission:', err);
+          Alert.alert('Error', 'Failed to request microphone permission', [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+          return;
+        }
+      }
+
+      // Check premium status first - premium users have unlimited voice credits
+      const premiumStatus = await RevenueCatService.checkPremiumStatus();
+      console.log('🔍 Initial premium status check:', premiumStatus);
+
+      let balanceCheck;
+      if (!premiumStatus) {
+        // Only check credit balance for non-premium users
+        balanceCheck = await canStartCall();
+        if (!balanceCheck.allowed) {
+          Alert.alert(
+            'Not enough credits',
+            balanceCheck.message || 'You need at least 10 seconds to start a call.',
+            [
+              {
+                text: 'Get More Credits',
+                onPress: () => {
+                  navigation.replace('Paywall', {
+                    characterName,
+                    characterImageUrl,
+                    callAction: 'pick',
+                    returnScreen: 'Chat',
+                  });
+                },
+              },
+              {
+                text: 'Cancel',
+                onPress: () => navigation.goBack(),
+                style: 'cancel',
+              },
+            ]
+          );
+          return;
+        }
+      } else {
+        console.log('✅ Premium user - skipping balance check, allowing call');
+        // Set a dummy balance for premium users
+        balanceCheck = { allowed: true, balance: 999999 };
+      }
+
+      // Subscribe to real-time balance updates
+      balanceUnsubscribeRef.current = subscribeToBalance(async (newBalance) => {
+        console.log('💰 Balance updated:', newBalance);
+        setBalance(newBalance);
+        balanceRef.current = newBalance; // Update ref for interval access
+
+        // CRITICAL: Only check balance for non-premium users
+        // Premium users have unlimited voice credits
+        // Check directly from RevenueCat to avoid store sync timing issues
+        const premiumStatus = await RevenueCatService.checkPremiumStatus();
+        if (premiumStatus) {
+          console.log('✅ Premium user - ignoring balance check');
+          return;
         }
 
-        console.log('🎵 Setting audio mode...');
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: !isSpeakerOn,
-        });
-        console.log('✅ Audio mode set successfully');
+        // If credits reach 0 during call, stop immediately
+        if (newBalance <= 0 && isCallActive && !creditsExhaustedShownRef.current) {
+          console.log('❌ Credits depleted, stopping call');
+          creditsExhaustedShownRef.current = true;
+          handleCreditsExhausted();
+        }
+      });
 
-        console.log('✅ Audio recording ready for streaming');
+      // Setup Vapi event listeners
+      onCallStart(() => {
+        console.log('📞 Vapi call started');
+        setIsCallActive(true);
+        setIsConnecting(false);
+        setErrorMessage(null);
+        startCreditDeduction();
+      });
 
-      } catch (error: any) {
-        console.error('❌ Error initializing audio:', error);
-        console.error('❌ Error stack:', error?.stack);
-        console.error('❌ Error message:', error?.message);
+      onCallEnd(() => {
+        console.log('📴 Vapi call ended');
+        setIsCallActive(false);
+        stopCreditDeduction();
+      });
 
+      onError((error: any) => {
+        console.error('❌ Vapi error:', error);
+        setErrorMessage('Call failed, try again');
+        Alert.alert('Call Failed', 'Call failed, try again');
+        setIsCallActive(false);
+        setIsConnecting(false);
+        stopCreditDeduction();
+      });
+
+      // Start the call
+      try {
+        console.log('📞 Starting Vapi call...');
+        setBalance(balanceCheck.balance);
+        balanceRef.current = balanceCheck.balance; // Initialize ref with balance
+        await startCall();
+        console.log('✅ Vapi call initiated successfully');
+      } catch (error) {
+        console.error('❌ Failed to start Vapi call:', error);
+        setErrorMessage('Call failed, try again');
+        setIsConnecting(false);
         Alert.alert(
-          'Audio Initialization Error',
-          'Unable to initialize audio. Please restart the app and try again.',
+          'Call Failed',
+          'Unable to start the call. Please check your internet connection and try again.',
           [
             {
               text: 'Go Back',
@@ -168,99 +209,32 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
             },
           ]
         );
-        return;
       }
-
-      // Connect to WebSocket
-      await connect();
-
-      // Set cutoff callback
-      setOnCutOff(async (reason) => {
-        console.log('📵 Call cut off:', reason);
-        console.log('💎 Checking premium status for paywall navigation...');
-
-        const premium = await RevenueCatService.checkPremiumStatus();
-        console.log('💎 Premium status result:', premium);
-
-        Alert.alert(
-          'Out of Credits! ⏱️',
-          `Your voice call credits have ended.\n\nPurchase more credits to continue talking with ${characterName}!`,
-          [
-            {
-              text: 'Buy More Credits',
-              onPress: () => {
-                disconnect();
-
-                if (premium) {
-                  console.log('💎 Premium user - Navigating to CustomCreditsPaywall');
-                  navigation.replace('CustomCreditsPaywall', {
-                    characterName,
-                    characterImageUrl,
-                    callAction: 'pick',
-                    returnScreen: 'Chat',
-                  });
-                } else {
-                  console.log('💎 Non-premium user - Navigating to Paywall');
-                  navigation.replace('Paywall', {
-                    characterName,
-                    characterImageUrl,
-                    callAction: 'pick',
-                    returnScreen: 'Chat',
-                  });
-                }
-              },
-              style: 'default',
-            },
-            {
-              text: 'Later',
-              onPress: () => {
-                disconnect();
-                navigation.navigate('Chat', { fromOnboarding: false });
-              },
-              style: 'cancel',
-            },
-          ],
-          { cancelable: false }
-        );
-      });
-
-      // Set text response callback for TTS
-      setOnTextResponse((text) => {
-        console.log('🗣️ AI response:', text);
-        speakText(text);
-      });
-
-      // Set audio response callback (if backend sends PCM audio)
-      setOnAudioResponse((audioData) => {
-        console.log('🔊 Received audio response from backend');
-        playAudioResponse(audioData);
-      });
     };
 
     initializeCall();
 
     // Cleanup on unmount
     return () => {
-      disconnect();
-      stopAudioStream();
-      Speech.stop();
+      stopCall();
+      stopCreditDeduction();
+      creditsExhaustedShownRef.current = false; // Reset flag on unmount
+      if (balanceUnsubscribeRef.current) {
+        balanceUnsubscribeRef.current();
+      }
+      // SCENARIO 8 FIX: Clear premium check interval to prevent memory leaks
+      if (premiumCheckIntervalRef.current) {
+        clearInterval(premiumCheckIntervalRef.current);
+        premiumCheckIntervalRef.current = null;
+      }
     };
   }, []);
-
-  // Start call when ready
-  useEffect(() => {
-    if (state === CallState.READY && !isCallActive) {
-      console.log('✅ WebSocket ready, starting call...');
-      startCall(characterId, characterName, characterProfile);
-      setIsCallActive(true);
-    }
-  }, [state, isCallActive]);
 
   // Call duration timer
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
-    if (state === CallState.CALLING) {
+    if (isCallActive) {
       interval = setInterval(() => {
         setCallDuration((prev) => prev + 1);
       }, 1000);
@@ -269,7 +243,198 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [state]);
+  }, [isCallActive]);
+
+  // Credit deduction functions
+  const startCreditDeduction = async () => {
+    console.log('💳 Starting credit deduction timer...');
+
+    // CRITICAL: Premium users have UNLIMITED voice credits - skip deduction entirely
+    // Check premium status directly from RevenueCat to avoid store sync timing issues
+    const premiumStatus = await RevenueCatService.checkPremiumStatus();
+    console.log('🔍 Checking premium status for credit deduction:', premiumStatus);
+
+    if (premiumStatus) {
+      console.log('✅ Premium user detected - unlimited voice credits, skipping deduction');
+
+      // SCENARIO 8: Mid-call subscription expiry monitoring
+      // Check premium status every minute during the call
+      // SCENARIO 8 FIX: Store interval in ref so it can be cleared on cleanup
+      premiumCheckIntervalRef.current = setInterval(async () => {
+        const currentPremiumStatus = await RevenueCatService.checkPremiumStatus();
+        console.log('🔍 Mid-call premium status check:', currentPremiumStatus);
+
+        if (!currentPremiumStatus) {
+          console.warn('⚠️ Premium status expired during call - gracefully completing call');
+
+          // Clear the interval
+          if (premiumCheckIntervalRef.current) {
+            clearInterval(premiumCheckIntervalRef.current);
+            premiumCheckIntervalRef.current = null;
+          }
+
+          // Show alert AFTER call ends naturally
+          // Don't cut the call mid-conversation for better UX
+          Alert.alert(
+            'Subscription Expired',
+            'Your premium subscription has expired. This call will complete, but you\'ll need to renew to make future calls.',
+            [{ text: 'OK' }]
+          );
+        }
+      }, 60000); // Check every 60 seconds
+
+      return;
+    }
+
+    const user = getCurrentUser();
+    if (!user) {
+      console.error('No user found for credit deduction');
+      return;
+    }
+
+    // CRASH RECOVERY: Record call start timestamp with retry logic
+    const callId = `${user.uid}_${Date.now()}`;
+    callStartTimeRef.current = Date.now();
+    const recordSuccess = await recordCallStart(user.uid, callId, characterName, balanceRef.current || 0);
+
+    if (!recordSuccess) {
+      console.warn('⚠️ Failed to record call start after retries - crash recovery may be incomplete');
+      // TODO: Log to analytics for monitoring production failures
+      // logEvent('call_start_record_failed', { uid: user.uid, callId });
+    }
+
+    // BATCHED DEDUCTION: Accumulate seconds locally, batch Firestore writes
+    // This reduces Firestore write costs and avoids hitting 1 write/second/document limit
+    const BATCH_INTERVAL_SECONDS = 10; // Deduct every 10 seconds instead of every 1 second
+
+    creditDeductionIntervalRef.current = setInterval(async () => {
+      try {
+        // Check if we've already shown the exhausted alert
+        if (creditsExhaustedShownRef.current) {
+          return;
+        }
+
+        // Accumulate 1 second
+        secondsAccumulatedRef.current += 1;
+
+        // Check local balance estimate
+        const estimatedBalance = (balanceRef.current || 0) - secondsAccumulatedRef.current;
+
+        // Warn user when getting low (but don't end call yet - wait for server confirmation)
+        if (estimatedBalance <= 10 && estimatedBalance > 0) {
+          console.warn(`⚠️ Low balance: ~${estimatedBalance}s remaining`);
+        }
+
+        // BATCHED WRITE: Only write to Firestore every N seconds
+        if (secondsAccumulatedRef.current >= BATCH_INTERVAL_SECONDS) {
+          const secondsToDeduct = secondsAccumulatedRef.current;
+          secondsAccumulatedRef.current = 0; // Reset accumulator
+
+          console.log(`💰 Batch deducting ${secondsToDeduct} seconds...`);
+
+          // CONCURRENT SESSION FIX: Use atomic decrement to prevent double-spend
+          const newBalance = await decrementVoiceBalanceAtomic(user.uid, secondsToDeduct);
+
+          if (newBalance === null) {
+            console.error('❌ Failed to atomically decrement balance');
+            // Re-add seconds back to accumulator to retry next batch
+            secondsAccumulatedRef.current += secondsToDeduct;
+            return;
+          }
+
+          // Update local ref with server-confirmed balance
+          balanceRef.current = newBalance;
+          console.log(`✅ Batch deducted ${secondsToDeduct}s atomically. New balance: ${newBalance}s`);
+
+          // CRITICAL: If balance hit 0 or negative, end call immediately
+          if (newBalance <= 0) {
+            console.log('❌ Credits depleted after batch deduction, ending call NOW');
+            creditsExhaustedShownRef.current = true;
+            stopCreditDeduction();
+            stopCall();
+            await clearActiveCall(user.uid); // Clear crash recovery record
+            handleCreditsExhausted();
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error deducting credits:', error);
+      }
+    }, 1000); // Check every 1 second, but only write every BATCH_INTERVAL_SECONDS
+  };
+
+  const stopCreditDeduction = async () => {
+    if (creditDeductionIntervalRef.current) {
+      clearInterval(creditDeductionIntervalRef.current);
+      creditDeductionIntervalRef.current = null;
+      console.log('🛑 Credit deduction stopped');
+    }
+
+    // BATCHED DEDUCTION: Deduct any remaining accumulated seconds
+    const user = getCurrentUser();
+    if (user && secondsAccumulatedRef.current > 0) {
+      const finalSeconds = secondsAccumulatedRef.current;
+      secondsAccumulatedRef.current = 0;
+
+      console.log(`💰 Final batch deduction: ${finalSeconds} seconds`);
+
+      try {
+        const newBalance = await decrementVoiceBalanceAtomic(user.uid, finalSeconds);
+        if (newBalance !== null) {
+          balanceRef.current = newBalance;
+          console.log(`✅ Final deduction complete. Final balance: ${newBalance}s`);
+        }
+      } catch (error) {
+        console.error('❌ Error in final credit deduction:', error);
+      }
+
+      // CRASH RECOVERY: Clear active call record on normal end
+      await clearActiveCall(user.uid);
+    }
+  };
+
+  const handleCreditsExhausted = async () => {
+    console.log('📵 Credits exhausted, ending call');
+    // CRITICAL: Stop credit deduction FIRST, before stopping call
+    stopCreditDeduction();
+    stopCall();
+
+    const premium = await RevenueCatService.checkPremiumStatus();
+    Alert.alert(
+      'Out of Credits!',
+      `Your voice call credits have ended.\n\nPurchase more credits to continue talking with ${characterName}!`,
+      [
+        {
+          text: 'Buy More Credits',
+          onPress: () => {
+            if (premium) {
+              navigation.replace('CustomCreditsPaywall', {
+                characterName,
+                characterImageUrl,
+                callAction: 'pick',
+                returnScreen: 'Chat',
+              });
+            } else {
+              navigation.replace('Paywall', {
+                characterName,
+                characterImageUrl,
+                callAction: 'pick',
+                returnScreen: 'Chat',
+              });
+            }
+          },
+        },
+        {
+          text: 'Later',
+          onPress: () => {
+            navigation.navigate('Chat', { fromOnboarding: false });
+          },
+          style: 'cancel',
+        },
+      ],
+      { cancelable: false }
+    );
+  };
 
   // Pulsing avatar animation
   useEffect(() => {
@@ -291,7 +456,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
   // Waveform animations
   useEffect(() => {
-    if (state === CallState.CALLING) {
+    if (isCallActive) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(waveAnim1, {
@@ -341,7 +506,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         ).start();
       }, 200);
     }
-  }, [state]);
+  }, [isCallActive]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number | null) => {
@@ -364,170 +529,11 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
     return seconds !== null && seconds <= 10 && seconds > 0;
   };
 
-  // Text-to-Speech function
-  const speakText = async (text: string) => {
-    try {
-      setIsSpeaking(true);
-      console.log('🔊 Speaking:', text);
-
-      Speech.speak(text, {
-        language: 'en-US',
-        pitch: 0.95,
-        rate: 1.0,
-        voice: Platform.OS === 'ios'
-          ? 'com.apple.ttsbundle.Samantha-compact'
-          : 'en-us-x-sfg#female_1-local',
-        onDone: () => {
-          setIsSpeaking(false);
-          console.log('✅ Finished speaking');
-        },
-        onError: (error) => {
-          console.error('❌ TTS error:', error);
-          setIsSpeaking(false);
-        },
-      });
-    } catch (error) {
-      console.error('❌ Error speaking text:', error);
-      setIsSpeaking(false);
-    }
-  };
-
-  // Play audio response from backend (PCM data)
-  const playAudioResponse = async (_audioData: any) => {
-    try {
-      console.log('🎵 Playing audio response...');
-      // TODO: Implement PCM audio playback if backend sends audio
-      // For now, we're using TTS on the client side
-    } catch (error) {
-      console.error('❌ Error playing audio:', error);
-    }
-  };
-
-  // Start PCM audio streaming
-  const startAudioStream = async () => {
-    try {
-      console.log('🎙️ Starting PCM audio stream...');
-      setIsRecording(true);
-      isStreamingRef.current = true;
-
-      // Stop TTS if speaking
-      if (isSpeaking) {
-        Speech.stop();
-        setIsSpeaking(false);
-      }
-
-      // Clear previous chunks
-      audioChunksRef.current = [];
-
-      // Configure recording for 16kHz PCM with audio callback
-      const recordingConfig: RecordingConfig = {
-        interval: 250,  // Send chunks every 250ms
-        sampleRate: 16000,
-        channels: 1,
-        encoding: 'pcm_16bit',
-        pointsPerSecond: 16000,
-        onAudioStream: async (event: AudioDataEvent) => {
-          if (isStreamingRef.current && event.data) {
-            // Collect base64 PCM chunks at 16kHz
-            console.log(`🎤 Audio chunk received: ${event.eventDataSize} bytes, soundLevel: ${event.soundLevel}`);
-            audioChunksRef.current.push(event.data);
-          }
-        },
-      };
-
-      // Start streaming with callback
-      const { subscription } = await ExpoPlayAudioStream.startMicrophone(recordingConfig);
-
-      // Store subscription for cleanup
-      if (subscription) {
-        audioStreamRef.current = subscription;
-      }
-
-      console.log('✅ Audio stream started');
-    } catch (error) {
-      console.error('❌ Failed to start audio stream:', error);
-      setIsRecording(false);
-      isStreamingRef.current = false;
-    }
-  };
-
-  // Stop PCM audio streaming and send to backend
-  const stopAudioStream = async () => {
-    try {
-      console.log('🛑 Stopping audio stream...');
-
-      // Mark as not streaming
-      isStreamingRef.current = false;
-
-      // Stop microphone
-      await ExpoPlayAudioStream.stopMicrophone();
-
-      setIsRecording(false);
-
-      // Combine all PCM chunks into one base64 string
-      if (audioChunksRef.current.length > 0) {
-        const combinedAudio = audioChunksRef.current.join('');
-        console.log(`📤 Sending ${combinedAudio.length} characters of PCM audio data to server`);
-
-        // Send PCM audio to backend
-        sendAudio(combinedAudio);
-
-        // Clear chunks
-        audioChunksRef.current = [];
-      } else {
-        console.warn('⚠️ No audio data collected');
-      }
-
-      // Remove listener
-      if (audioStreamRef.current) {
-        audioStreamRef.current.remove();
-        audioStreamRef.current = null;
-      }
-
-      console.log('✅ Audio stream stopped');
-    } catch (error) {
-      console.error('❌ Failed to stop audio stream:', error);
-      setIsRecording(false);
-      isStreamingRef.current = false;
-    }
-  };
-
   // Get call status text
   const getStatusText = () => {
-    switch (state) {
-      case CallState.CONNECTING:
-        return 'Connecting...';
-      case CallState.AUTHENTICATING:
-        return 'Authenticating...';
-      case CallState.READY:
-        return 'Starting call...';
-      case CallState.CALLING:
-        return 'Connected';
-      case CallState.ERROR:
-        return 'Connection error';
-      default:
-        return 'Connecting...';
-    }
-  };
-
-  // Toggle speaker mode
-  const toggleSpeaker = async () => {
-    try {
-      const newSpeakerState = !isSpeakerOn;
-      setIsSpeakerOn(newSpeakerState);
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: !newSpeakerState,
-      });
-
-      console.log(`🔊 Audio mode: ${newSpeakerState ? 'Speaker' : 'Earpiece'}`);
-    } catch (error) {
-      console.error('❌ Failed to toggle speaker:', error);
-    }
+    if (isConnecting) return 'Connecting...';
+    if (isCallActive) return 'Connected';
+    return 'Call ended';
   };
 
   const handleEndCall = () => {
@@ -540,8 +546,14 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         text: 'End Call',
         style: 'destructive',
         onPress: () => {
-          endCall();
-          disconnect();
+          // CRITICAL: Stop credit deduction FIRST, before stopping call
+          stopCreditDeduction();
+          // SCENARIO 8 FIX: Also clear premium check interval
+          if (premiumCheckIntervalRef.current) {
+            clearInterval(premiumCheckIntervalRef.current);
+            premiumCheckIntervalRef.current = null;
+          }
+          stopCall();
           navigation.navigate('Chat', { fromOnboarding: false });
         },
       },
@@ -601,7 +613,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
           )}
 
           {/* Animated Glow Rings */}
-          {state === CallState.CALLING && (
+          {isCallActive && (
             <>
               <View style={[styles.glowRing, styles.glowRing1]} />
               <View style={[styles.glowRing, styles.glowRing2]} />
@@ -614,7 +626,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
         {/* Call Status */}
         <View style={styles.statusContainer}>
-          {state === CallState.CALLING && (
+          {isCallActive && (
             <View style={styles.statusDotActive} />
           )}
           <Text style={styles.statusText}>{getStatusText()}</Text>
@@ -626,7 +638,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         </Text>
 
         {/* Waveform Visualization */}
-        {state === CallState.CALLING && (
+        {isCallActive && (
           <View style={styles.waveformContainer}>
             <Animated.View style={[styles.wavebar, styles.wavebarTall, { opacity: wave1Height }]} />
             <Animated.View style={[styles.wavebar, styles.wavebarMedium, { opacity: wave2Height }]} />
@@ -653,64 +665,30 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         </View>
 
         {/* Error Message */}
-        {error && (
+        {errorMessage && (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
+            <Text style={styles.errorText}>⚠️ {errorMessage}</Text>
           </View>
         )}
       </View>
 
       {/* Bottom Controls */}
       <View style={styles.bottomControls}>
-        {/* Speaker Toggle Button */}
-        {state === CallState.CALLING && (
+        {/* End Call Button */}
+        {isCallActive && (
           <TouchableOpacity
-            style={styles.speakerButton}
-            onPress={toggleSpeaker}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.speakerButtonCircle, isSpeakerOn && styles.speakerButtonActive]}>
-              <Text style={styles.speakerIcon}>{isSpeakerOn ? '🔊' : '🎧'}</Text>
-            </View>
-            <Text style={styles.speakerLabel}>
-              {isSpeakerOn ? 'Speaker' : 'Earpiece'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Microphone Button */}
-        {state === CallState.CALLING && (
-          <TouchableOpacity
-            style={[styles.micButton, isRecording && styles.micButtonActive]}
-            onPressIn={startAudioStream}
-            onPressOut={stopAudioStream}
+            style={styles.endCallButton}
+            onPress={handleEndCall}
             activeOpacity={0.8}
           >
             <LinearGradient
-              colors={isRecording ? ['#10B981', '#059669'] : ['#8B5CF6', '#7C3AED']}
-              style={styles.micButtonGradient}
+              colors={['#EF4444', '#DC2626']}
+              style={styles.endCallGradient}
             >
-              <Text style={styles.micIcon}>{isRecording ? '🎙️' : '🎤'}</Text>
+              <Text style={styles.endCallIcon}>📞</Text>
             </LinearGradient>
-            <Text style={styles.micLabel}>
-              {isRecording ? 'Listening...' : 'Tap to Speak'}
-            </Text>
           </TouchableOpacity>
         )}
-
-        {/* End Call Button */}
-        <TouchableOpacity
-          style={styles.endCallButton}
-          onPress={handleEndCall}
-          activeOpacity={0.8}
-        >
-          <LinearGradient
-            colors={['#EF4444', '#DC2626']}
-            style={styles.endCallGradient}
-          >
-            <Text style={styles.endCallIcon}>📞</Text>
-          </LinearGradient>
-        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
