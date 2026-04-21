@@ -1,8 +1,9 @@
 import Vapi from '@vapi-ai/react-native';
 import { AppState } from 'react-native';
+import ENV from '../config/env';
 
-const VAPI_PUBLIC_KEY = "e24046c3-e0b4-4cb8-8896-3284dd8f4a6a";
-const VAPI_ASSISTANT_ID = "5350de50-a47f-4cd8-9cf3-b1e64ca03a9f";
+const VAPI_PUBLIC_KEY = ENV.VAPI_PUBLIC_KEY;
+const VAPI_ASSISTANT_ID = ENV.VAPI_ASSISTANT_ID;
 
 // Initialize Vapi with your public key
 let vapi = new Vapi(VAPI_PUBLIC_KEY);

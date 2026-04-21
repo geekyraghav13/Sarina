@@ -4,10 +4,10 @@
  */
 
 import { Girlfriend } from '../store/girlfriendStore';
+import ENV from '../config/env';
 
 // Gemini Configuration
-// TODO: Move this to a secure backend or use environment variables
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
+const GEMINI_API_KEY = ENV.GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 interface ChatHistoryItem {

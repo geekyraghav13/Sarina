@@ -55,6 +55,9 @@ service-account-key.json
 # Uncomment the line below if your firebase config has sensitive data
 # app/config/firebase.ts
 
+# Environment configuration with API keys
+app/config/env.ts
+
 # TypeScript
 *.tsbuildinfo
 
