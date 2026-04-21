@@ -67,6 +67,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   const callStartTimeRef = useRef<number | null>(null); // CRASH RECOVERY: Track call start time
   const initialBalanceRef = useRef<number | null>(null); // ANALYTICS: Track initial balance for call
   const totalCallSecondsRef = useRef<number>(0); // ANALYTICS: Track total call duration
+  const manuallyEndedRef = useRef<boolean>(false); // DOUBLE-DEDUCTION FIX: Track if call was manually ended
 
   // Animation refs
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -198,11 +199,19 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
       onCallEnd(() => {
         console.log('📴 Vapi call ended');
         setIsCallActive(false);
-        stopCreditDeduction();
+
+        // DOUBLE-DEDUCTION FIX: Only stop credit deduction if NOT manually ended
+        // If manually ended, stopCreditDeduction was already called in handleEndCall
+        if (!manuallyEndedRef.current) {
+          console.log('✅ Call ended by remote/system - stopping credit deduction');
+          stopCreditDeduction();
+        } else {
+          console.log('⚠️ Call was manually ended - credit deduction already stopped, skipping');
+        }
 
         // Log voice call ended to analytics
         const user = getCurrentUser();
-        if (user) {
+        if (user && !manuallyEndedRef.current) {
           const creditsUsed = (initialBalanceRef.current ?? 0) - (balanceRef.current ?? 0);
           logVoiceCallEnded(
             user.uid,
@@ -252,6 +261,8 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
     // Cleanup on unmount
     return () => {
+      // Set manually ended flag to prevent double deduction on cleanup
+      manuallyEndedRef.current = true;
       stopCall();
       stopCreditDeduction();
       creditsExhaustedShownRef.current = false; // Reset flag on unmount
@@ -409,6 +420,12 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
   };
 
   const stopCreditDeduction = async () => {
+    // CRITICAL FIX: Prevent double-deduction by checking if already stopped
+    if (!creditDeductionIntervalRef.current && secondsAccumulatedRef.current === 0) {
+      console.log('⚠️ Credit deduction already stopped, skipping duplicate call');
+      return;
+    }
+
     if (creditDeductionIntervalRef.current) {
       clearInterval(creditDeductionIntervalRef.current);
       creditDeductionIntervalRef.current = null;
@@ -419,7 +436,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
     const user = getCurrentUser();
     if (user && secondsAccumulatedRef.current > 0) {
       const finalSeconds = secondsAccumulatedRef.current;
-      secondsAccumulatedRef.current = 0;
+      secondsAccumulatedRef.current = 0; // Reset accumulator IMMEDIATELY to prevent race condition
 
       console.log(`💰 Final batch deduction: ${finalSeconds} seconds`);
 
@@ -440,6 +457,9 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
   const handleCreditsExhausted = async () => {
     console.log('📵 Credits exhausted, ending call');
+
+    // DOUBLE-DEDUCTION FIX: Mark call as manually ended to prevent onCallEnd from deducting again
+    manuallyEndedRef.current = true;
 
     // Log credits exhausted to analytics
     const user = getCurrentUser();
@@ -607,6 +627,9 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
         text: 'End Call',
         style: 'destructive',
         onPress: () => {
+          // DOUBLE-DEDUCTION FIX: Mark call as manually ended to prevent onCallEnd from deducting again
+          manuallyEndedRef.current = true;
+
           // CRITICAL: Stop credit deduction FIRST, before stopping call
           stopCreditDeduction();
           // SCENARIO 8 FIX: Also clear premium check interval
