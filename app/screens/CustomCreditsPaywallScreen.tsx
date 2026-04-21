@@ -79,56 +79,72 @@ export const CustomCreditsPaywallScreen: React.FC<CustomCreditsPaywallProps> = (
         // Wait for sync to complete
         await new Promise(resolve => setTimeout(resolve, 1500));
 
+        // Stop loading indicator before showing alerts
+        setLoading(false);
+
         // If user was trying to make a call, navigate to call screen
         if (callAction === 'pick' && characterName) {
           const girlfriend = girlfriends.find(gf => gf.name === characterName);
 
           if (girlfriend) {
-            Alert.alert(
-              'Credits Added! 🎉',
-              'You now have 10 more minutes. Starting your call...',
-              [
-                {
-                  text: 'Start Call',
-                  onPress: () => {
-                    navigation.replace('VoiceCall', {
-                      characterName: girlfriend.name,
-                      characterImageUrl: girlfriend.imageUrl || characterImageUrl,
-                      characterId: girlfriend.id,
-                      characterProfile: {
-                        name: girlfriend.name,
-                        personality: girlfriend.personality,
-                        tone: girlfriend.tone,
-                        interests: girlfriend.interests,
-                        appearance: girlfriend.appearance,
-                      },
-                    });
+            // Use setTimeout to ensure alert shows properly after loading state changes
+            setTimeout(() => {
+              Alert.alert(
+                'Credits Added! 🎉',
+                'You now have 10 more minutes. Starting your call...',
+                [
+                  {
+                    text: 'Start Call',
+                    onPress: () => {
+                      navigation.replace('VoiceCall', {
+                        characterName: girlfriend.name,
+                        characterImageUrl: girlfriend.imageUrl || characterImageUrl,
+                        characterId: girlfriend.id,
+                        characterProfile: {
+                          name: girlfriend.name,
+                          personality: girlfriend.personality,
+                          tone: girlfriend.tone,
+                          interests: girlfriend.interests,
+                          appearance: girlfriend.appearance,
+                        },
+                      });
+                    },
                   },
-                },
-              ]
-            );
+                ],
+                {
+                  cancelable: false,
+                }
+              );
+            }, 300);
             return;
           }
         }
 
         // Just show success and close
-        Alert.alert(
-          'Credits Added! 🎉',
-          'You now have 10 more minutes of talk time!',
-          [{ text: 'OK', onPress: handleClose }]
-        );
+        // Use setTimeout to ensure alert shows properly after loading state changes
+        setTimeout(() => {
+          Alert.alert(
+            'Credits Added! 🎉',
+            'You now have 10 more minutes of talk time!',
+            [{ text: 'OK', onPress: handleClose }],
+            {
+              cancelable: false,
+            }
+          );
+        }, 300);
       } else {
         // Purchase failed or cancelled
+        setLoading(false);
         if (result.error !== 'Purchase cancelled') {
-          Alert.alert(
-            'Purchase Failed',
-            result.error || 'Something went wrong. Please try again.',
-            [{ text: 'OK' }]
-          );
+          setTimeout(() => {
+            Alert.alert(
+              'Purchase Failed',
+              result.error || 'Something went wrong. Please try again.',
+              [{ text: 'OK' }]
+            );
+          }, 300);
         }
       }
-
-      setLoading(false);
     } catch (error) {
       console.error('❌ Purchase error:', error);
       setLoading(false);

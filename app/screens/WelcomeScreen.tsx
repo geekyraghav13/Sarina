@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getCurrentUser } from '../services/authService';
 
 const { width, height } = Dimensions.get('window');
 const WELCOME_SEEN_KEY = '@welcome_seen';
@@ -27,8 +28,10 @@ type WelcomeScreenProps = {
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
   const handleGetStarted = async () => {
     try {
-      // Mark welcome screen as seen
-      await AsyncStorage.setItem(WELCOME_SEEN_KEY, 'true');
+      // Mark welcome screen as seen with user-specific key
+      const user = getCurrentUser();
+      const key = user ? `${WELCOME_SEEN_KEY}_${user.uid}` : WELCOME_SEEN_KEY;
+      await AsyncStorage.setItem(key, 'true');
     } catch (error) {
       console.error('Error saving welcome seen status:', error);
     }

@@ -3,7 +3,7 @@
     "name": "Sarina AI Companion",
     "slug": "sarina",
     "owner": "8284",
-    "version": "1.5.0",
+    "version": "2.8.7",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",

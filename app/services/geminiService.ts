@@ -6,8 +6,9 @@
 import { Girlfriend } from '../store/girlfriendStore';
 
 // Gemini Configuration
-const GEMINI_API_KEY = 'AIzaSyBNDpbvXpCv7y3nVbDa13S3a5sOQIl7-PM';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+// TODO: Move this to a secure backend or use environment variables
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY_HERE';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 interface ChatHistoryItem {
   sender: string;
@@ -51,8 +52,7 @@ Your goal is to create a meaningful, genuine connection through authentic conver
  */
 const formatChatHistory = (
   chatHistory: ChatHistoryItem[],
-  characterName: string,
-  userName: string = 'You'
+  characterName: string
 ): any[] => {
   return chatHistory.map((msg) => ({
     role: msg.sender === characterName ? 'model' : 'user',
@@ -74,7 +74,7 @@ export const generateAIResponse = async (
 
     // Get last 10 messages for context
     const recentHistory = chatHistory.slice(-10);
-    const historyMessages = formatChatHistory(recentHistory, character.name, userName);
+    const historyMessages = formatChatHistory(recentHistory, character.name);
 
     // Build the request payload with safety settings
     const payload = {

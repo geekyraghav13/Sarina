@@ -36,6 +36,8 @@ import {
   generateWelcomeMessage,
   isOpenRouterConfigured,
 } from '../services/geminiService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getCurrentUser } from '../services/authService';
 
 interface Message {
   id: string;
@@ -182,18 +184,40 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
     };
   }, []);
 
+  // Helper function to navigate to home screen
+  const navigateToHome = async () => {
+    // Log chat session duration before leaving
+    const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
+    logChatSessionDuration(girlfriendId, sessionDuration, messageCount);
+
+    // Mark onboarding as completed to ensure MainTabs is in the navigation stack
+    const user = getCurrentUser();
+    if (user) {
+      const key = `@onboarding_completed_${user.uid}`;
+      await AsyncStorage.setItem(key, 'true');
+      console.log('✅ Onboarding marked as completed from ChatScreen for user:', user.uid);
+    }
+
+    // Small delay to let AppNavigator detect the onboarding completion and add MainTabs to stack
+    setTimeout(() => {
+      try {
+        // Navigate to MainTabs (Home screen) with reset to clear navigation stack
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainTabs' }],
+        });
+      } catch (error) {
+        console.error('❌ Error navigating to MainTabs:', error);
+        // Fallback: just go back
+        navigation.goBack();
+      }
+    }, 100);
+  };
+
   // Handle hardware back button and navigation back button
   useEffect(() => {
     const backAction = () => {
-      // Log chat session duration before leaving
-      const sessionDuration = Math.floor((Date.now() - sessionStartTime) / 1000);
-      logChatSessionDuration(girlfriendId, sessionDuration, messageCount);
-
-      // Always navigate to MainTabs (Home screen) when back is pressed
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
-      });
+      navigateToHome();
       return true; // Prevent default back behavior
     };
 
@@ -394,8 +418,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
             style={styles.backButton}
             onPress={() => {
               console.log('🏠 Back/Home button pressed - navigating to MainTabs');
-              // Navigate back to MainTabs (Home screen)
-              navigation.navigate('MainTabs' as any);
+              navigateToHome();
             }}
             activeOpacity={0.7}
           >

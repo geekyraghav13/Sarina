@@ -8,19 +8,23 @@ import {
   Alert,
   Platform,
   Linking,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as AppleAuthentication from 'expo-apple-authentication';
+import { Ionicons } from '@expo/vector-icons';
 import {
   signInWithGoogle,
-  signInWithApple,
   initializeGoogleSignIn,
-  isAppleSignInAvailable
 } from '../services/authService';
+
+const { width } = Dimensions.get('window');
 
 export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
-  const [appleSignInAvailable, setAppleSignInAvailable] = useState(false);
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const slideAnim = useState(new Animated.Value(50))[0];
+  const scaleAnim = useState(new Animated.Value(0.8))[0];
 
   const handleOpenLink = async (url: string, linkName: string) => {
     try {
@@ -46,14 +50,26 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     // Initialize Google Sign-In on mount
     initializeGoogleSignIn();
 
-    // Check if Apple Sign In is available
-    checkAppleSignIn();
+    // Animate entrance
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 50,
+        friction: 7,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
-
-  const checkAppleSignIn = async () => {
-    const available = await isAppleSignInAvailable();
-    setAppleSignInAvailable(available);
-  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -85,84 +101,102 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     }
   };
 
-  const handleAppleSignIn = async () => {
-    try {
-      setLoading(true);
-      console.log('🍎 Starting Apple Sign-In...');
-
-      const user = await signInWithApple();
-
-      console.log('✅ Apple Sign-In successful:', user.uid);
-      setLoading(false);
-
-      // Navigation will happen automatically via auth state listener
-      console.log('ℹ️ Waiting for navigation...');
-    } catch (error: any) {
-      console.error('❌ Apple Sign-in error:', error);
-      setLoading(false);
-
-      // Don't show alert if user cancelled
-      if (error.message?.includes('cancelled')) {
-        return;
-      }
-
-      let errorMessage = 'Failed to sign in with Apple. Please try again.';
-
-      if (error.message) {
-        errorMessage = error.message;
-      }
-
-      Alert.alert('Sign In Failed', errorMessage);
-    }
-  };
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#1a1a2e', '#16213e', '#0f3460']}
+        colors={['#0f0c29', '#302b63', '#24243e']}
         style={styles.gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        <View style={styles.content}>
-          {/* Logo/Title */}
+        {/* Animated Circles Background */}
+        <View style={styles.circlesContainer}>
+          <View style={[styles.circle, styles.circle1]} />
+          <View style={[styles.circle, styles.circle2]} />
+          <View style={[styles.circle, styles.circle3]} />
+        </View>
+
+        <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [
+                { translateY: slideAnim },
+                { scale: scaleAnim }
+              ]
+            }
+          ]}
+        >
+          {/* Logo/Icon Area */}
           <View style={styles.header}>
-            <Text style={styles.title}>Welcome to Sarina</Text>
-            <Text style={styles.subtitle}>Your AI Girlfriend Experience</Text>
+            <LinearGradient
+              colors={['#FF6B9D', '#C06C84', '#6C5B7B']}
+              style={styles.logoContainer}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="heart" size={56} color="#FFFFFF" />
+            </LinearGradient>
+
+            <Text style={styles.title}>Sarina</Text>
+            <Text style={styles.subtitle}>Your AI Companion Experience</Text>
+
+            {/* Feature Pills */}
+            <View style={styles.featuresContainer}>
+              <View style={styles.featurePill}>
+                <Ionicons name="chatbubbles" size={14} color="#FF6B9D" />
+                <Text style={styles.featureText}>Chat</Text>
+              </View>
+              <View style={styles.featurePill}>
+                <Ionicons name="call" size={14} color="#FF6B9D" />
+                <Text style={styles.featureText}>Voice Calls</Text>
+              </View>
+              <View style={styles.featurePill}>
+                <Ionicons name="sparkles" size={14} color="#FF6B9D" />
+                <Text style={styles.featureText}>AI Powered</Text>
+              </View>
+            </View>
           </View>
 
           {/* Sign In Buttons */}
           <View style={styles.buttonContainer}>
-            {/* Apple Sign In Button - Show first on iOS */}
-            {appleSignInAvailable && (
-              <AppleAuthentication.AppleAuthenticationButton
-                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                cornerRadius={30}
-                style={styles.appleButton}
-                onPress={handleAppleSignIn}
-              />
-            )}
-
-            {/* Google Sign In Button - Following Google Brand Guidelines */}
+            {/* Google Sign In Button - Modern Design */}
             <TouchableOpacity
-              style={[styles.googleButton, appleSignInAvailable && styles.googleButtonSpacing]}
+              style={styles.googleButton}
               onPress={handleGoogleSignIn}
               disabled={loading}
+              activeOpacity={0.8}
             >
-              {loading ? (
-                <ActivityIndicator color="#1F1F1F" />
-              ) : (
-                <>
-                  <View style={styles.googleIcon}>
-                    <Text style={styles.googleIconText}>G</Text>
-                  </View>
-                  <Text style={styles.googleButtonText}>Sign in with Google</Text>
-                </>
-              )}
+              <LinearGradient
+                colors={['#FFFFFF', '#F5F5F5']}
+                style={styles.googleButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#1F1F1F" />
+                ) : (
+                  <>
+                    <View style={styles.googleIconContainer}>
+                      <Ionicons name="logo-google" size={22} color="#4285F4" />
+                    </View>
+                    <Text style={styles.googleButtonText}>Continue with Google</Text>
+                  </>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
 
-            {/* Terms and Privacy Policy - Separate clickable links */}
+            {/* Security Badge */}
+            <View style={styles.securityBadge}>
+              <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
+              <Text style={styles.securityText}>Secure & Private</Text>
+            </View>
+
+            {/* Terms and Privacy Policy */}
             <View style={styles.legalContainer}>
-              <Text style={styles.legalText}>By continuing, you agree to our{'\n'}</Text>
+              <Text style={styles.legalText}>By continuing, you agree to our</Text>
               <View style={styles.legalLinksRow}>
                 <TouchableOpacity onPress={() => handleOpenLink('https://sarina-ai-companion.lovable.app/terms', 'Terms of Service')}>
                   <Text style={styles.legalLink}>Terms of Service</Text>
@@ -174,7 +208,7 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
               </View>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </LinearGradient>
     </View>
   );
@@ -183,79 +217,152 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#0f0c29',
   },
   gradient: {
     flex: 1,
   },
+  circlesContainer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  circle: {
+    position: 'absolute',
+    borderRadius: 1000,
+    opacity: 0.1,
+  },
+  circle1: {
+    width: 300,
+    height: 300,
+    backgroundColor: '#FF6B9D',
+    top: -100,
+    right: -100,
+  },
+  circle2: {
+    width: 200,
+    height: 200,
+    backgroundColor: '#C06C84',
+    bottom: 100,
+    left: -50,
+  },
+  circle3: {
+    width: 150,
+    height: 150,
+    backgroundColor: '#6C5B7B',
+    top: 200,
+    left: 50,
+  },
   content: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 30,
-    paddingTop: 100,
-    paddingBottom: 60,
+    paddingHorizontal: 32,
+    paddingTop: 80,
+    paddingBottom: 50,
   },
   header: {
     alignItems: 'center',
+    marginTop: 20,
+  },
+  logoContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#FF6B9D',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
   },
   title: {
-    fontSize: 42,
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    marginBottom: 10,
+    marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: 1,
   },
   subtitle: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 17,
+    color: 'rgba(255,255,255,0.75)',
     textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  featuresContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  featurePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 157, 0.3)',
+  },
+  featureText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
   },
   buttonContainer: {
     alignItems: 'center',
     width: '100%',
   },
-  appleButton: {
-    width: '100%',
-    height: 54,
-    marginBottom: 16,
-  },
   googleButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  googleButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
+    paddingVertical: 18,
     paddingHorizontal: 24,
-    borderRadius: 30,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
   },
-  googleButtonSpacing: {
-    marginTop: 0,
-  },
-  googleIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#4285F4',
-    justifyContent: 'center',
-    alignItems: 'center',
+  googleIconContainer: {
     marginRight: 12,
-  },
-  googleIconText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   googleButtonText: {
     color: '#1F1F1F',
-    fontSize: 16,
-    fontWeight: '500',
-    letterSpacing: 0.25,
+    fontSize: 17,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  securityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    backgroundColor: 'rgba(76, 175, 80, 0.15)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 175, 80, 0.3)',
+  },
+  securityText: {
+    color: '#4CAF50',
+    fontSize: 13,
+    fontWeight: '600',
   },
   legalContainer: {
     marginTop: 24,
@@ -267,16 +374,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     justifyContent: 'center',
+    marginTop: 4,
   },
   legalText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 12,
     textAlign: 'center',
   },
   legalLink: {
-    color: '#8B5CF6',
+    color: '#FF6B9D',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     textDecorationLine: 'underline',
   },
 });

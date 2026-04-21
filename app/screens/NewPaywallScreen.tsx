@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Alert, ActivityIndicator, Text } from 'react-native';
+import { View, StyleSheet, Alert, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
@@ -10,6 +10,8 @@ import * as RevenueCatService from '../services/revenueCatService';
 import { canStartCall } from '../services/creditService';
 import { logPaywallShown, logSubscriptionPurchased } from '../services/analyticsService';
 import { getCurrentUser } from '../services/authService';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -21,6 +23,7 @@ interface NewPaywallScreenProps {
 
 export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
+  const [showHomeButton, setShowHomeButton] = useState(false);
   const { setIsPremium, setSubscriptionType } = usePaymentStore();
   const { girlfriends } = useGirlfriendStore();
 
@@ -188,9 +191,12 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
       });
 
       console.log('📊 Paywall result:', result);
+      // Show home button after paywall is dismissed
+      setShowHomeButton(true);
       handlePaywallResult(result);
     } catch (error) {
       console.error('❌ Error presenting paywall:', error);
+      setShowHomeButton(true);
 
       Alert.alert(
         'Error',
@@ -236,25 +242,44 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         // EXACT FLOW AS REQUIRED:
         // Show alert: "You have been subscribed"
         // When OK pressed → Navigate to Home Screen
-        Alert.alert(
-          'Subscription Confirmed',
-          'You have been subscribed',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                console.log('✅ Navigating to Home Screen (MainTabs)');
-                // Navigate to Home Screen (MainTabs)
-                // navigation.reset() clears the entire back stack, preventing Android back button
-                // from returning to the paywall. User can only exit the app from MainTabs.
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'MainTabs' }],
-                });
+        // Use setTimeout to ensure the alert is shown properly after paywall dismisses
+        setTimeout(() => {
+          Alert.alert(
+            'Subscription Confirmed',
+            'You have been subscribed',
+            [
+              {
+                text: 'OK',
+                onPress: async () => {
+                  console.log('✅ Navigating to Home Screen (MainTabs)');
+
+                  // Mark onboarding as completed before navigating
+                  // This ensures MainTabs exists in the navigation stack
+                  const user = getCurrentUser();
+                  if (user) {
+                    const key = `@onboarding_completed_${user.uid}`;
+                    await AsyncStorage.setItem(key, 'true');
+                    console.log('✅ Onboarding marked as completed for user:', user.uid);
+                  }
+
+                  // Small delay to let AppNavigator re-render with MainTabs in stack
+                  setTimeout(() => {
+                    // Navigate to Home Screen (MainTabs)
+                    // navigation.reset() clears the entire back stack, preventing Android back button
+                    // from returning to the paywall. User can only exit the app from MainTabs.
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'MainTabs' }],
+                    });
+                  }, 100);
+                },
               },
-            },
-          ]
-        );
+            ],
+            {
+              cancelable: false, // Force user to press OK
+            }
+          );
+        }, 500);
         break;
 
       case PAYWALL_RESULT.RESTORED:
@@ -277,24 +302,43 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         setIsPremium(restoredSubInfo.isPremium);
         setSubscriptionType(restoredSubInfo.tier as any);
 
-        Alert.alert(
-          'Purchases Restored',
-          'Your subscription has been successfully restored!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                console.log('✅ Navigating to Home Screen (MainTabs)');
-                // navigation.reset() clears the entire back stack, preventing Android back button
-                // from returning to the paywall. User can only exit the app from MainTabs.
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'MainTabs' }],
-                });
+        // Use setTimeout to ensure the alert is shown properly after paywall dismisses
+        setTimeout(() => {
+          Alert.alert(
+            'Purchases Restored',
+            'Your subscription has been successfully restored!',
+            [
+              {
+                text: 'OK',
+                onPress: async () => {
+                  console.log('✅ Navigating to Home Screen (MainTabs)');
+
+                  // Mark onboarding as completed before navigating
+                  // This ensures MainTabs exists in the navigation stack
+                  const user = getCurrentUser();
+                  if (user) {
+                    const key = `@onboarding_completed_${user.uid}`;
+                    await AsyncStorage.setItem(key, 'true');
+                    console.log('✅ Onboarding marked as completed for user:', user.uid);
+                  }
+
+                  // Small delay to let AppNavigator re-render with MainTabs in stack
+                  setTimeout(() => {
+                    // navigation.reset() clears the entire back stack, preventing Android back button
+                    // from returning to the paywall. User can only exit the app from MainTabs.
+                    navigation.reset({
+                      index: 0,
+                      routes: [{ name: 'MainTabs' }],
+                    });
+                  }, 100);
+                },
               },
-            },
-          ]
-        );
+            ],
+            {
+              cancelable: false, // Force user to press OK
+            }
+          );
+        }, 500);
         break;
 
       case PAYWALL_RESULT.CANCELLED:
@@ -329,9 +373,38 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
     navigation.navigate('Chat', { fromOnboarding: false });
   };
 
+  const navigateToHome = async () => {
+    console.log('🏠 Home button pressed - navigating to MainTabs');
+
+    // Mark onboarding as completed before navigating
+    const user = getCurrentUser();
+    if (user) {
+      const key = `@onboarding_completed_${user.uid}`;
+      await AsyncStorage.setItem(key, 'true');
+      console.log('✅ Onboarding marked as completed for user:', user.uid);
+    }
+
+    // Small delay to let AppNavigator re-render with MainTabs in stack
+    setTimeout(() => {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'MainTabs' }],
+      });
+    }, 100);
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        {showHomeButton && (
+          <TouchableOpacity
+            style={styles.homeButton}
+            onPress={navigateToHome}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="home" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
         <ActivityIndicator size="large" color="#FF3263" />
         <Text style={styles.loadingText}>Loading subscription options...</Text>
       </View>
@@ -341,6 +414,15 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
   // RevenueCat UI handles everything, so we just show a loading state
   return (
     <View style={styles.container}>
+      {showHomeButton && (
+        <TouchableOpacity
+          style={styles.homeButton}
+          onPress={navigateToHome}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="home" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
       <ActivityIndicator size="large" color="#FF3263" />
     </View>
   );
@@ -364,5 +446,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  homeButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
 });

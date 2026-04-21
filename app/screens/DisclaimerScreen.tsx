@@ -13,6 +13,7 @@ import { RootStackParamList } from '../navigation/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logScreenView } from '../services/analyticsService';
 import { logOnboardingStart } from '../services/firebaseAnalytics';
+import { getCurrentUser } from '../services/authService';
 
 // Sample character images from Firebase
 const SAMPLE_CHARACTERS = [
@@ -46,8 +47,10 @@ export const DisclaimerScreen: React.FC<DisclaimerScreenProps> = ({
   const handleAgree = async () => {
     try {
       setIsAgreed(true);
-      await AsyncStorage.setItem(DISCLAIMER_ACCEPTED_KEY, 'true');
-      console.log('✅ Disclaimer accepted');
+      const user = getCurrentUser();
+      const key = user ? `${DISCLAIMER_ACCEPTED_KEY}_${user.uid}` : DISCLAIMER_ACCEPTED_KEY;
+      await AsyncStorage.setItem(key, 'true');
+      console.log('✅ Disclaimer accepted for user:', user?.uid);
       // Don't navigate - let AppNavigator handle it via state change
     } catch (error) {
       console.error('Failed to save disclaimer acceptance:', error);
@@ -276,9 +279,11 @@ const styles = StyleSheet.create({
 });
 
 // Helper function to check if disclaimer was accepted
-export const checkDisclaimerAccepted = async (): Promise<boolean> => {
+export const checkDisclaimerAccepted = async (userId?: string): Promise<boolean> => {
   try {
-    const accepted = await AsyncStorage.getItem(DISCLAIMER_ACCEPTED_KEY);
+    // Use user-specific key if userId is provided, otherwise use global key for backward compatibility
+    const key = userId ? `${DISCLAIMER_ACCEPTED_KEY}_${userId}` : DISCLAIMER_ACCEPTED_KEY;
+    const accepted = await AsyncStorage.getItem(key);
     return accepted === 'true';
   } catch (error) {
     console.error('Failed to check disclaimer acceptance:', error);

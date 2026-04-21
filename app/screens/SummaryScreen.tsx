@@ -9,6 +9,7 @@ import { RootStackParamList } from '../navigation/types';
 import { logScreenView, logOnboardingCompleted } from '../services/analyticsService';
 import { logOnboardingComplete } from '../services/firebaseAnalytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getCurrentUser } from '../services/authService';
 
 const ONBOARDING_COMPLETED_KEY = '@onboarding_completed';
 
@@ -46,10 +47,12 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
     // Firebase: Track onboarding complete
     logOnboardingComplete();
 
-    // Save onboarding completion flag
+    // Save onboarding completion flag with user-specific key
     try {
-      await AsyncStorage.setItem(ONBOARDING_COMPLETED_KEY, 'true');
-      console.log('✅ Onboarding completed, navigating to Chat');
+      const user = getCurrentUser();
+      const key = user ? `${ONBOARDING_COMPLETED_KEY}_${user.uid}` : ONBOARDING_COMPLETED_KEY;
+      await AsyncStorage.setItem(key, 'true');
+      console.log('✅ Onboarding completed for user:', user?.uid);
     } catch (error) {
       console.error('Failed to save onboarding completion:', error);
     }
@@ -273,9 +276,11 @@ const styles = StyleSheet.create({
 });
 
 // Export function to check if onboarding has been completed
-export const checkOnboardingCompleted = async (): Promise<boolean> => {
+export const checkOnboardingCompleted = async (userId?: string): Promise<boolean> => {
   try {
-    const completed = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
+    // Use user-specific key if userId is provided, otherwise use global key for backward compatibility
+    const key = userId ? `${ONBOARDING_COMPLETED_KEY}_${userId}` : ONBOARDING_COMPLETED_KEY;
+    const completed = await AsyncStorage.getItem(key);
     return completed === 'true';
   } catch (error) {
     console.error('Failed to check onboarding completion:', error);

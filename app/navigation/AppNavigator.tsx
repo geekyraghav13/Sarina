@@ -42,8 +42,8 @@ export const AppNavigator: React.FC = () => {
     console.log('🔐 Current user:', authenticated ? user?.uid : 'Not signed in');
 
     if (authenticated) {
-      const accepted = await checkDisclaimerAccepted();
-      const completed = await checkOnboardingCompleted();
+      const accepted = await checkDisclaimerAccepted(user?.uid);
+      const completed = await checkOnboardingCompleted(user?.uid);
       console.log('📋 Disclaimer accepted:', accepted);
       console.log('✏️ Onboarding completed:', completed);
       setDisclaimerAccepted(accepted);
@@ -59,12 +59,25 @@ export const AppNavigator: React.FC = () => {
   useEffect(() => {
     loadInitialRoute();
 
-    // Poll for disclaimer acceptance every second
+    // Poll for disclaimer acceptance every 500ms
     const disclaimerInterval = setInterval(async () => {
       if (isAuthenticated && !disclaimerAccepted) {
-        const accepted = await checkDisclaimerAccepted();
+        const user = getCurrentUser();
+        const accepted = await checkDisclaimerAccepted(user?.uid);
         if (accepted) {
           setDisclaimerAccepted(true);
+        }
+      }
+    }, 500);
+
+    // Poll for onboarding completion every 500ms
+    const onboardingInterval = setInterval(async () => {
+      if (isAuthenticated && disclaimerAccepted && !onboardingCompleted) {
+        const user = getCurrentUser();
+        const completed = await checkOnboardingCompleted(user?.uid);
+        if (completed) {
+          console.log('✅ Onboarding completion detected, updating navigation state');
+          setOnboardingCompleted(true);
         }
       }
     }, 500);
@@ -83,9 +96,10 @@ export const AppNavigator: React.FC = () => {
 
     return () => {
       clearInterval(disclaimerInterval);
+      clearInterval(onboardingInterval);
       unsubscribe();
     };
-  }, [isAuthenticated, disclaimerAccepted]);
+  }, [isAuthenticated, disclaimerAccepted, onboardingCompleted]);
 
   if (!isInitialized || isLoading) {
     // Show black screen while checking auth to prevent flash (no spinner)

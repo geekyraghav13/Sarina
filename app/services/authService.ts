@@ -149,6 +149,12 @@ export const signOut = async () => {
     await GoogleSignin.revokeAccess();
     await GoogleSignin.signOut();
     await firebaseSignOut(auth);
+
+    // Clear AsyncStorage to reset onboarding state
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.clear();
+    console.log('🗑️ AsyncStorage cleared');
+
     console.log('✅ Signed out successfully');
   } catch (error) {
     console.error('❌ Sign out failed:', error);
@@ -335,6 +341,7 @@ const deleteDocumentsByUserIdREST = async (
  * 5. Firebase Auth account
  * 6. RevenueCat user data
  * 7. Google Sign-In access
+ * 8. AsyncStorage (onboarding state, etc.)
  *
  * IMPORTANT: This is IRREVERSIBLE and deletes ALL traces of the user from the database
  */
@@ -458,13 +465,23 @@ export const deleteAccount = async () => {
       console.warn('⚠️ STEP 6 WARNING: Could not revoke Google access:', error);
     }
 
-    // STEP 7: Delete Firebase Auth account (FINAL STEP)
-    console.log('\n🔥 STEP 7: Deleting Firebase Auth account...');
+    // STEP 7: Clear AsyncStorage to reset onboarding state
+    console.log('\n🗑️ STEP 7: Clearing AsyncStorage...');
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      await AsyncStorage.clear();
+      console.log('✅ STEP 7 COMPLETE: AsyncStorage cleared');
+    } catch (error) {
+      console.warn('⚠️ STEP 7 WARNING: Could not clear AsyncStorage:', error);
+    }
+
+    // STEP 8: Delete Firebase Auth account (FINAL STEP)
+    console.log('\n🔥 STEP 8: Deleting Firebase Auth account...');
     try {
       await user.delete();
-      console.log('✅ STEP 7 COMPLETE: Firebase Auth account deleted');
+      console.log('✅ STEP 8 COMPLETE: Firebase Auth account deleted');
     } catch (error) {
-      console.error('❌ STEP 7 FAILED:', error);
+      console.error('❌ STEP 8 FAILED:', error);
       throw error; // This is critical, so we throw
     }
 

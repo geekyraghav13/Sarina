@@ -1,10 +1,31 @@
 import Vapi from '@vapi-ai/react-native';
+import { AppState } from 'react-native';
 
 const VAPI_PUBLIC_KEY = "e24046c3-e0b4-4cb8-8896-3284dd8f4a6a";
 const VAPI_ASSISTANT_ID = "5350de50-a47f-4cd8-9cf3-b1e64ca03a9f";
 
 // Initialize Vapi with your public key
-const vapi = new Vapi(VAPI_PUBLIC_KEY);
+let vapi = new Vapi(VAPI_PUBLIC_KEY);
+let activeCall = null;
+
+// Reset Vapi instance on app reopen to fix "already started" issue
+let appStateSubscription = null;
+
+const setupAppStateListener = () => {
+  if (appStateSubscription) return; // Already set up
+
+  appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+    if (nextAppState === 'active') {
+      console.log('🔄 App reopened - resetting Vapi instance to clear stale state');
+      // Recreate Vapi instance to reset internal flags
+      vapi = new Vapi(VAPI_PUBLIC_KEY);
+      activeCall = null;
+    }
+  });
+};
+
+// Initialize listener on module load
+setupAppStateListener();
 
 /**
  * Start a voice call with the pre-configured Vapi assistant
@@ -14,10 +35,30 @@ export const startCall = async () => {
   try {
     console.log('🎙️ Starting Vapi call with assistant:', VAPI_ASSISTANT_ID);
     const call = await vapi.start(VAPI_ASSISTANT_ID);
+
+    // Check if call was actually created (null means "already started" from previous session)
+    if (!call) {
+      console.error('❌ Vapi call failed to start - instance may be in stale state');
+      // Reset Vapi instance and retry once
+      console.log('🔄 Resetting Vapi instance and retrying...');
+      vapi = new Vapi(VAPI_PUBLIC_KEY);
+      const retryCall = await vapi.start(VAPI_ASSISTANT_ID);
+
+      if (!retryCall) {
+        throw new Error('Failed to start call - Vapi instance in invalid state');
+      }
+
+      activeCall = retryCall;
+      console.log('✅ Vapi call started successfully after retry:', retryCall);
+      return retryCall;
+    }
+
+    activeCall = call;
     console.log('✅ Vapi call started successfully:', call);
     return call;
   } catch (error) {
     console.error('❌ Failed to start Vapi call:', error);
+    activeCall = null;
     throw error;
   }
 };
@@ -28,7 +69,16 @@ export const startCall = async () => {
 export const stopCall = () => {
   try {
     console.log('📴 Stopping Vapi call...');
-    vapi.stop();
+
+    // Use the proper cleanup method if available
+    if (activeCall && typeof activeCall.hangUp === 'function') {
+      activeCall.hangUp();
+      console.log('✅ Called hangUp() on active call');
+    }
+
+    // Reset internal state
+    activeCall = null;
+
     console.log('✅ Vapi call stopped');
   } catch (error) {
     console.error('❌ Error stopping Vapi call:', error);
