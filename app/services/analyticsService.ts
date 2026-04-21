@@ -1,9 +1,9 @@
-import { logEvent, setUserId, setUserProperties } from 'firebase/analytics';
-import { getAnalyticsInstance } from '../config/firebase';
+import analytics from '@react-native-firebase/analytics';
 
 /**
- * Analytics Service for Firebase Analytics
+ * Analytics Service for Firebase Analytics (React Native)
  * Provides helper functions to track user events and behavior
+ * Using @react-native-firebase/analytics for native support
  */
 
 // Custom event names
@@ -50,16 +50,13 @@ export const AnalyticsEvents = {
 /**
  * Log a custom event to Firebase Analytics
  */
-export const logAnalyticsEvent = (
+export const logAnalyticsEvent = async (
   eventName: string,
   params?: Record<string, any>
-): void => {
+): Promise<void> => {
   try {
-    const analytics = getAnalyticsInstance();
-    if (analytics) {
-      logEvent(analytics, eventName, params);
-      console.log(`📊 Analytics: ${eventName}`, params);
-    }
+    await analytics().logEvent(eventName, params);
+    console.log(`📊 Analytics: ${eventName}`, params);
   } catch (error) {
     console.warn('Failed to log analytics event:', error);
   }
@@ -197,13 +194,10 @@ export const logError = (
 /**
  * Set user ID for analytics
  */
-export const setAnalyticsUserId = (userId: string): void => {
+export const setAnalyticsUserId = async (userId: string): Promise<void> => {
   try {
-    const analytics = getAnalyticsInstance();
-    if (analytics) {
-      setUserId(analytics, userId);
-      console.log('📊 Analytics: User ID set');
-    }
+    await analytics().setUserId(userId);
+    console.log('📊 Analytics: User ID set');
   } catch (error) {
     console.warn('Failed to set user ID:', error);
   }
@@ -212,13 +206,10 @@ export const setAnalyticsUserId = (userId: string): void => {
 /**
  * Set user properties for analytics
  */
-export const setAnalyticsUserProperties = (properties: Record<string, any>): void => {
+export const setAnalyticsUserProperties = async (properties: Record<string, any>): Promise<void> => {
   try {
-    const analytics = getAnalyticsInstance();
-    if (analytics) {
-      setUserProperties(analytics, properties);
-      console.log('📊 Analytics: User properties set', properties);
-    }
+    await analytics().setUserProperties(properties);
+    console.log('📊 Analytics: User properties set', properties);
   } catch (error) {
     console.warn('Failed to set user properties:', error);
   }
