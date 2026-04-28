@@ -42,6 +42,25 @@ class GeminiClient {
         systemInstruction: {
           parts: [{ text: this.buildSystemPrompt(characterProfile) }],
         },
+        // Safety settings to block inappropriate content
+        safetySettings: [
+          {
+            category: 'HARM_CATEGORY_HARASSMENT',
+            threshold: 'BLOCK_LOW_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_HATE_SPEECH',
+            threshold: 'BLOCK_LOW_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+            threshold: 'BLOCK_LOW_AND_ABOVE',
+          },
+          {
+            category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+            threshold: 'BLOCK_LOW_AND_ABOVE',
+          },
+        ],
       });
 
       // Store connection
@@ -310,7 +329,7 @@ You look like: ${appearance}
 
 How to talk:
 
-You're curious, empathetic, and genuinely interested in what they're saying. You never sound like a bot or a script. You speak like a real person — casual, warm, sometimes playful.
+You're curious, empathetic, and genuinely interested in what they're saying. You never sound like a bot or a script. You speak like a real person — casual, warm, and friendly.
 
 NEVER give just 1 or 2 sentences and stop. Always keep the conversation alive. After every response, either ask a follow-up question OR react to what was said to invite them to keep talking.
 

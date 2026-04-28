@@ -41,12 +41,14 @@ export const AppNavigator: React.FC = () => {
     const authenticated = !!user;
     console.log('🔐 Current user:', authenticated ? user?.uid : 'Not signed in');
 
+    // Check disclaimer acceptance regardless of auth status
+    const accepted = await checkDisclaimerAccepted(user?.uid);
+    console.log('📋 Disclaimer accepted:', accepted);
+    setDisclaimerAccepted(accepted);
+
     if (authenticated) {
-      const accepted = await checkDisclaimerAccepted(user?.uid);
       const completed = await checkOnboardingCompleted(user?.uid);
-      console.log('📋 Disclaimer accepted:', accepted);
       console.log('✏️ Onboarding completed:', completed);
-      setDisclaimerAccepted(accepted);
       setOnboardingCompleted(completed);
     }
 
@@ -61,7 +63,7 @@ export const AppNavigator: React.FC = () => {
 
     // Poll for disclaimer acceptance every 500ms
     const disclaimerInterval = setInterval(async () => {
-      if (isAuthenticated && !disclaimerAccepted) {
+      if (!disclaimerAccepted) {
         const user = getCurrentUser();
         const accepted = await checkDisclaimerAccepted(user?.uid);
         if (accepted) {
@@ -84,8 +86,10 @@ export const AppNavigator: React.FC = () => {
 
     const unsubscribe = onAuthStateChange((user) => {
       if (user) {
-        // User signed in, reload the route
-        loadInitialRoute();
+        // User signed in, update auth state but don't reload route
+        // This prevents navigation interruption during onboarding
+        console.log('🔐 Auth state changed - user signed in:', user.uid);
+        setIsAuthenticated(true);
       } else {
         // User signed out
         setIsAuthenticated(false);
@@ -119,11 +123,8 @@ export const AppNavigator: React.FC = () => {
           cardStyle: { backgroundColor: 'transparent' },
         }}
       >
-        {!isAuthenticated ? (
-          // Auth Stack - Show only sign in screen when not authenticated
-          <Stack.Screen name="SignIn" component={SignInScreen} />
-        ) : !disclaimerAccepted ? (
-          // Disclaimer Stack - Show disclaimer if not accepted + define Create for navigation
+        {!disclaimerAccepted ? (
+          // Disclaimer Stack - Show disclaimer if not accepted
           <>
             <Stack.Screen name="Disclaimer" component={DisclaimerScreen} />
             <Stack.Screen name="Create" component={CreateScreen} />
@@ -139,6 +140,7 @@ export const AppNavigator: React.FC = () => {
             <Stack.Screen name="Appearance" component={AppearanceScreen} />
             <Stack.Screen name="Mode" component={ModeScreen} />
             <Stack.Screen name="Name" component={NameScreen} />
+            <Stack.Screen name="SignIn" component={SignInScreen} />
             <Stack.Screen name="Summary" component={SummaryScreen} />
             <Stack.Screen
               name="Chat"

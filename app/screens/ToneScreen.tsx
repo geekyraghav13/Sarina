@@ -15,13 +15,13 @@ interface ToneScreenProps {
 
 const TONE_OPTIONS = [
   'Cute',
-  'Flirty',
   'Friendly',
-  'Playful',
-  'Romantic',
+  'Cheerful',
   'Caring',
+  'Supportive',
   'Mysterious',
   'Confident',
+  'Energetic',
 ];
 
 export const ToneScreen: React.FC<ToneScreenProps> = ({ navigation }) => {

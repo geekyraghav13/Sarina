@@ -16,21 +16,15 @@ interface ModeScreenProps {
 const MODES = [
   {
     id: 'safe',
-    title: 'Safe',
-    description: 'Friendly and appropriate conversations for all',
+    title: 'Friendly',
+    description: 'Warm and appropriate conversations',
     icon: '😊',
   },
   {
-    id: 'romantic',
-    title: 'Romantic',
-    description: 'Sweet, affectionate, and emotionally intimate',
+    id: 'caring',
+    title: 'Caring',
+    description: 'Sweet, affectionate, and supportive',
     icon: '💕',
-  },
-  {
-    id: 'nsfw',
-    title: 'Hot',
-    description: 'Playful and flirty conversations (18+)',
-    icon: '🔥',
   },
 ];
 

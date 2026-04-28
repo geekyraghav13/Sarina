@@ -56,7 +56,8 @@ service-account-key.json
 # app/config/firebase.ts
 
 # Environment configuration with API keys
-app/config/env.ts
+app/config/env.local.ts
+*.local.ts
 
 # TypeScript
 *.tsbuildinfo
@@ -77,6 +78,9 @@ GoogleService-Info.plist
 # Local documentation
 DOCUMENTATION_ORGANIZATION_COMPLETE.md
 CLAUDE.md
+
+# Test files
+test-firebase-connection.js
 
 # Backend environment
 backend/.env

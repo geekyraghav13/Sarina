@@ -44,11 +44,11 @@ export const useVideoForProfile = () => {
     // Priority 2: Tone selection (if no appearance yet)
     else if (profile.tone && profile.tone.length > 0) {
       const primaryTone = profile.tone[0].toLowerCase();
-      if (primaryTone === 'romantic' || primaryTone === 'flirty') {
+      if (primaryTone === 'caring' || primaryTone === 'supportive') {
         newVideoSource = VIDEO_SOURCES.ROMANTIC;
       } else if (primaryTone === 'mysterious') {
         newVideoSource = VIDEO_SOURCES.FANTASY;
-      } else if (primaryTone === 'cute' || primaryTone === 'playful') {
+      } else if (primaryTone === 'cute' || primaryTone === 'cheerful') {
         newVideoSource = VIDEO_SOURCES.ANIME;
       }
     }

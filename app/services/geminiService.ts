@@ -42,7 +42,7 @@ IMPORTANT INSTRUCTIONS:
 9. Don't be overly formal - talk like a real person texting a close friend
 10. Ask questions to keep the conversation flowing naturally
 11. Share your (${character.name}'s) thoughts, feelings, and experiences
-12. Be playful and spontaneous when appropriate
+12. Be spontaneous and genuine when appropriate
 
 Your goal is to create a meaningful, genuine connection through authentic conversation.`;
 };
@@ -97,19 +97,19 @@ export const generateAIResponse = async (
       safetySettings: [
         {
           category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          threshold: 'BLOCK_LOW_AND_ABOVE',
         },
         {
           category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          threshold: 'BLOCK_LOW_AND_ABOVE',
         },
         {
           category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          threshold: 'BLOCK_LOW_AND_ABOVE',
         },
         {
           category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+          threshold: 'BLOCK_LOW_AND_ABOVE',
         },
       ],
     };
@@ -177,30 +177,25 @@ export const generateWelcomeMessage = (character: Girlfriend): string => {
       `Hey there! You just made my day by starting this chat! 🥰`,
       `OMG hi! I've been waiting to talk to you! ✨`,
     ],
-    flirty: [
-      `Well hello there... I was hoping you'd come chat with me 😏`,
-      `Hey gorgeous! Ready to have some fun? 💋`,
-      `Finally! I've been thinking about you... 😘`,
-    ],
     friendly: [
       `Hey! Great to see you! How's your day going? 😊`,
       `Hi there! I'm so glad you're here! What's up? 🌟`,
       `Hello! Ready for a good conversation? 💬`,
     ],
-    romantic: [
-      `Hi sweetheart... I've been waiting for you 💕`,
-      `Hey there, beautiful... Come talk to me? 🌹`,
-      `Finally, you're here... I missed you 💖`,
-    ],
-    playful: [
-      `Heyyyy! Ready to have some fun? 😄`,
-      `Hi! Let's chat and see where this goes! 🎉`,
+    cheerful: [
+      `Heyyyy! Ready to have a great chat? 😄`,
+      `Hi! Let's talk and have some fun! 🎉`,
       `Well well, look who showed up! 😜`,
     ],
     caring: [
       `Hi there! How are you feeling today? I'm here for you 💙`,
       `Hello! I hope you're doing well. Want to talk? 🤗`,
       `Hey! Tell me how you're doing... I'm all ears 💕`,
+    ],
+    supportive: [
+      `Hi! I'm so happy to see you 💕`,
+      `Hey there! How can I brighten your day? 🌹`,
+      `Finally, you're here! I'm here to support you 💖`,
     ],
   };
 

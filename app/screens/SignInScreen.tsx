@@ -81,8 +81,8 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       console.log('✅ Google Sign-In successful:', user.uid);
       setLoading(false);
 
-      // Navigation will happen automatically via auth state listener
-      console.log('ℹ️ Waiting for navigation...');
+      // Use replace instead of navigate to reset the stack and go to Summary
+      navigation.replace('Summary');
     } catch (error: any) {
       console.error('❌ Sign-in error:', error);
       setLoading(false);

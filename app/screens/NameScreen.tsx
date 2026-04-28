@@ -46,7 +46,7 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
   const handleNext = () => {
     if (name.trim()) {
       setProfile({ name: name.trim() });
-      navigation.navigate('Summary');
+      navigation.navigate('SignIn');
     }
   };
 

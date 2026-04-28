@@ -3,11 +3,14 @@
 
 export const backgroundMap = {
   default: require('../../assets/videos/default.mp4'),
-  flirty: require('../../assets/videos/default.mp4'), // TODO: Add flirty.mp4
-  cute: require('../../assets/videos/default.mp4'), // TODO: Add cute.mp4
-  romantic: require('../../assets/videos/default.mp4'), // TODO: Add romantic.mp4
-  playful: require('../../assets/videos/default.mp4'), // TODO: Add playful.mp4
-  mysterious: require('../../assets/videos/default.mp4'), // TODO: Add mysterious.mp4
+  cute: require('../../assets/videos/default.mp4'),
+  friendly: require('../../assets/videos/default.mp4'),
+  cheerful: require('../../assets/videos/default.mp4'),
+  caring: require('../../assets/videos/default.mp4'),
+  supportive: require('../../assets/videos/default.mp4'),
+  mysterious: require('../../assets/videos/default.mp4'),
+  confident: require('../../assets/videos/default.mp4'),
+  energetic: require('../../assets/videos/default.mp4'),
 };
 
 export const getBackgroundForProfile = (
@@ -25,10 +28,7 @@ export const getBackgroundForProfile = (
     }
   }
 
-  // Override with mode-specific background if needed
-  if (mode === 'romantic' && backgroundMap.romantic) {
-    background = backgroundMap.romantic;
-  }
+  // Mode is already sanitized, no need for mode-specific override
 
   return background;
 };

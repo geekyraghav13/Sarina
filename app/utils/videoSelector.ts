@@ -23,16 +23,16 @@ export const getVideoForTone = (tone: string): any => {
 
   switch (lowerTone) {
     case 'cute':
-    case 'playful':
+    case 'cheerful':
       return VIDEO_SOURCES.ANIME;
-    case 'romantic':
-    case 'flirty':
+    case 'caring':
+    case 'supportive':
       return VIDEO_SOURCES.ROMANTIC;
     case 'mysterious':
       return VIDEO_SOURCES.FANTASY;
     case 'confident':
+    case 'energetic':
       return VIDEO_SOURCES.DEFAULT;
-    case 'caring':
     case 'friendly':
       return VIDEO_SOURCES.MINIMAL;
     default:

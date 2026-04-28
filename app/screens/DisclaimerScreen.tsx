@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
-  Image,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
@@ -14,14 +13,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logScreenView } from '../services/analyticsService';
 import { logOnboardingStart } from '../services/firebaseAnalytics';
 import { getCurrentUser } from '../services/authService';
-
-// Sample character images from Firebase
-const SAMPLE_CHARACTERS = [
-  { id: '1', name: 'Serena', imageUrl: 'https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fserena.jpg?alt=media&token=5f6ca662-d41b-4d72-92a8-053c1d466cd2' },
-  { id: '2', name: 'Maya', imageUrl: 'https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fmaya.jpg?alt=media&token=eb0872f5-d151-4d94-8379-eb81247fb09e' },
-  { id: '3', name: 'Luna', imageUrl: 'https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fluna.jpg?alt=media&token=03a97c04-0d46-44e5-bf47-927d159fd6b0' },
-  { id: '4', name: 'Sophie', imageUrl: 'https://firebasestorage.googleapis.com/v0/b/sarina-ai-2b2c1.firebasestorage.app/o/characters%2Fsophie.jpg?alt=media&token=9bf29ed5-ef5b-4314-9f8d-23901f2dbade' },
-];
 
 type DisclaimerScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -38,6 +29,7 @@ export const DisclaimerScreen: React.FC<DisclaimerScreenProps> = ({
   navigation,
 }) => {
   const [isAgreed, setIsAgreed] = useState(false);
+  const [isChecked, setIsChecked] = useState(false);
 
   React.useEffect(() => {
     logScreenView('Disclaimer');
@@ -45,6 +37,8 @@ export const DisclaimerScreen: React.FC<DisclaimerScreenProps> = ({
   }, []);
 
   const handleAgree = async () => {
+    if (!isChecked) return; // Don't proceed if checkbox isn't checked
+
     try {
       setIsAgreed(true);
       const user = getCurrentUser();
@@ -72,22 +66,6 @@ export const DisclaimerScreen: React.FC<DisclaimerScreenProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>Before We Begin...</Text>
-
-        {/* Character Preview Grid */}
-        <View style={styles.charactersGrid}>
-          {SAMPLE_CHARACTERS.map((char) => (
-            <View key={char.id} style={styles.characterCard}>
-              <Image
-                source={{ uri: char.imageUrl }}
-                style={styles.characterImage}
-                resizeMode="cover"
-              />
-              <View style={styles.characterOverlay}>
-                <Text style={styles.characterName}>{char.name}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
 
         {/* AI Generated Content */}
         <View style={styles.section}>
@@ -118,10 +96,10 @@ export const DisclaimerScreen: React.FC<DisclaimerScreenProps> = ({
           <View style={styles.iconContainer}>
             <Text style={styles.icon}>⚠️</Text>
           </View>
-          <Text style={styles.sectionTitle}>Age & Responsibility</Text>
+          <Text style={styles.sectionTitle}>User Responsibility</Text>
           <Text style={styles.sectionText}>
-            You confirm you're 18+ and take full responsibility for your account
-            activity. Companion chatbots may not be suitable for minors.
+            You take full responsibility for your account activity and agree to
+            use this app in accordance with our terms and applicable laws.
           </Text>
         </View>
 
@@ -136,14 +114,33 @@ export const DisclaimerScreen: React.FC<DisclaimerScreenProps> = ({
             <Text style={styles.termsLink}>Privacy Policy</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Checkbox Agreement */}
+        <TouchableOpacity
+          style={styles.checkboxContainer}
+          onPress={() => setIsChecked(!isChecked)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
+            {isChecked && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+          <Text style={styles.checkboxText}>
+            I have read and agree to the terms above
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* I Agree Button */}
       <View style={styles.buttonContainer}>
         <TouchableOpacity
-          style={[styles.agreeButton, isAgreed && styles.agreeButtonActive]}
+          style={[
+            styles.agreeButton,
+            isAgreed && styles.agreeButtonActive,
+            !isChecked && styles.agreeButtonDisabled
+          ]}
           onPress={handleAgree}
           activeOpacity={0.8}
+          disabled={!isChecked}
         >
           <Text style={styles.agreeButtonText}>I Agree</Text>
         </TouchableOpacity>
@@ -239,51 +236,63 @@ const styles = StyleSheet.create({
   agreeButtonActive: {
     backgroundColor: '#6D28D9',
   },
+  agreeButtonDisabled: {
+    backgroundColor: 'rgba(124, 58, 237, 0.4)',
+  },
   agreeButtonText: {
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  charactersGrid: {
+  checkboxContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 32,
-    gap: 12,
+    alignItems: 'center',
+    marginTop: 24,
+    paddingHorizontal: 16,
   },
-  characterCard: {
-    width: '48%',
-    aspectRatio: 0.75,
-    borderRadius: 16,
-    overflow: 'hidden',
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  characterImage: {
-    width: '100%',
-    height: '100%',
+  checkboxChecked: {
+    backgroundColor: '#7C3AED',
+    borderColor: '#7C3AED',
   },
-  characterOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-  },
-  characterName: {
-    fontSize: 14,
-    fontWeight: '600',
+  checkmark: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#FFFFFF',
-    textAlign: 'center',
+  },
+  checkboxText: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    flex: 1,
   },
 });
 
 // Helper function to check if disclaimer was accepted
 export const checkDisclaimerAccepted = async (userId?: string): Promise<boolean> => {
   try {
-    // Use user-specific key if userId is provided, otherwise use global key for backward compatibility
-    const key = userId ? `${DISCLAIMER_ACCEPTED_KEY}_${userId}` : DISCLAIMER_ACCEPTED_KEY;
-    const accepted = await AsyncStorage.getItem(key);
+    // Check user-specific key first if userId is provided
+    if (userId) {
+      const userKey = `${DISCLAIMER_ACCEPTED_KEY}_${userId}`;
+      const userAccepted = await AsyncStorage.getItem(userKey);
+      if (userAccepted === 'true') {
+        return true;
+      }
+      // Fallback to global key (for users who accepted before sign-in)
+      const globalAccepted = await AsyncStorage.getItem(DISCLAIMER_ACCEPTED_KEY);
+      return globalAccepted === 'true';
+    }
+    // No userId, check global key only
+    const accepted = await AsyncStorage.getItem(DISCLAIMER_ACCEPTED_KEY);
     return accepted === 'true';
   } catch (error) {
     console.error('Failed to check disclaimer acceptance:', error);
