@@ -58,7 +58,7 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ navigation }) => {
   }, []);
 
   const handleStart = () => {
-    navigation.navigate('Age');
+    navigation.navigate('LanguageSelection');
   };
 
   return (

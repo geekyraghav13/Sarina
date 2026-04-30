@@ -1,0 +1,125 @@
+{
+  "language": {
+    "title": "言語を選択",
+    "subtitle": "お好みの言語を選択してください",
+    "step": "ステップ {{current}} / {{total}}"
+  },
+  "welcome": {
+    "title": "サリナ",
+    "tagline": "あなたのAIコンパニオン",
+    "feature_chat": "チャット",
+    "feature_photo": "写真をリクエスト",
+    "feature_video": "ビデオ通話",
+    "feature_more": "もっと見る",
+    "button_start": "始めましょう"
+  },
+  "disclaimer": {
+    "title": "免責事項",
+    "content": "このアプリは娯楽目的のみです..."
+  },
+  "age": {
+    "title": "あなたの年齢は？",
+    "subtitle": "このアプリを使用するには18歳以上である必要があります",
+    "step": "ステップ {{current}} / {{total}}"
+  },
+  "personality": {
+    "title": "彼女の性格を選択",
+    "subtitle": "魅力的な性格特性を選択してください",
+    "step": "ステップ {{current}} / {{total}}",
+    "kind": "優しい",
+    "adventurous": "冒険的",
+    "intelligent": "知的",
+    "funny": "面白い",
+    "empathetic": "共感的",
+    "bold": "大胆",
+    "creative": "創造的",
+    "supportive": "支援的",
+    "spontaneous": "自発的",
+    "thoughtful": "思慮深い"
+  },
+  "interests": {
+    "title": "彼女の興味を選択",
+    "subtitle": "彼女は何が好きですか？",
+    "step": "ステップ {{current}} / {{total}}",
+    "music": "音楽",
+    "movies": "映画",
+    "gaming": "ゲーム",
+    "travel": "旅行",
+    "cooking": "料理",
+    "art": "芸術",
+    "sports": "スポーツ",
+    "reading": "読書",
+    "photography": "写真",
+    "fitness": "フィットネス",
+    "technology": "テクノロジー",
+    "fashion": "ファッション"
+  },
+  "appearance": {
+    "title": "外見スタイルを選択",
+    "subtitle": "どのように見えるべきですか？",
+    "step": "ステップ {{current}} / {{total}}",
+    "realistic": "リアル",
+    "realistic_desc": "写実的でリアルな外見",
+    "anime": "アニメ",
+    "anime_desc": "美しいアニメキャラクター",
+    "fantasy": "ファンタジー",
+    "fantasy_desc": "魔法のような幻想的な外見",
+    "minimal": "ミニマル",
+    "minimal_desc": "シンプルでエレガントなデザイン"
+  },
+  "mode": {
+    "title": "モードを選択",
+    "subtitle": "会話スタイルを選択してください",
+    "step": "ステップ {{current}} / {{total}}",
+    "friendly": "フレンドリー",
+    "friendly_desc": "カジュアルで楽しい会話",
+    "caring": "思いやり",
+    "caring_desc": "理解と支援",
+    "romantic": "ロマンチック",
+    "romantic_desc": "甘く愛情深い",
+    "flirty": "フリーティ",
+    "flirty_desc": "遊び心があっていたずら"
+  },
+  "tone": {
+    "title": "彼女のトーンを選択",
+    "subtitle": "1つ以上のトーンを選択してください",
+    "step": "ステップ {{current}} / {{total}}",
+    "cute": "かわいい",
+    "friendly": "フレンドリー",
+    "cheerful": "陽気",
+    "caring": "思いやり",
+    "supportive": "支援的",
+    "mysterious": "ミステリアス",
+    "confident": "自信のある",
+    "energetic": "エネルギッシュ"
+  },
+  "name": {
+    "title": "彼女の名前は？",
+    "subtitle": "AIコンパニオンに名前を付けてください",
+    "step": "ステップ {{current}} / {{total}}",
+    "placeholder": "名前を入力..."
+  },
+  "summary": {
+    "title": "{{name}}と会いましょう",
+    "title_default": "あなたのAIと会いましょう",
+    "subtitle": "開始する前に確認してください",
+    "step": "ステップ {{current}} / {{total}}",
+    "label_name": "名前",
+    "label_age": "年齢",
+    "label_tone": "トーン",
+    "label_personality": "性格",
+    "label_interests": "興味",
+    "label_appearance": "外見",
+    "label_mode": "モード",
+    "not_set": "未設定",
+    "years_old": "{{age}}歳",
+    "button_start": "チャットを開始"
+  },
+  "common": {
+    "back": "戻る",
+    "next": "次へ",
+    "continue": "続ける",
+    "finish": "完了",
+    "skip": "スキップ"
+  }
+}

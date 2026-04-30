@@ -7,6 +7,7 @@ import { useUserProfile } from '../store/userProfile';
 import { useVideoForProfile } from '../hooks/useVideoForProfile';
 import { RootStackParamList } from '../navigation/types';
 import { logScreenView } from '../services/firebaseAnalytics';
+import { useTranslation } from 'react-i18next';
 
 type ModeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Mode'>;
 
@@ -14,25 +15,25 @@ interface ModeScreenProps {
   navigation: ModeScreenNavigationProp;
 }
 
-const MODES = [
-  {
-    id: 'safe',
-    title: 'Friendly',
-    description: 'Warm and appropriate conversations',
-    icon: '😊',
-  },
-  {
-    id: 'caring',
-    title: 'Caring',
-    description: 'Sweet, affectionate, and supportive',
-    icon: '💕',
-  },
-];
+const MODE_IDS = ['friendly', 'caring'];
+const MODE_ICONS: { [key: string]: string } = {
+  friendly: '😊',
+  caring: '💕',
+};
 
 export const ModeScreen: React.FC<ModeScreenProps> = ({ navigation }) => {
+  const { t } = useTranslation();
   const [selectedMode, setSelectedMode] = useState<string>('');
   const { setProfile } = useUserProfile();
   const videoSource = useVideoForProfile();
+
+  // Build modes from translations
+  const MODES = MODE_IDS.map(id => ({
+    id: id === 'friendly' ? 'safe' : id,  // Map friendly to 'safe' for backend compatibility
+    title: t(`mode.${id}`),
+    description: t(`mode.${id}_desc`),
+    icon: MODE_ICONS[id],
+  }));
 
   // Track screen view
   React.useEffect(() => {
@@ -65,9 +66,9 @@ export const ModeScreen: React.FC<ModeScreenProps> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.step}>Step 6 of 8</Text>
-          <Text style={styles.title}>Select Mode</Text>
-          <Text style={styles.subtitle}>Choose the conversation style</Text>
+          <Text style={styles.step}>{t('mode.step', { current: 5, total: 8 })}</Text>
+          <Text style={styles.title}>{t('mode.title')}</Text>
+          <Text style={styles.subtitle}>{t('mode.subtitle')}</Text>
         </View>
 
         <View style={styles.cardsContainer}>
@@ -90,7 +91,7 @@ export const ModeScreen: React.FC<ModeScreenProps> = ({ navigation }) => {
               onPress={handleBack}
               activeOpacity={0.7}
             >
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -102,7 +103,7 @@ export const ModeScreen: React.FC<ModeScreenProps> = ({ navigation }) => {
               activeOpacity={0.8}
               disabled={!selectedMode}
             >
-              <Text style={styles.nextButtonText}>Next</Text>
+              <Text style={styles.nextButtonText}>{t('common.next')}</Text>
             </TouchableOpacity>
           </View>
         </View>

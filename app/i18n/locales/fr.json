@@ -1,0 +1,125 @@
+{
+  "language": {
+    "title": "Choisissez votre langue",
+    "subtitle": "Sélectionnez votre langue préférée",
+    "step": "Étape {{current}} sur {{total}}"
+  },
+  "welcome": {
+    "title": "Sarina",
+    "tagline": "Votre Compagne IA",
+    "feature_chat": "Discuter",
+    "feature_photo": "Demander une photo",
+    "feature_video": "Appel vidéo",
+    "feature_more": "Bien plus",
+    "button_start": "Commençons"
+  },
+  "disclaimer": {
+    "title": "Avertissement",
+    "content": "Cette application est uniquement à des fins de divertissement..."
+  },
+  "age": {
+    "title": "Quel âge avez-vous ?",
+    "subtitle": "Vous devez avoir 18 ans ou plus pour utiliser cette application",
+    "step": "Étape {{current}} sur {{total}}"
+  },
+  "personality": {
+    "title": "Choisissez sa personnalité",
+    "subtitle": "Sélectionnez les traits de personnalité qui vous attirent",
+    "step": "Étape {{current}} sur {{total}}",
+    "kind": "Gentille",
+    "adventurous": "Aventureuse",
+    "intelligent": "Intelligente",
+    "funny": "Drôle",
+    "empathetic": "Empathique",
+    "bold": "Audacieuse",
+    "creative": "Créative",
+    "supportive": "Soutenante",
+    "spontaneous": "Spontanée",
+    "thoughtful": "Réfléchie"
+  },
+  "interests": {
+    "title": "Sélectionnez ses centres d'intérêt",
+    "subtitle": "Qu'est-ce qui la passionne ?",
+    "step": "Étape {{current}} sur {{total}}",
+    "music": "Musique",
+    "movies": "Cinéma",
+    "gaming": "Jeux vidéo",
+    "travel": "Voyages",
+    "cooking": "Cuisine",
+    "art": "Art",
+    "sports": "Sports",
+    "reading": "Lecture",
+    "photography": "Photographie",
+    "fitness": "Fitness",
+    "technology": "Technologie",
+    "fashion": "Mode"
+  },
+  "appearance": {
+    "title": "Choisissez le style d'apparence",
+    "subtitle": "À quoi devrait-elle ressembler ?",
+    "step": "Étape {{current}} sur {{total}}",
+    "realistic": "Réaliste",
+    "realistic_desc": "Apparence photoréaliste et réaliste",
+    "anime": "Anime",
+    "anime_desc": "Beau personnage de style anime",
+    "fantasy": "Fantaisie",
+    "fantasy_desc": "Aspect magique et éthéré",
+    "minimal": "Minimaliste",
+    "minimal_desc": "Design simple et élégant"
+  },
+  "mode": {
+    "title": "Sélectionnez le mode",
+    "subtitle": "Choisissez le style de conversation",
+    "step": "Étape {{current}} sur {{total}}",
+    "friendly": "Amicale",
+    "friendly_desc": "Conversations décontractées et amusantes",
+    "caring": "Attentionnée",
+    "caring_desc": "Compréhensive et soutenante",
+    "romantic": "Romantique",
+    "romantic_desc": "Douce et affectueuse",
+    "flirty": "Coquine",
+    "flirty_desc": "Joueuse et espiègle"
+  },
+  "tone": {
+    "title": "Choisissez son ton",
+    "subtitle": "Sélectionnez un ou plusieurs tons de personnalité",
+    "step": "Étape {{current}} sur {{total}}",
+    "cute": "Mignonne",
+    "friendly": "Amicale",
+    "cheerful": "Joyeuse",
+    "caring": "Attentionnée",
+    "supportive": "Soutenante",
+    "mysterious": "Mystérieuse",
+    "confident": "Confiante",
+    "energetic": "Énergique"
+  },
+  "name": {
+    "title": "Comment s'appelle-t-elle ?",
+    "subtitle": "Donnez un nom à votre compagne IA",
+    "step": "Étape {{current}} sur {{total}}",
+    "placeholder": "Entrez un nom..."
+  },
+  "summary": {
+    "title": "Rencontrez {{name}}",
+    "title_default": "Rencontrez votre IA",
+    "subtitle": "Vérifiez votre création avant de commencer",
+    "step": "Étape {{current}} sur {{total}}",
+    "label_name": "Nom",
+    "label_age": "Âge",
+    "label_tone": "Ton",
+    "label_personality": "Personnalité",
+    "label_interests": "Centres d'intérêt",
+    "label_appearance": "Apparence",
+    "label_mode": "Mode",
+    "not_set": "Non défini",
+    "years_old": "{{age}} ans",
+    "button_start": "Commencer à discuter"
+  },
+  "common": {
+    "back": "Retour",
+    "next": "Suivant",
+    "continue": "Continuer",
+    "finish": "Terminer",
+    "skip": "Passer"
+  }
+}

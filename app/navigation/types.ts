@@ -2,7 +2,7 @@ export type RootStackParamList = {
   SignIn: undefined;
   Disclaimer: undefined;
   Create: undefined;
-  Age: undefined;
+  LanguageSelection: undefined;
   Tone: undefined;
   Personality: undefined;
   Interests: undefined;

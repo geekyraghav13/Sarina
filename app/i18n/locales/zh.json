@@ -1,0 +1,125 @@
+{
+  "language": {
+    "title": "选择您的语言",
+    "subtitle": "选择您喜欢的语言",
+    "step": "第 {{current}} 步，共 {{total}} 步"
+  },
+  "welcome": {
+    "title": "萨琳娜",
+    "tagline": "您的AI伴侣",
+    "feature_chat": "聊天",
+    "feature_photo": "请求照片",
+    "feature_video": "视频通话",
+    "feature_more": "更多功能",
+    "button_start": "开始"
+  },
+  "disclaimer": {
+    "title": "免责声明",
+    "content": "此应用仅供娱乐使用..."
+  },
+  "age": {
+    "title": "您多大了？",
+    "subtitle": "您必须年满18岁才能使用此应用",
+    "step": "第 {{current}} 步，共 {{total}} 步"
+  },
+  "personality": {
+    "title": "选择她的性格",
+    "subtitle": "选择您喜欢的性格特征",
+    "step": "第 {{current}} 步，共 {{total}} 步",
+    "kind": "善良",
+    "adventurous": "冒险",
+    "intelligent": "聪明",
+    "funny": "有趣",
+    "empathetic": "有同理心",
+    "bold": "大胆",
+    "creative": "有创意",
+    "supportive": "支持",
+    "spontaneous": "自发",
+    "thoughtful": "体贴"
+  },
+  "interests": {
+    "title": "选择她的兴趣",
+    "subtitle": "她热爱什么？",
+    "step": "第 {{current}} 步，共 {{total}} 步",
+    "music": "音乐",
+    "movies": "电影",
+    "gaming": "游戏",
+    "travel": "旅行",
+    "cooking": "烹饪",
+    "art": "艺术",
+    "sports": "体育",
+    "reading": "阅读",
+    "photography": "摄影",
+    "fitness": "健身",
+    "technology": "技术",
+    "fashion": "时尚"
+  },
+  "appearance": {
+    "title": "选择外观风格",
+    "subtitle": "她应该是什么样子？",
+    "step": "第 {{current}} 步，共 {{total}} 步",
+    "realistic": "写实",
+    "realistic_desc": "逼真且栩栩如生的外观",
+    "anime": "动漫",
+    "anime_desc": "美丽的动漫风格角色",
+    "fantasy": "奇幻",
+    "fantasy_desc": "魔幻而空灵的外观",
+    "minimal": "极简",
+    "minimal_desc": "简洁优雅的设计"
+  },
+  "mode": {
+    "title": "选择模式",
+    "subtitle": "选择对话风格",
+    "step": "第 {{current}} 步，共 {{total}} 步",
+    "friendly": "友好",
+    "friendly_desc": "轻松有趣的对话",
+    "caring": "关怀",
+    "caring_desc": "理解和支持",
+    "romantic": "浪漫",
+    "romantic_desc": "甜蜜深情",
+    "flirty": "调情",
+    "flirty_desc": "俏皮顽皮"
+  },
+  "tone": {
+    "title": "选择她的语气",
+    "subtitle": "选择一个或多个性格语气",
+    "step": "第 {{current}} 步，共 {{total}} 步",
+    "cute": "可爱",
+    "friendly": "友好",
+    "cheerful": "开朗",
+    "caring": "关怀",
+    "supportive": "支持",
+    "mysterious": "神秘",
+    "confident": "自信",
+    "energetic": "充满活力"
+  },
+  "name": {
+    "title": "她叫什么名字？",
+    "subtitle": "为您的AI伴侣起个名字",
+    "step": "第 {{current}} 步，共 {{total}} 步",
+    "placeholder": "输入名字..."
+  },
+  "summary": {
+    "title": "认识 {{name}}",
+    "title_default": "认识您的AI",
+    "subtitle": "开始前查看您的创作",
+    "step": "第 {{current}} 步，共 {{total}} 步",
+    "label_name": "名字",
+    "label_age": "年龄",
+    "label_tone": "语气",
+    "label_personality": "性格",
+    "label_interests": "兴趣",
+    "label_appearance": "外观",
+    "label_mode": "模式",
+    "not_set": "未设置",
+    "years_old": "{{age}} 岁",
+    "button_start": "开始聊天"
+  },
+  "common": {
+    "back": "返回",
+    "next": "下一步",
+    "continue": "继续",
+    "finish": "完成",
+    "skip": "跳过"
+  }
+}

@@ -7,7 +7,7 @@ import {
 import { DisclaimerScreen, checkDisclaimerAccepted } from '../screens/DisclaimerScreen';
 import { SignInScreen } from '../screens/SignInScreen';
 import { CreateScreen } from '../screens/CreateScreen';
-import { AgeScreen } from '../screens/AgeScreen';
+import { LanguageSelectionScreen } from '../screens/LanguageSelectionScreen';
 import { ToneScreen } from '../screens/ToneScreen';
 import { PersonalityScreen } from '../screens/PersonalityScreen';
 import { InterestsScreen } from '../screens/InterestsScreen';
@@ -133,12 +133,12 @@ export const AppNavigator: React.FC = () => {
           // Onboarding Stack - Show onboarding screens if not completed
           <>
             <Stack.Screen name="Create" component={CreateScreen} />
-            <Stack.Screen name="Age" component={AgeScreen} />
-            <Stack.Screen name="Tone" component={ToneScreen} />
+            <Stack.Screen name="LanguageSelection" component={LanguageSelectionScreen} />
             <Stack.Screen name="Personality" component={PersonalityScreen} />
             <Stack.Screen name="Interests" component={InterestsScreen} />
             <Stack.Screen name="Appearance" component={AppearanceScreen} />
             <Stack.Screen name="Mode" component={ModeScreen} />
+            <Stack.Screen name="Tone" component={ToneScreen} />
             <Stack.Screen name="Name" component={NameScreen} />
             <Stack.Screen name="SignIn" component={SignInScreen} />
             <Stack.Screen name="Summary" component={SummaryScreen} />

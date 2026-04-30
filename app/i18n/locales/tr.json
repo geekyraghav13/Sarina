@@ -1,0 +1,125 @@
+{
+  "language": {
+    "title": "Dilinizi seçin",
+    "subtitle": "Tercih ettiğiniz dili seçin",
+    "step": "Adım {{current}} / {{total}}"
+  },
+  "welcome": {
+    "title": "Sarina",
+    "tagline": "Yapay Zeka Arkadaşınız",
+    "feature_chat": "Sohbet",
+    "feature_photo": "Fotoğraf iste",
+    "feature_video": "Görüntülü arama",
+    "feature_more": "Daha fazlası",
+    "button_start": "Başlayalım"
+  },
+  "disclaimer": {
+    "title": "Feragatname",
+    "content": "Bu uygulama sadece eğlence amaçlıdır..."
+  },
+  "age": {
+    "title": "Kaç yaşındasınız?",
+    "subtitle": "Bu uygulamayı kullanmak için 18 yaş ve üzeri olmalısınız",
+    "step": "Adım {{current}} / {{total}}"
+  },
+  "personality": {
+    "title": "Onun kişiliğini seçin",
+    "subtitle": "Sizi çeken kişilik özelliklerini seçin",
+    "step": "Adım {{current}} / {{total}}",
+    "kind": "Nazik",
+    "adventurous": "Maceracı",
+    "intelligent": "Zeki",
+    "funny": "Komik",
+    "empathetic": "Empatik",
+    "bold": "Cesur",
+    "creative": "Yaratıcı",
+    "supportive": "Destekleyici",
+    "spontaneous": "Kendiliğinden",
+    "thoughtful": "Düşünceli"
+  },
+  "interests": {
+    "title": "Onun ilgi alanlarını seçin",
+    "subtitle": "Neyle ilgilenmeli?",
+    "step": "Adım {{current}} / {{total}}",
+    "music": "Müzik",
+    "movies": "Filmler",
+    "gaming": "Oyun",
+    "travel": "Seyahat",
+    "cooking": "Yemek pişirme",
+    "art": "Sanat",
+    "sports": "Spor",
+    "reading": "Okuma",
+    "photography": "Fotoğrafçılık",
+    "fitness": "Fitness",
+    "technology": "Teknoloji",
+    "fashion": "Moda"
+  },
+  "appearance": {
+    "title": "Görünüm stilini seçin",
+    "subtitle": "Nasıl görünmeli?",
+    "step": "Adım {{current}} / {{total}}",
+    "realistic": "Gerçekçi",
+    "realistic_desc": "Fotogerçekçi ve canlı görünüm",
+    "anime": "Anime",
+    "anime_desc": "Güzel anime tarzı karakter",
+    "fantasy": "Fantezi",
+    "fantasy_desc": "Büyülü ve ruhani görünüm",
+    "minimal": "Minimalist",
+    "minimal_desc": "Basit ve zarif tasarım"
+  },
+  "mode": {
+    "title": "Modu seçin",
+    "subtitle": "Konuşma stilini seçin",
+    "step": "Adım {{current}} / {{total}}",
+    "friendly": "Arkadaş canlısı",
+    "friendly_desc": "Rahat ve eğlenceli sohbetler",
+    "caring": "İlgili",
+    "caring_desc": "Anlayışlı ve destekleyici",
+    "romantic": "Romantik",
+    "romantic_desc": "Tatlı ve sevecen",
+    "flirty": "Flörtöz",
+    "flirty_desc": "Oyunbaz ve yaramaz"
+  },
+  "tone": {
+    "title": "Onun tonunu seçin",
+    "subtitle": "Bir veya daha fazla ton seçin",
+    "step": "Adım {{current}} / {{total}}",
+    "cute": "Sevimli",
+    "friendly": "Arkadaş canlısı",
+    "cheerful": "Neşeli",
+    "caring": "İlgili",
+    "supportive": "Destekleyici",
+    "mysterious": "Gizemli",
+    "confident": "Kendinden emin",
+    "energetic": "Enerjik"
+  },
+  "name": {
+    "title": "Onun adı ne?",
+    "subtitle": "Yapay zeka arkadaşınıza bir isim verin",
+    "step": "Adım {{current}} / {{total}}",
+    "placeholder": "Bir isim girin..."
+  },
+  "summary": {
+    "title": "{{name}} ile tanışın",
+    "title_default": "Yapay zekanızla tanışın",
+    "subtitle": "Başlamadan önce kreasyonunuzu gözden geçirin",
+    "step": "Adım {{current}} / {{total}}",
+    "label_name": "İsim",
+    "label_age": "Yaş",
+    "label_tone": "Ton",
+    "label_personality": "Kişilik",
+    "label_interests": "İlgi alanları",
+    "label_appearance": "Görünüm",
+    "label_mode": "Mod",
+    "not_set": "Ayarlanmamış",
+    "years_old": "{{age}} yaşında",
+    "button_start": "Sohbete başla"
+  },
+  "common": {
+    "back": "Geri",
+    "next": "İleri",
+    "continue": "Devam et",
+    "finish": "Bitir",
+    "skip": "Atla"
+  }
+}

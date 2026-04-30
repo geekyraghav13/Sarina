@@ -7,6 +7,7 @@ import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
 import { getVideoForPersonality, VIDEO_SOURCES } from '../utils/videoSelector';
 import { logScreenView } from '../services/firebaseAnalytics';
+import { useTranslation } from 'react-i18next';
 
 type PersonalityScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -17,27 +18,31 @@ interface PersonalityScreenProps {
   navigation: PersonalityScreenNavigationProp;
 }
 
-const PERSONALITY_OPTIONS = [
-  'Kind',
-  'Adventurous',
-  'Intelligent',
-  'Funny',
-  'Empathetic',
-  'Bold',
-  'Creative',
-  'Supportive',
-  'Spontaneous',
-  'Thoughtful',
+const PERSONALITY_KEYS = [
+  'kind',
+  'adventurous',
+  'intelligent',
+  'funny',
+  'empathetic',
+  'bold',
+  'creative',
+  'supportive',
+  'spontaneous',
+  'thoughtful',
 ];
 
 export const PersonalityScreen: React.FC<PersonalityScreenProps> = ({
   navigation,
 }) => {
+  const { t } = useTranslation();
   const [selectedPersonalities, setSelectedPersonalities] = useState<string[]>(
     []
   );
   const { setProfile } = useUserProfile();
   const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
+
+  // Translate personality options
+  const personalityOptions = PERSONALITY_KEYS.map(key => t(`personality.${key}`));
 
   // Track screen view
   React.useEffect(() => {
@@ -82,16 +87,16 @@ export const PersonalityScreen: React.FC<PersonalityScreenProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.step}>Step 3 of 8</Text>
-          <Text style={styles.title}>Choose Her Personality</Text>
+          <Text style={styles.step}>{t('personality.step', { current: 2, total: 8 })}</Text>
+          <Text style={styles.title}>{t('personality.title')}</Text>
           <Text style={styles.subtitle}>
-            Select personality traits that appeal to you
+            {t('personality.subtitle')}
           </Text>
         </View>
 
         <View style={styles.optionsContainer}>
           <ChipSelector
-            options={PERSONALITY_OPTIONS}
+            options={personalityOptions}
             selected={selectedPersonalities}
             onSelect={handlePersonalitySelect}
             multiSelect
@@ -105,7 +110,7 @@ export const PersonalityScreen: React.FC<PersonalityScreenProps> = ({
               onPress={handleBack}
               activeOpacity={0.7}
             >
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -118,7 +123,7 @@ export const PersonalityScreen: React.FC<PersonalityScreenProps> = ({
               activeOpacity={0.8}
               disabled={selectedPersonalities.length === 0}
             >
-              <Text style={styles.nextButtonText}>Next</Text>
+              <Text style={styles.nextButtonText}>{t('common.next')}</Text>
             </TouchableOpacity>
           </View>
         </View>

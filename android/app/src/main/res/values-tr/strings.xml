@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Configuration -->
+    <string name="app_name">Sarina AI Companion</string>
+    <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
+    <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_logo_text">Sarina</string>
+    <string name="welcome_tagline">Yapay Zeka Arkadaşınız</string>
+    <string name="welcome_feature_chat">Sohbet</string>
+    <string name="welcome_feature_photo">Fotoğraf iste</string>
+    <string name="welcome_feature_video">Görüntülü arama</string>
+    <string name="welcome_feature_more">Çok daha fazlası</string>
+    <string name="welcome_button_start">Hadi Başlayalım</string>
+
+    <!-- Report Screen -->
+    <string name="report_header_title">Sorun Bildir</string>
+    <string name="report_info_text">Bildirimlerinizi ciddiye alıyoruz. Tüm gönderiler, güvenli ve saygılı bir ortam sağlamak için ekibimiz tarafından incelenir.</string>
+    <string name="report_section_reason">Bir Neden Seçin</string>
+    <string name="report_section_description">Sorunu Açıklayın</string>
+    <string name="report_reason_inappropriate">Uygunsuz İçerik</string>
+    <string name="report_reason_harassment">Taciz veya Zorbalık</string>
+    <string name="report_reason_spam">Spam veya Yanıltıcı</string>
+    <string name="report_reason_privacy">Gizlilik Endişesi</string>
+    <string name="report_reason_technical">Teknik Sorun</string>
+    <string name="report_reason_other">Diğer</string>
+    <string name="report_placeholder_description">Lütfen bildiriminizle ilgili ayrıntıları girin…</string>
+    <string name="report_char_count">%1$d / 500 karakter</string>
+    <string name="report_button_submit">Bildirimi Gönder</string>
+    <string name="report_button_submitting">Gönderiliyor…</string>
+    <string name="report_footer_text">Bildirimler gizlidir ve uygulama deneyimini herkes için iyileştirmemize yardımcı olur.</string>
+    <string name="report_alert_reason_required">Lütfen bildirim için bir neden seçin.</string>
+    <string name="report_alert_details_required">Lütfen bildiriminizle ilgili ayrıntıları girin.</string>
+    <string name="report_alert_submitted_title">Bildirim Gönderildi</string>
+    <string name="report_alert_submitted_message">Bildiriminiz için teşekkür ederiz. İnceleyip uygun işlemi gerçekleştireceğiz.</string>
+    <string name="report_alert_button_ok">Tamam</string>
+
+    <!-- Summary Screen -->
+    <string name="summary_title_meet">%1$s ile tanışın</string>
+    <string name="summary_title_meet_default">Yapay Zekanızla Tanışın</string>
+
+    <!-- Appearance Screen -->
+    <string name="appearance_style_realistic">Gerçekçi</string>
+    <string name="appearance_style_anime">Anime</string>
+    <string name="appearance_style_fantasy">Fantezi</string>
+    <string name="appearance_style_minimal">Minimal</string>
+
+    <!-- Mode Screen -->
+    <string name="mode_friendly">Arkadaşça</string>
+    <string name="mode_caring">Şefkatli</string>
+
+    <!-- Name Screen -->
+    <string name="name_placeholder">İsim girin…</string>
+
+    <!-- Chat Screen -->
+    <string name="chat_input_placeholder">Merhaba</string>
+
+    <!-- Voice Call Screen -->
+    <string name="voice_permission_title">Mikrofon İzni</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_share_title">Sarina AI\'yı Paylaş</string>
+
+    <!-- Credits/Paywall Screen -->
+    <string name="credits_price_default">$0.99</string>
+    <string name="premium_entitlement_id" translatable="false">premium</string>
+    <string name="product_identifier_unknown">bilinmiyor</string>
+
+    <!-- Common UI Elements -->
+    <string name="common_back_icon">←</string>
+    <string name="common_checkmark">✓</string>
+    <string name="common_required">Gerekli</string>
+
+    <!-- Feature Icons (Emojis) -->
+    <string name="icon_chat" translatable="false">💬</string>
+    <string name="icon_photo" translatable="false">📸</string>
+    <string name="icon_video_call" translatable="false">📞</string>
+    <string name="icon_sparkles" translatable="false">✨</string>
+    <string name="icon_warning" translatable="false">⚠️</string>
+    <string name="icon_prohibited" translatable="false">🚫</string>
+    <string name="icon_email" translatable="false">📧</string>
+    <string name="icon_lock" translatable="false">🔒</string>
+    <string name="icon_wrench" translatable="false">🔧</string>
+    <string name="icon_message" translatable="false">💬</string>
+    <string name="icon_shield" translatable="false">🛡️</string>
+</resources>

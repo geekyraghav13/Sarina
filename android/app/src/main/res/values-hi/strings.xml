@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Configuration -->
+    <string name="app_name">Sarina AI Companion</string>
+    <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
+    <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_logo_text">Sarina</string>
+    <string name="welcome_tagline">आपका AI साथी</string>
+    <string name="welcome_feature_chat">चैट</string>
+    <string name="welcome_feature_photo">फ़ोटो मांगें</string>
+    <string name="welcome_feature_video">वीडियो कॉल</string>
+    <string name="welcome_feature_more">और भी बहुत कुछ</string>
+    <string name="welcome_button_start">चलिए शुरू करें</string>
+
+    <!-- Report Screen -->
+    <string name="report_header_title">समस्या की रिपोर्ट करें</string>
+    <string name="report_info_text">हम आपकी रिपोर्ट को गंभीरता से लेते हैं। सुरक्षित और सम्मानजनक माहौल बनाए रखने के लिए सभी सबमिशन की हमारी टीम द्वारा समीक्षा की जाती है।</string>
+    <string name="report_section_reason">कारण चुनें</string>
+    <string name="report_section_description">समस्या का वर्णन करें</string>
+    <string name="report_reason_inappropriate">अनुचित सामग्री</string>
+    <string name="report_reason_harassment">उत्पीड़न या धमकाना</string>
+    <string name="report_reason_spam">स्पैम या भ्रामक</string>
+    <string name="report_reason_privacy">गोपनीयता संबंधी चिंता</string>
+    <string name="report_reason_technical">तकनीकी समस्या</string>
+    <string name="report_reason_other">अन्य</string>
+    <string name="report_placeholder_description">कृपया अपनी रिपोर्ट के बारे में विवरण दें…</string>
+    <string name="report_char_count">%1$d / 500 अक्षर</string>
+    <string name="report_button_submit">रिपोर्ट सबमिट करें</string>
+    <string name="report_button_submitting">सबमिट हो रहा है…</string>
+    <string name="report_footer_text">रिपोर्ट गोपनीय हैं और सभी के लिए ऐप अनुभव को बेहतर बनाने में हमारी मदद करती हैं।</string>
+    <string name="report_alert_reason_required">कृपया रिपोर्ट करने का कारण चुनें।</string>
+    <string name="report_alert_details_required">कृपया अपनी रिपोर्ट के बारे में विवरण दें।</string>
+    <string name="report_alert_submitted_title">रिपोर्ट सबमिट हो गई</string>
+    <string name="report_alert_submitted_message">आपकी रिपोर्ट के लिए धन्यवाद। हम इसकी समीक्षा करेंगे और उचित कार्रवाई करेंगे।</string>
+    <string name="report_alert_button_ok">ठीक है</string>
+
+    <!-- Summary Screen -->
+    <string name="summary_title_meet">%1$s से मिलें</string>
+    <string name="summary_title_meet_default">अपने AI से मिलें</string>
+
+    <!-- Appearance Screen -->
+    <string name="appearance_style_realistic">यथार्थवादी</string>
+    <string name="appearance_style_anime">एनीमे</string>
+    <string name="appearance_style_fantasy">कल्पना</string>
+    <string name="appearance_style_minimal">सरल</string>
+
+    <!-- Mode Screen -->
+    <string name="mode_friendly">मित्रवत</string>
+    <string name="mode_caring">देखभाल करने वाली</string>
+
+    <!-- Name Screen -->
+    <string name="name_placeholder">नाम दर्ज करें…</string>
+
+    <!-- Chat Screen -->
+    <string name="chat_input_placeholder">नमस्ते</string>
+
+    <!-- Voice Call Screen -->
+    <string name="voice_permission_title">माइक्रोफ़ोन अनुमति</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_share_title">Sarina AI साझा करें</string>
+
+    <!-- Credits/Paywall Screen -->
+    <string name="credits_price_default">$0.99</string>
+    <string name="premium_entitlement_id" translatable="false">premium</string>
+    <string name="product_identifier_unknown">अज्ञात</string>
+
+    <!-- Common UI Elements -->
+    <string name="common_back_icon">←</string>
+    <string name="common_checkmark">✓</string>
+    <string name="common_required">आवश्यक</string>
+
+    <!-- Feature Icons (Emojis) -->
+    <string name="icon_chat" translatable="false">💬</string>
+    <string name="icon_photo" translatable="false">📸</string>
+    <string name="icon_video_call" translatable="false">📞</string>
+    <string name="icon_sparkles" translatable="false">✨</string>
+    <string name="icon_warning" translatable="false">⚠️</string>
+    <string name="icon_prohibited" translatable="false">🚫</string>
+    <string name="icon_email" translatable="false">📧</string>
+    <string name="icon_lock" translatable="false">🔒</string>
+    <string name="icon_wrench" translatable="false">🔧</string>
+    <string name="icon_message" translatable="false">💬</string>
+    <string name="icon_shield" translatable="false">🛡️</string>
+</resources>

@@ -1,0 +1,125 @@
+{
+  "language": {
+    "title": "अपनी भाषा चुनें",
+    "subtitle": "अपनी पसंदीदा भाषा चुनें",
+    "step": "चरण {{current}} / {{total}}"
+  },
+  "welcome": {
+    "title": "सरीना",
+    "tagline": "आपका AI साथी",
+    "feature_chat": "चैट",
+    "feature_photo": "फ़ोटो का अनुरोध करें",
+    "feature_video": "वीडियो कॉल",
+    "feature_more": "और भी बहुत कुछ",
+    "button_start": "शुरू करें"
+  },
+  "disclaimer": {
+    "title": "अस्वीकरण",
+    "content": "यह ऐप केवल मनोरंजन के उद्देश्यों के लिए है..."
+  },
+  "age": {
+    "title": "आपकी उम्र क्या है?",
+    "subtitle": "इस ऐप का उपयोग करने के लिए आपकी आयु 18 वर्ष या उससे अधिक होनी चाहिए",
+    "step": "चरण {{current}} / {{total}}"
+  },
+  "personality": {
+    "title": "उसका व्यक्तित्व चुनें",
+    "subtitle": "वे व्यक्तित्व लक्षण चुनें जो आपको आकर्षित करते हैं",
+    "step": "चरण {{current}} / {{total}}",
+    "kind": "दयालु",
+    "adventurous": "साहसी",
+    "intelligent": "बुद्धिमान",
+    "funny": "मजाकिया",
+    "empathetic": "सहानुभूतिपूर्ण",
+    "bold": "निडर",
+    "creative": "रचनात्मक",
+    "supportive": "सहायक",
+    "spontaneous": "सहज",
+    "thoughtful": "विचारशील"
+  },
+  "interests": {
+    "title": "उसकी रुचियां चुनें",
+    "subtitle": "उसे क्या पसंद होना चाहिए?",
+    "step": "चरण {{current}} / {{total}}",
+    "music": "संगीत",
+    "movies": "फिल्में",
+    "gaming": "गेमिंग",
+    "travel": "यात्रा",
+    "cooking": "खाना पकाना",
+    "art": "कला",
+    "sports": "खेल",
+    "reading": "पढ़ना",
+    "photography": "फोटोग्राफी",
+    "fitness": "फिटनेस",
+    "technology": "तकनीक",
+    "fashion": "फैशन"
+  },
+  "appearance": {
+    "title": "रूप शैली चुनें",
+    "subtitle": "उसे कैसी दिखनी चाहिए?",
+    "step": "चरण {{current}} / {{total}}",
+    "realistic": "यथार्थवादी",
+    "realistic_desc": "फोटो-जैसा और जीवंत रूप",
+    "anime": "एनीमे",
+    "anime_desc": "सुंदर एनीमे शैली का चरित्र",
+    "fantasy": "फंतासी",
+    "fantasy_desc": "जादुई और अलौकिक रूप",
+    "minimal": "न्यूनतम",
+    "minimal_desc": "सरल और सुरुचिपूर्ण डिजाइन"
+  },
+  "mode": {
+    "title": "मोड चुनें",
+    "subtitle": "बातचीत की शैली चुनें",
+    "step": "चरण {{current}} / {{total}}",
+    "friendly": "मित्रवत",
+    "friendly_desc": "आरामदायक और मजेदार बातचीत",
+    "caring": "देखभाल करने वाली",
+    "caring_desc": "समझदार और सहायक",
+    "romantic": "रोमांटिक",
+    "romantic_desc": "मीठी और स्नेहपूर्ण",
+    "flirty": "छेड़खानी",
+    "flirty_desc": "चंचल और शरारती"
+  },
+  "tone": {
+    "title": "उसका स्वर चुनें",
+    "subtitle": "एक या अधिक स्वर चुनें",
+    "step": "चरण {{current}} / {{total}}",
+    "cute": "प्यारी",
+    "friendly": "मित्रवत",
+    "cheerful": "प्रसन्न",
+    "caring": "देखभाल करने वाली",
+    "supportive": "सहायक",
+    "mysterious": "रहस्यमय",
+    "confident": "आत्मविश्वासी",
+    "energetic": "ऊर्जावान"
+  },
+  "name": {
+    "title": "उसका नाम क्या है?",
+    "subtitle": "अपने AI साथी को एक नाम दें",
+    "step": "चरण {{current}} / {{total}}",
+    "placeholder": "एक नाम दर्ज करें..."
+  },
+  "summary": {
+    "title": "{{name}} से मिलें",
+    "title_default": "अपने AI से मिलें",
+    "subtitle": "शुरू करने से पहले अपनी रचना की समीक्षा करें",
+    "step": "चरण {{current}} / {{total}}",
+    "label_name": "नाम",
+    "label_age": "आयु",
+    "label_tone": "स्वर",
+    "label_personality": "व्यक्तित्व",
+    "label_interests": "रुचियां",
+    "label_appearance": "रूप",
+    "label_mode": "मोड",
+    "not_set": "सेट नहीं किया गया",
+    "years_old": "{{age}} वर्ष",
+    "button_start": "चैट शुरू करें"
+  },
+  "common": {
+    "back": "वापस",
+    "next": "अगला",
+    "continue": "जारी रखें",
+    "finish": "समाप्त करें",
+    "skip": "छोड़ें"
+  }
+}

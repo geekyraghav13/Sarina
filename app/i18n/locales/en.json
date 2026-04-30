@@ -1,0 +1,125 @@
+{
+  "language": {
+    "title": "Choose Your Language",
+    "subtitle": "Select your preferred language",
+    "step": "Step {{current}} of {{total}}"
+  },
+  "welcome": {
+    "title": "Sarina",
+    "tagline": "Your AI Companion",
+    "feature_chat": "Chat",
+    "feature_photo": "Request photo",
+    "feature_video": "Video call",
+    "feature_more": "Much more",
+    "button_start": "Let's Start"
+  },
+  "disclaimer": {
+    "title": "Disclaimer",
+    "content": "This app is for entertainment purposes only..."
+  },
+  "age": {
+    "title": "How old are you?",
+    "subtitle": "You must be 18 or older to use this app",
+    "step": "Step {{current}} of {{total}}"
+  },
+  "personality": {
+    "title": "Choose Her Personality",
+    "subtitle": "Select personality traits that appeal to you",
+    "step": "Step {{current}} of {{total}}",
+    "kind": "Kind",
+    "adventurous": "Adventurous",
+    "intelligent": "Intelligent",
+    "funny": "Funny",
+    "empathetic": "Empathetic",
+    "bold": "Bold",
+    "creative": "Creative",
+    "supportive": "Supportive",
+    "spontaneous": "Spontaneous",
+    "thoughtful": "Thoughtful"
+  },
+  "interests": {
+    "title": "Select Her Interests",
+    "subtitle": "What should she be passionate about?",
+    "step": "Step {{current}} of {{total}}",
+    "music": "Music",
+    "movies": "Movies",
+    "gaming": "Gaming",
+    "travel": "Travel",
+    "cooking": "Cooking",
+    "art": "Art",
+    "sports": "Sports",
+    "reading": "Reading",
+    "photography": "Photography",
+    "fitness": "Fitness",
+    "technology": "Technology",
+    "fashion": "Fashion"
+  },
+  "appearance": {
+    "title": "Choose Appearance Style",
+    "subtitle": "How should she look?",
+    "step": "Step {{current}} of {{total}}",
+    "realistic": "Realistic",
+    "realistic_desc": "Photorealistic and lifelike appearance",
+    "anime": "Anime",
+    "anime_desc": "Beautiful anime-style character",
+    "fantasy": "Fantasy",
+    "fantasy_desc": "Magical and ethereal look",
+    "minimal": "Minimal",
+    "minimal_desc": "Simple and elegant design"
+  },
+  "mode": {
+    "title": "Select Mode",
+    "subtitle": "Choose the conversation style",
+    "step": "Step {{current}} of {{total}}",
+    "friendly": "Friendly",
+    "friendly_desc": "Casual and fun conversations",
+    "caring": "Caring",
+    "caring_desc": "Supportive and understanding",
+    "romantic": "Romantic",
+    "romantic_desc": "Sweet and affectionate",
+    "flirty": "Flirty",
+    "flirty_desc": "Playful and teasing"
+  },
+  "tone": {
+    "title": "Choose Her Tone",
+    "subtitle": "Select one or more personality tones",
+    "step": "Step {{current}} of {{total}}",
+    "cute": "Cute",
+    "friendly": "Friendly",
+    "cheerful": "Cheerful",
+    "caring": "Caring",
+    "supportive": "Supportive",
+    "mysterious": "Mysterious",
+    "confident": "Confident",
+    "energetic": "Energetic"
+  },
+  "name": {
+    "title": "What's her name?",
+    "subtitle": "Give your AI companion a name",
+    "step": "Step {{current}} of {{total}}",
+    "placeholder": "Enter name..."
+  },
+  "summary": {
+    "title": "Meet {{name}}",
+    "title_default": "Meet Your AI",
+    "subtitle": "Review your creation before starting",
+    "step": "Step {{current}} of {{total}}",
+    "label_name": "Name",
+    "label_age": "Age",
+    "label_tone": "Tone",
+    "label_personality": "Personality",
+    "label_interests": "Interests",
+    "label_appearance": "Appearance",
+    "label_mode": "Mode",
+    "not_set": "Not set",
+    "years_old": "{{age}} years old",
+    "button_start": "Start Chatting"
+  },
+  "common": {
+    "back": "Back",
+    "next": "Next",
+    "continue": "Continue",
+    "finish": "Finish",
+    "skip": "Skip"
+  }
+}

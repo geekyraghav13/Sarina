@@ -1,0 +1,125 @@
+{
+  "language": {
+    "title": "Выберите язык",
+    "subtitle": "Выберите предпочитаемый язык",
+    "step": "Шаг {{current}} из {{total}}"
+  },
+  "welcome": {
+    "title": "Сарина",
+    "tagline": "Ваш ИИ-компаньон",
+    "feature_chat": "Чат",
+    "feature_photo": "Запросить фото",
+    "feature_video": "Видеозвонок",
+    "feature_more": "Гораздо больше",
+    "button_start": "Начнем"
+  },
+  "disclaimer": {
+    "title": "Отказ от ответственности",
+    "content": "Это приложение предназначено только для развлечения..."
+  },
+  "age": {
+    "title": "Сколько вам лет?",
+    "subtitle": "Вам должно быть 18 лет или больше, чтобы использовать это приложение",
+    "step": "Шаг {{current}} из {{total}}"
+  },
+  "personality": {
+    "title": "Выберите её личность",
+    "subtitle": "Выберите черты личности, которые вам нравятся",
+    "step": "Шаг {{current}} из {{total}}",
+    "kind": "Добрая",
+    "adventurous": "Смелая",
+    "intelligent": "Умная",
+    "funny": "Забавная",
+    "empathetic": "Эмпатичная",
+    "bold": "Дерзкая",
+    "creative": "Креативная",
+    "supportive": "Поддерживающая",
+    "spontaneous": "Спонтанная",
+    "thoughtful": "Вдумчивая"
+  },
+  "interests": {
+    "title": "Выберите её интересы",
+    "subtitle": "Чем она увлекается?",
+    "step": "Шаг {{current}} из {{total}}",
+    "music": "Музыка",
+    "movies": "Фильмы",
+    "gaming": "Игры",
+    "travel": "Путешествия",
+    "cooking": "Кулинария",
+    "art": "Искусство",
+    "sports": "Спорт",
+    "reading": "Чтение",
+    "photography": "Фотография",
+    "fitness": "Фитнес",
+    "technology": "Технологии",
+    "fashion": "Мода"
+  },
+  "appearance": {
+    "title": "Выберите стиль внешности",
+    "subtitle": "Как она должна выглядеть?",
+    "step": "Шаг {{current}} из {{total}}",
+    "realistic": "Реалистичная",
+    "realistic_desc": "Фотореалистичный и живой вид",
+    "anime": "Аниме",
+    "anime_desc": "Красивый персонаж в стиле аниме",
+    "fantasy": "Фэнтези",
+    "fantasy_desc": "Магический и неземной вид",
+    "minimal": "Минималистичная",
+    "minimal_desc": "Простой и элегантный дизайн"
+  },
+  "mode": {
+    "title": "Выберите режим",
+    "subtitle": "Выберите стиль общения",
+    "step": "Шаг {{current}} из {{total}}",
+    "friendly": "Дружелюбная",
+    "friendly_desc": "Непринужденные и веселые разговоры",
+    "caring": "Заботливая",
+    "caring_desc": "Понимающая и поддерживающая",
+    "romantic": "Романтичная",
+    "romantic_desc": "Нежная и любящая",
+    "flirty": "Кокетливая",
+    "flirty_desc": "Игривая и озорная"
+  },
+  "tone": {
+    "title": "Выберите её тон",
+    "subtitle": "Выберите один или несколько тонов личности",
+    "step": "Шаг {{current}} из {{total}}",
+    "cute": "Милая",
+    "friendly": "Дружелюбная",
+    "cheerful": "Весёлая",
+    "caring": "Заботливая",
+    "supportive": "Поддерживающая",
+    "mysterious": "Загадочная",
+    "confident": "Уверенная",
+    "energetic": "Энергичная"
+  },
+  "name": {
+    "title": "Как её зовут?",
+    "subtitle": "Дайте имя своему ИИ-компаньону",
+    "step": "Шаг {{current}} из {{total}}",
+    "placeholder": "Введите имя..."
+  },
+  "summary": {
+    "title": "Познакомьтесь с {{name}}",
+    "title_default": "Познакомьтесь с вашим ИИ",
+    "subtitle": "Проверьте своё творение перед началом",
+    "step": "Шаг {{current}} из {{total}}",
+    "label_name": "Имя",
+    "label_age": "Возраст",
+    "label_tone": "Тон",
+    "label_personality": "Личность",
+    "label_interests": "Интересы",
+    "label_appearance": "Внешность",
+    "label_mode": "Режим",
+    "not_set": "Не задано",
+    "years_old": "{{age}} лет",
+    "button_start": "Начать общение"
+  },
+  "common": {
+    "back": "Назад",
+    "next": "Далее",
+    "continue": "Продолжить",
+    "finish": "Завершить",
+    "skip": "Пропустить"
+  }
+}

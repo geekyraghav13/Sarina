@@ -1,0 +1,125 @@
+{
+  "language": {
+    "title": "Wählen Sie Ihre Sprache",
+    "subtitle": "Wählen Sie Ihre bevorzugte Sprache",
+    "step": "Schritt {{current}} von {{total}}"
+  },
+  "welcome": {
+    "title": "Sarina",
+    "tagline": "Ihre KI-Begleiterin",
+    "feature_chat": "Chatten",
+    "feature_photo": "Foto anfordern",
+    "feature_video": "Videoanruf",
+    "feature_more": "Viel mehr",
+    "button_start": "Loslegen"
+  },
+  "disclaimer": {
+    "title": "Haftungsausschluss",
+    "content": "Diese App dient nur zu Unterhaltungszwecken..."
+  },
+  "age": {
+    "title": "Wie alt sind Sie?",
+    "subtitle": "Sie müssen mindestens 18 Jahre alt sein, um diese App zu nutzen",
+    "step": "Schritt {{current}} von {{total}}"
+  },
+  "personality": {
+    "title": "Wählen Sie ihre Persönlichkeit",
+    "subtitle": "Wählen Sie die Persönlichkeitsmerkmale aus, die Sie ansprechen",
+    "step": "Schritt {{current}} von {{total}}",
+    "kind": "Nett",
+    "adventurous": "Abenteuerlustig",
+    "intelligent": "Intelligent",
+    "funny": "Lustig",
+    "empathetic": "Einfühlsam",
+    "bold": "Mutig",
+    "creative": "Kreativ",
+    "supportive": "Unterstützend",
+    "spontaneous": "Spontan",
+    "thoughtful": "Nachdenklich"
+  },
+  "interests": {
+    "title": "Wählen Sie ihre Interessen",
+    "subtitle": "Wofür soll sie sich begeistern?",
+    "step": "Schritt {{current}} von {{total}}",
+    "music": "Musik",
+    "movies": "Filme",
+    "gaming": "Gaming",
+    "travel": "Reisen",
+    "cooking": "Kochen",
+    "art": "Kunst",
+    "sports": "Sport",
+    "reading": "Lesen",
+    "photography": "Fotografie",
+    "fitness": "Fitness",
+    "technology": "Technologie",
+    "fashion": "Mode"
+  },
+  "appearance": {
+    "title": "Wählen Sie den Aussehens-Stil",
+    "subtitle": "Wie soll sie aussehen?",
+    "step": "Schritt {{current}} von {{total}}",
+    "realistic": "Realistisch",
+    "realistic_desc": "Fotorealistische und lebensechte Erscheinung",
+    "anime": "Anime",
+    "anime_desc": "Schöner Anime-Charakter",
+    "fantasy": "Fantasy",
+    "fantasy_desc": "Magisches und ätherisches Aussehen",
+    "minimal": "Minimalistisch",
+    "minimal_desc": "Einfaches und elegantes Design"
+  },
+  "mode": {
+    "title": "Wählen Sie den Modus",
+    "subtitle": "Wählen Sie den Gesprächsstil",
+    "step": "Schritt {{current}} von {{total}}",
+    "friendly": "Freundlich",
+    "friendly_desc": "Lockere und unterhaltsame Gespräche",
+    "caring": "Fürsorglich",
+    "caring_desc": "Verständnisvoll und unterstützend",
+    "romantic": "Romantisch",
+    "romantic_desc": "Süß und liebevoll",
+    "flirty": "Flirtend",
+    "flirty_desc": "Verspielt und neckisch"
+  },
+  "tone": {
+    "title": "Wählen Sie ihren Ton",
+    "subtitle": "Wählen Sie einen oder mehrere Persönlichkeitstöne",
+    "step": "Schritt {{current}} von {{total}}",
+    "cute": "Niedlich",
+    "friendly": "Freundlich",
+    "cheerful": "Fröhlich",
+    "caring": "Fürsorglich",
+    "supportive": "Unterstützend",
+    "mysterious": "Mysteriös",
+    "confident": "Selbstbewusst",
+    "energetic": "Energiegeladen"
+  },
+  "name": {
+    "title": "Wie heißt sie?",
+    "subtitle": "Geben Sie Ihrer KI-Begleiterin einen Namen",
+    "step": "Schritt {{current}} von {{total}}",
+    "placeholder": "Namen eingeben..."
+  },
+  "summary": {
+    "title": "Treffen Sie {{name}}",
+    "title_default": "Treffen Sie Ihre KI",
+    "subtitle": "Überprüfen Sie Ihre Kreation, bevor Sie beginnen",
+    "step": "Schritt {{current}} von {{total}}",
+    "label_name": "Name",
+    "label_age": "Alter",
+    "label_tone": "Ton",
+    "label_personality": "Persönlichkeit",
+    "label_interests": "Interessen",
+    "label_appearance": "Aussehen",
+    "label_mode": "Modus",
+    "not_set": "Nicht festgelegt",
+    "years_old": "{{age}} Jahre alt",
+    "button_start": "Chat beginnen"
+  },
+  "common": {
+    "back": "Zurück",
+    "next": "Weiter",
+    "continue": "Fortfahren",
+    "finish": "Beenden",
+    "skip": "Überspringen"
+  }
+}

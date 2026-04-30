@@ -1,13 +1,14 @@
 /**
  * Firebase Analytics Service for React Native
  *
- * This service provides type-safe Firebase Analytics event logging
- * for tracking user behavior, monetization, and app performance.
+ * This service provides comprehensive event tracking for the complete
+ * user journey from onboarding through engagement and monetization.
  *
- * Mandatory Events for Google Play:
- * 1. first_open - Automatically tracked by Firebase
- * 2. ad_impression - Tracked when user sees ads/paywall
- * 3. purchase - Tracked when user completes purchase
+ * Key Events Tracked:
+ * 1. Onboarding Flow - Language selection through character creation
+ * 2. User Engagement - Chat messages, voice calls, photo requests
+ * 3. Monetization - Subscription flows and purchases
+ * 4. Retention - Daily active users, feature usage patterns
  */
 
 import { Platform } from 'react-native';
@@ -102,80 +103,16 @@ export const setUserProperties = async (properties: Record<string, string>): Pro
 };
 
 // ============================================================================
-// MANDATORY EVENT 1: first_open
+// CORE EVENTS
 // ============================================================================
+
 /**
  * NOTE: first_open is automatically tracked by Firebase SDK
  * when a user opens the app for the first time.
- *
- * No manual implementation needed!
- *
- * Firebase will automatically log this event when:
- * - User installs the app and opens it for the first time
- * - Or clears app data and opens it again
  */
 
 // ============================================================================
-// MANDATORY EVENT 2: ad_impression
-// ============================================================================
-
-export interface AdImpressionParams {
-  /** Platform showing the ad (e.g., 'paywall', 'banner', 'interstitial') */
-  ad_platform: string;
-
-  /** Format of the ad (e.g., 'subscription_offer', 'rewarded_video') */
-  ad_format: string;
-
-  /** Source of the ad (e.g., 'sarina_premium', 'admob') */
-  ad_source: string;
-
-  /** Value/potential revenue of the ad impression */
-  value: number;
-
-  /** Currency code (e.g., 'USD', 'EUR') */
-  currency: string;
-
-  /** Optional: specific ad unit ID */
-  ad_unit_name?: string;
-}
-
-/**
- * Log ad impression event
- * Call this when user views an ad or paywall
- *
- * @example
- * ```typescript
- * logAdImpression({
- *   ad_platform: 'paywall',
- *   ad_format: 'subscription_offer',
- *   ad_source: 'sarina_premium',
- *   value: 9.99,
- *   currency: 'USD',
- *   ad_unit_name: 'premium_monthly_offer'
- * });
- * ```
- */
-export const logAdImpression = async (params: AdImpressionParams): Promise<void> => {
-  if (!isAnalyticsAvailable()) return;
-
-  try {
-    await analytics().logEvent('ad_impression', {
-      ad_platform: params.ad_platform,
-      ad_format: params.ad_format,
-      ad_source: params.ad_source,
-      value: params.value,
-      currency: params.currency,
-      ...(params.ad_unit_name && { ad_unit_name: params.ad_unit_name }),
-    });
-
-    console.log('📊 Ad impression logged:', params);
-  } catch (error) {
-    console.error('❌ Failed to log ad impression:', error);
-  }
-};
-
-// ============================================================================
-// MANDATORY EVENT 3: purchase
+// PURCHASE EVENT
 // ============================================================================
 
 export interface PurchaseItem {
@@ -259,7 +196,7 @@ export const logPurchase = async (params: PurchaseParams): Promise<void> => {
 };
 
 // ============================================================================
-// ADDITIONAL HELPFUL EVENTS
+// USER JOURNEY TRACKING - COMPREHENSIVE EVENTS
 // ============================================================================
 
 /**
@@ -279,6 +216,10 @@ export const logScreenView = async (screenName: string, screenClass?: string): P
     console.error('❌ Failed to log screen view:', error);
   }
 };
+
+// ============================================================================
+// ONBOARDING JOURNEY EVENTS
+// ============================================================================
 
 /**
  * Log app open event
@@ -310,6 +251,23 @@ export const logOnboardingStart = async (): Promise<void> => {
     console.log('📊 Onboarding start logged');
   } catch (error) {
     console.error('❌ Failed to log onboarding start:', error);
+  }
+};
+
+/**
+ * Log when user selects a language
+ */
+export const logLanguageSelected = async (language: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('language_selected', {
+      language,
+      timestamp: Date.now(),
+    });
+    console.log(`📊 Language selected: ${language}`);
+  } catch (error) {
+    console.error('❌ Failed to log language selection:', error);
   }
 };
 
@@ -453,6 +411,320 @@ export const logPlanSelected = async (planType: string, value: number): Promise<
   }
 };
 
+// ============================================================================
+// COMPREHENSIVE USER JOURNEY EVENTS
+// ============================================================================
+
+/**
+ * Log onboarding step completion
+ */
+export const logOnboardingStep = async (stepNumber: number, stepName: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('onboarding_step', {
+      step_number: stepNumber,
+      step_name: stepName,
+      timestamp: Date.now(),
+    });
+    console.log(`📊 Onboarding step logged: ${stepNumber} - ${stepName}`);
+  } catch (error) {
+    console.error('❌ Failed to log onboarding step:', error);
+  }
+};
+
+/**
+ * Log personality traits selection
+ */
+export const logPersonalitySelected = async (traits: string[]): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('personality_selected', {
+      selected_traits: traits.join(','),
+      trait_count: traits.length,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Personality traits selected:', traits);
+  } catch (error) {
+    console.error('❌ Failed to log personality selection:', error);
+  }
+};
+
+/**
+ * Log interests selection
+ */
+export const logInterestsSelected = async (interests: string[]): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('interests_selected', {
+      selected_interests: interests.join(','),
+      interest_count: interests.length,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Interests selected:', interests);
+  } catch (error) {
+    console.error('❌ Failed to log interests selection:', error);
+  }
+};
+
+/**
+ * Log appearance style selection
+ */
+export const logAppearanceSelected = async (style: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('appearance_selected', {
+      style,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Appearance style selected:', style);
+  } catch (error) {
+    console.error('❌ Failed to log appearance selection:', error);
+  }
+};
+
+/**
+ * Log mode selection
+ */
+export const logModeSelected = async (mode: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('mode_selected', {
+      mode,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Mode selected:', mode);
+  } catch (error) {
+    console.error('❌ Failed to log mode selection:', error);
+  }
+};
+
+/**
+ * Log tone selection
+ */
+export const logToneSelected = async (tones: string[]): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('tone_selected', {
+      selected_tones: tones.join(','),
+      tone_count: tones.length,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Tones selected:', tones);
+  } catch (error) {
+    console.error('❌ Failed to log tone selection:', error);
+  }
+};
+
+/**
+ * Log character name entered
+ */
+export const logCharacterNamed = async (hasCustomName: boolean): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('character_named', {
+      has_custom_name: hasCustomName,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Character named:', hasCustomName ? 'custom' : 'default');
+  } catch (error) {
+    console.error('❌ Failed to log character naming:', error);
+  }
+};
+
+/**
+ * Log character creation completed
+ */
+export const logCharacterCreated = async (characterData: {
+  personality: string[];
+  interests: string[];
+  appearance: string;
+  mode: string;
+  tones: string[];
+}): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('character_created', {
+      personality_count: characterData.personality.length,
+      interest_count: characterData.interests.length,
+      appearance: characterData.appearance,
+      mode: characterData.mode,
+      tone_count: characterData.tones.length,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Character created');
+  } catch (error) {
+    console.error('❌ Failed to log character creation:', error);
+  }
+};
+
+// ============================================================================
+// ENGAGEMENT EVENTS
+// ============================================================================
+
+/**
+ * Log voice call started
+ */
+export const logVoiceCallStart = async (characterName: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('voice_call_start', {
+      character_name: characterName,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Voice call started:', characterName);
+  } catch (error) {
+    console.error('❌ Failed to log voice call start:', error);
+  }
+};
+
+/**
+ * Log voice call ended
+ */
+export const logVoiceCallEnd = async (characterName: string, duration: number): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('voice_call_end', {
+      character_name: characterName,
+      duration_seconds: duration,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Voice call ended:', characterName, duration);
+  } catch (error) {
+    console.error('❌ Failed to log voice call end:', error);
+  }
+};
+
+/**
+ * Log photo request
+ */
+export const logPhotoRequest = async (characterName: string, prompt?: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('photo_request', {
+      character_name: characterName,
+      has_custom_prompt: !!prompt,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Photo requested:', characterName);
+  } catch (error) {
+    console.error('❌ Failed to log photo request:', error);
+  }
+};
+
+/**
+ * Log photo viewed
+ */
+export const logPhotoViewed = async (characterName: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('photo_viewed', {
+      character_name: characterName,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Photo viewed:', characterName);
+  } catch (error) {
+    console.error('❌ Failed to log photo viewed:', error);
+  }
+};
+
+/**
+ * Log chat session duration
+ */
+export const logChatSessionEnd = async (characterName: string, duration: number, messageCount: number): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('chat_session_end', {
+      character_name: characterName,
+      duration_seconds: duration,
+      message_count: messageCount,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Chat session ended:', characterName, duration, messageCount);
+  } catch (error) {
+    console.error('❌ Failed to log chat session end:', error);
+  }
+};
+
+/**
+ * Log paywall viewed
+ */
+export const logPaywallViewed = async (source: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('paywall_viewed', {
+      source,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Paywall viewed from:', source);
+  } catch (error) {
+    console.error('❌ Failed to log paywall viewed:', error);
+  }
+};
+
+/**
+ * Log paywall dismissed
+ */
+export const logPaywallDismissed = async (source: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('paywall_dismissed', {
+      source,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Paywall dismissed from:', source);
+  } catch (error) {
+    console.error('❌ Failed to log paywall dismissed:', error);
+  }
+};
+
+/**
+ * Log credits depleted
+ */
+export const logCreditsDepleted = async (lastAction: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('credits_depleted', {
+      last_action: lastAction,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Credits depleted after:', lastAction);
+  } catch (error) {
+    console.error('❌ Failed to log credits depleted:', error);
+  }
+};
+
+/**
+ * Log character regenerated
+ */
+export const logCharacterRegenerated = async (): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('character_regenerated', {
+      timestamp: Date.now(),
+    });
+    console.log('📊 Character regenerated');
+  } catch (error) {
+    console.error('❌ Failed to log character regeneration:', error);
+  }
+};
+
 /**
  * Enable/disable debug mode for analytics
  * Use this during development to see events in Firebase DebugView
@@ -469,21 +741,51 @@ export const setAnalyticsDebugMode = async (enabled: boolean): Promise<void> => 
 };
 
 export default {
+  // Core
   initializeAnalytics,
   setUserId,
   setUserProperties,
-  logAdImpression,
+
+  // Monetization
   logPurchase,
-  logScreenView,
-  logAppOpen,
-  logOnboardingStart,
-  logOnboardingComplete,
-  logChatStart,
-  logMessageSent,
-  logSubscriptionCancel,
   logBeginCheckout,
   logPurchaseFailed,
   logSubscriptionRestored,
+  logSubscriptionCancel,
   logPlanSelected,
+
+  // Onboarding Journey
+  logAppOpen,
+  logOnboardingStart,
+  logOnboardingStep,
+  logLanguageSelected,
+  logPersonalitySelected,
+  logInterestsSelected,
+  logAppearanceSelected,
+  logModeSelected,
+  logToneSelected,
+  logCharacterNamed,
+  logCharacterCreated,
+  logOnboardingComplete,
+
+  // Engagement
+  logScreenView,
+  logChatStart,
+  logMessageSent,
+  logChatSessionEnd,
+  logVoiceCallStart,
+  logVoiceCallEnd,
+  logPhotoRequest,
+  logPhotoViewed,
+
+  // Paywall & Credits
+  logPaywallViewed,
+  logPaywallDismissed,
+  logCreditsDepleted,
+
+  // Character Management
+  logCharacterRegenerated,
+
+  // Debug
   setAnalyticsDebugMode,
 };
