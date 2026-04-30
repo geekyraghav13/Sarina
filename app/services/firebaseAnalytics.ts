@@ -14,14 +14,18 @@ import { Platform } from 'react-native';
 
 // Lazy import Firebase to handle Expo Go environment
 let analytics: any = null;
+let firebaseApp: any = null;
 let isFirebaseAvailable = false;
 
-// Try to import Firebase Analytics
+// Try to import Firebase App and Analytics
+// IMPORTANT: Must import @react-native-firebase/app BEFORE analytics
 try {
+  firebaseApp = require('@react-native-firebase/app').default;
   analytics = require('@react-native-firebase/analytics').default;
   isFirebaseAvailable = true;
+  console.log('✅ Firebase modules loaded successfully');
 } catch (error) {
-  console.log('Analytics skipped: Not in browser environment (React Native)');
+  console.log('ℹ️ Firebase not available (running in Expo Go or web)');
   isFirebaseAvailable = false;
 }
 
@@ -44,6 +48,15 @@ export const initializeAnalytics = async (): Promise<void> => {
   }
 
   try {
+    // Verify Firebase app is initialized
+    const apps = firebaseApp.apps;
+    console.log(`📱 Firebase apps initialized: ${apps.length}`);
+
+    if (apps.length === 0) {
+      console.error('❌ No Firebase app found! Firebase may not be properly configured.');
+      return;
+    }
+
     // Enable analytics collection
     await analytics().setAnalyticsCollectionEnabled(true);
 

@@ -12,6 +12,7 @@ import { logPaywallShown, logSubscriptionPurchased } from '../services/analytics
 import { getCurrentUser } from '../services/authService';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logAdImpression, logPurchase, logScreenView } from '../services/firebaseAnalytics';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -31,6 +32,7 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
   const { returnScreen, callAction, characterName, characterImageUrl } = route.params || {};
 
   useEffect(() => {
+    logScreenView('NewPaywall');
     checkPremiumAndCredits();
   }, []);
 
@@ -182,6 +184,16 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
           characterName,
           undefined // balance not available in this context
         );
+
+        // Log Firebase ad_impression event
+        await logAdImpression({
+          ad_platform: 'subscription_paywall',
+          ad_format: 'subscription_offer',
+          ad_source: 'sarina_premium',
+          value: 9.99,
+          currency: 'USD',
+          ad_unit_name: 'premium_subscription',
+        });
       }
 
       // Present the RevenueCat native paywall
@@ -237,6 +249,20 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
             0, // price not available from RevenueCat
             'USD'
           );
+
+          // Log Firebase purchase event
+          await logPurchase({
+            transaction_id: `subscription_${Date.now()}_${user.uid}`,
+            value: 9.99, // Update with actual price
+            currency: 'USD',
+            items: [{
+              item_id: productIdentifier,
+              item_name: 'Sarina Premium Subscription',
+              item_category: 'subscription',
+              quantity: 1,
+              price: 9.99,
+            }],
+          });
         }
 
         // EXACT FLOW AS REQUIRED:

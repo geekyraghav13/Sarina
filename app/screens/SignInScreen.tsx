@@ -17,6 +17,7 @@ import {
   signInWithGoogle,
   initializeGoogleSignIn,
 } from '../services/authService';
+import { logScreenView } from '../services/firebaseAnalytics';
 
 const { width } = Dimensions.get('window');
 
@@ -49,6 +50,9 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
   useEffect(() => {
     // Initialize Google Sign-In on mount
     initializeGoogleSignIn();
+
+    // Track screen view
+    logScreenView('SignIn');
 
     // Animate entrance
     Animated.parallel([

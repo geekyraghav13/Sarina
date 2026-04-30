@@ -6,6 +6,7 @@ import { ModeCard } from '../components/ModeCard';
 import { useUserProfile } from '../store/userProfile';
 import { useVideoForProfile } from '../hooks/useVideoForProfile';
 import { RootStackParamList } from '../navigation/types';
+import { logScreenView } from '../services/firebaseAnalytics';
 
 type ModeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Mode'>;
 
@@ -32,6 +33,11 @@ export const ModeScreen: React.FC<ModeScreenProps> = ({ navigation }) => {
   const [selectedMode, setSelectedMode] = useState<string>('');
   const { setProfile } = useUserProfile();
   const videoSource = useVideoForProfile();
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Mode');
+  }, []);
 
   const handleModeSelect = (id: string) => {
     setSelectedMode(id);

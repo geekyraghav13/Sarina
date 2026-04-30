@@ -6,6 +6,7 @@ import { ChipSelector } from '../components/ChipSelector';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
 import { getVideoForTone, VIDEO_SOURCES } from '../utils/videoSelector';
+import { logScreenView } from '../services/firebaseAnalytics';
 
 type ToneScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Tone'>;
 
@@ -28,6 +29,11 @@ export const ToneScreen: React.FC<ToneScreenProps> = ({ navigation }) => {
   const [selectedTones, setSelectedTones] = useState<string[]>([]);
   const { setProfile } = useUserProfile();
   const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Tone');
+  }, []);
 
   const handleToneSelect = (tone: string) => {
     const newSelectedTones = selectedTones.includes(tone)

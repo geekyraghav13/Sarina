@@ -6,6 +6,7 @@ import { ChipSelector } from '../components/ChipSelector';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
 import { getVideoForInterest, VIDEO_SOURCES } from '../utils/videoSelector';
+import { logScreenView } from '../services/firebaseAnalytics';
 
 type InterestsScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -37,6 +38,11 @@ export const InterestsScreen: React.FC<InterestsScreenProps> = ({
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const { setProfile } = useUserProfile();
   const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Interests');
+  }, []);
 
   const handleInterestSelect = (interest: string) => {
     const newSelectedInterests = selectedInterests.includes(interest)

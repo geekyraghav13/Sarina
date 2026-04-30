@@ -6,6 +6,7 @@ import { AgeWheel } from '../components/AgeWheel';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
 import { ALL_VIDEOS } from '../utils/videoSelector';
+import { logScreenView } from '../services/firebaseAnalytics';
 
 type AgeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Age'>;
 
@@ -19,6 +20,11 @@ export const AgeScreen: React.FC<AgeScreenProps> = ({ navigation }) => {
   const [currentVideoIndex, setCurrentVideoIndex] = useState(
     Math.floor(Math.random() * ALL_VIDEOS.length)
   );
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Age');
+  }, []);
 
   // Change video every time it loops
   const handleVideoEnd = () => {

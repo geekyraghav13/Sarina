@@ -6,6 +6,7 @@ import { ModeCard } from '../components/ModeCard';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
 import { getVideoForAppearance, VIDEO_SOURCES } from '../utils/videoSelector';
+import { logScreenView } from '../services/firebaseAnalytics';
 
 type AppearanceScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -49,6 +50,11 @@ export const AppearanceScreen: React.FC<AppearanceScreenProps> = ({
   const [selectedAppearance, setSelectedAppearance] = useState<string>('');
   const { setProfile } = useUserProfile();
   const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Appearance');
+  }, []);
 
   const handleAppearanceSelect = (id: string) => {
     setSelectedAppearance(id);

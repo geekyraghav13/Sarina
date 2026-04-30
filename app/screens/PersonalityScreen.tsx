@@ -6,6 +6,7 @@ import { ChipSelector } from '../components/ChipSelector';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
 import { getVideoForPersonality, VIDEO_SOURCES } from '../utils/videoSelector';
+import { logScreenView } from '../services/firebaseAnalytics';
 
 type PersonalityScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -37,6 +38,11 @@ export const PersonalityScreen: React.FC<PersonalityScreenProps> = ({
   );
   const { setProfile } = useUserProfile();
   const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Personality');
+  }, []);
 
   const handlePersonalitySelect = (personality: string) => {
     const newSelectedPersonalities = selectedPersonalities.includes(personality)

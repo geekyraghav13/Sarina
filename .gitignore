@@ -56,6 +56,7 @@ service-account-key.json
 # app/config/firebase.ts
 
 # Environment configuration with API keys
+app/config/env.ts
 app/config/env.local.ts
 *.local.ts
 

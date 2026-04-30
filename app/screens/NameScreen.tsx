@@ -12,6 +12,7 @@ import { VideoBackground } from '../components/VideoBackground';
 import { useUserProfile } from '../store/userProfile';
 import { useVideoForProfile } from '../hooks/useVideoForProfile';
 import { RootStackParamList } from '../navigation/types';
+import { logScreenView } from '../services/firebaseAnalytics';
 
 type NameScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Name'>;
 
@@ -36,6 +37,11 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
   const { setProfile } = useUserProfile();
   const videoSource = useVideoForProfile();
   const [name, setName] = useState('');
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Name');
+  }, []);
 
   const handleRandomName = () => {
     const randomName =
