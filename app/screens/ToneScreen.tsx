@@ -6,6 +6,8 @@ import { ChipSelector } from '../components/ChipSelector';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
 import { getVideoForTone, VIDEO_SOURCES } from '../utils/videoSelector';
+import { logScreenView } from '../services/firebaseAnalytics';
+import { useTranslation } from 'react-i18next';
 
 type ToneScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Tone'>;
 
@@ -13,21 +15,30 @@ interface ToneScreenProps {
   navigation: ToneScreenNavigationProp;
 }
 
-const TONE_OPTIONS = [
-  'Cute',
-  'Friendly',
-  'Cheerful',
-  'Caring',
-  'Supportive',
-  'Mysterious',
-  'Confident',
-  'Energetic',
+const TONE_KEYS = [
+  'cute',
+  'friendly',
+  'cheerful',
+  'caring',
+  'supportive',
+  'mysterious',
+  'confident',
+  'energetic',
 ];
 
 export const ToneScreen: React.FC<ToneScreenProps> = ({ navigation }) => {
+  const { t } = useTranslation();
   const [selectedTones, setSelectedTones] = useState<string[]>([]);
   const { setProfile } = useUserProfile();
   const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
+
+  // Translate tone options
+  const toneOptions = TONE_KEYS.map(key => t(`tone.${key}`));
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Tone');
+  }, []);
 
   const handleToneSelect = (tone: string) => {
     const newSelectedTones = selectedTones.includes(tone)
@@ -68,16 +79,16 @@ export const ToneScreen: React.FC<ToneScreenProps> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.step}>Step 2 of 8</Text>
-          <Text style={styles.title}>Choose Her Tone</Text>
+          <Text style={styles.step}>{t('tone.step', { current: 6, total: 8 })}</Text>
+          <Text style={styles.title}>{t('tone.title')}</Text>
           <Text style={styles.subtitle}>
-            Select one or more personality tones
+            {t('tone.subtitle')}
           </Text>
         </View>
 
         <View style={styles.optionsContainer}>
           <ChipSelector
-            options={TONE_OPTIONS}
+            options={toneOptions}
             selected={selectedTones}
             onSelect={handleToneSelect}
             multiSelect
@@ -91,7 +102,7 @@ export const ToneScreen: React.FC<ToneScreenProps> = ({ navigation }) => {
               onPress={handleBack}
               activeOpacity={0.7}
             >
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -103,7 +114,7 @@ export const ToneScreen: React.FC<ToneScreenProps> = ({ navigation }) => {
               activeOpacity={0.8}
               disabled={selectedTones.length === 0}
             >
-              <Text style={styles.nextButtonText}>Next</Text>
+              <Text style={styles.nextButtonText}>{t('common.next')}</Text>
             </TouchableOpacity>
           </View>
         </View>

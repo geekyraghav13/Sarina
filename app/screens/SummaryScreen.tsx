@@ -10,6 +10,8 @@ import { logScreenView, logOnboardingCompleted } from '../services/analyticsServ
 import { logOnboardingComplete } from '../services/firebaseAnalytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCurrentUser } from '../services/authService';
+import { useTranslation } from 'react-i18next';
+import * as RevenueCatService from '../services/revenueCatService';
 
 const ONBOARDING_COMPLETED_KEY = '@onboarding_completed';
 
@@ -23,6 +25,7 @@ interface SummaryScreenProps {
 }
 
 export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
+  const { t } = useTranslation();
   const { profile } = useUserProfile();
   const videoSource = useVideoForProfile();
   const { initializeDefaultGirlfriend } = useGirlfriendStore();
@@ -57,6 +60,25 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
       console.error('Failed to save onboarding completion:', error);
     }
 
+    // Sync user profile to RevenueCat attributes
+    try {
+      const user = getCurrentUser();
+      await RevenueCatService.syncUserProfileToAttributes({
+        email: user?.email,
+        displayName: user?.displayName,
+        age: profile.age,
+        personality: profile.personality,
+        interests: profile.interests,
+        appearance: profile.appearance,
+        mode: profile.mode,
+        tone: profile.tone,
+      });
+      console.log('✅ User profile synced to RevenueCat');
+    } catch (error) {
+      console.warn('⚠️ Could not sync profile to RevenueCat:', error);
+      // Don't block user flow if this fails
+    }
+
     // Initialize default girlfriend from onboarding with custom name
     initializeDefaultGirlfriend(profile.name);
 
@@ -82,73 +104,75 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.step}>Step 8 of 8</Text>
-          <Text style={styles.title}>Meet {profile.name || 'Your AI'}</Text>
+          <Text style={styles.step}>{t('summary.step', { current: 8, total: 8 })}</Text>
+          <Text style={styles.title}>
+            {profile.name ? t('summary.title', { name: profile.name }) : t('summary.title_default')}
+          </Text>
           <Text style={styles.subtitle}>
-            Review your creation before starting
+            {t('summary.subtitle')}
           </Text>
         </View>
 
         <View style={styles.summaryContainer}>
           <View style={styles.summarySection}>
-            <Text style={styles.sectionLabel}>Name</Text>
+            <Text style={styles.sectionLabel}>{t('summary.label_name')}</Text>
             <Text style={styles.sectionValue}>{profile.name}</Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.summarySection}>
-            <Text style={styles.sectionLabel}>Age</Text>
-            <Text style={styles.sectionValue}>{profile.age} years old</Text>
+            <Text style={styles.sectionLabel}>{t('summary.label_age')}</Text>
+            <Text style={styles.sectionValue}>{t('summary.years_old', { age: profile.age })}</Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.summarySection}>
-            <Text style={styles.sectionLabel}>Tone</Text>
+            <Text style={styles.sectionLabel}>{t('summary.label_tone')}</Text>
             <Text style={styles.sectionValue}>
-              {profile.tone?.join(', ') || 'Not set'}
+              {profile.tone?.join(', ') || t('summary.not_set')}
             </Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.summarySection}>
-            <Text style={styles.sectionLabel}>Personality</Text>
+            <Text style={styles.sectionLabel}>{t('summary.label_personality')}</Text>
             <Text style={styles.sectionValue}>
-              {profile.personality?.join(', ') || 'Not set'}
+              {profile.personality?.join(', ') || t('summary.not_set')}
             </Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.summarySection}>
-            <Text style={styles.sectionLabel}>Interests</Text>
+            <Text style={styles.sectionLabel}>{t('summary.label_interests')}</Text>
             <Text style={styles.sectionValue}>
-              {profile.interests?.join(', ') || 'Not set'}
+              {profile.interests?.join(', ') || t('summary.not_set')}
             </Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.summarySection}>
-            <Text style={styles.sectionLabel}>Appearance</Text>
+            <Text style={styles.sectionLabel}>{t('summary.label_appearance')}</Text>
             <Text style={styles.sectionValue}>
               {profile.appearance
                 ? profile.appearance.charAt(0).toUpperCase() +
                   profile.appearance.slice(1)
-                : 'Not set'}
+                : t('summary.not_set')}
             </Text>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.summarySection}>
-            <Text style={styles.sectionLabel}>Mode</Text>
+            <Text style={styles.sectionLabel}>{t('summary.label_mode')}</Text>
             <Text style={styles.sectionValue}>
               {profile.mode
                 ? profile.mode.charAt(0).toUpperCase() + profile.mode.slice(1)
-                : 'Not set'}
+                : t('summary.not_set')}
             </Text>
           </View>
         </View>
@@ -160,7 +184,7 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
               onPress={handleBack}
               activeOpacity={0.7}
             >
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -168,7 +192,7 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
               onPress={handleStart}
               activeOpacity={0.8}
             >
-              <Text style={styles.startButtonText}>Start Chatting</Text>
+              <Text style={styles.startButtonText}>{t('summary.button_start')}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -6,6 +6,8 @@ import { ChipSelector } from '../components/ChipSelector';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
 import { getVideoForInterest, VIDEO_SOURCES } from '../utils/videoSelector';
+import { logScreenView } from '../services/firebaseAnalytics';
+import { useTranslation } from 'react-i18next';
 
 type InterestsScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -16,27 +18,36 @@ interface InterestsScreenProps {
   navigation: InterestsScreenNavigationProp;
 }
 
-const INTEREST_OPTIONS = [
-  'Music',
-  'Movies',
-  'Gaming',
-  'Travel',
-  'Cooking',
-  'Art',
-  'Sports',
-  'Reading',
-  'Photography',
-  'Fitness',
-  'Technology',
-  'Fashion',
+const INTEREST_KEYS = [
+  'music',
+  'movies',
+  'gaming',
+  'travel',
+  'cooking',
+  'art',
+  'sports',
+  'reading',
+  'photography',
+  'fitness',
+  'technology',
+  'fashion',
 ];
 
 export const InterestsScreen: React.FC<InterestsScreenProps> = ({
   navigation,
 }) => {
+  const { t } = useTranslation();
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const { setProfile } = useUserProfile();
   const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
+
+  // Translate interest options
+  const interestOptions = INTEREST_KEYS.map(key => t(`interests.${key}`));
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Interests');
+  }, []);
 
   const handleInterestSelect = (interest: string) => {
     const newSelectedInterests = selectedInterests.includes(interest)
@@ -76,16 +87,16 @@ export const InterestsScreen: React.FC<InterestsScreenProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.step}>Step 4 of 8</Text>
-          <Text style={styles.title}>Select Her Interests</Text>
+          <Text style={styles.step}>{t('interests.step', { current: 3, total: 8 })}</Text>
+          <Text style={styles.title}>{t('interests.title')}</Text>
           <Text style={styles.subtitle}>
-            What should she be passionate about?
+            {t('interests.subtitle')}
           </Text>
         </View>
 
         <View style={styles.optionsContainer}>
           <ChipSelector
-            options={INTEREST_OPTIONS}
+            options={interestOptions}
             selected={selectedInterests}
             onSelect={handleInterestSelect}
             multiSelect
@@ -99,7 +110,7 @@ export const InterestsScreen: React.FC<InterestsScreenProps> = ({
               onPress={handleBack}
               activeOpacity={0.7}
             >
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -111,7 +122,7 @@ export const InterestsScreen: React.FC<InterestsScreenProps> = ({
               activeOpacity={0.8}
               disabled={selectedInterests.length === 0}
             >
-              <Text style={styles.nextButtonText}>Next</Text>
+              <Text style={styles.nextButtonText}>{t('common.next')}</Text>
             </TouchableOpacity>
           </View>
         </View>

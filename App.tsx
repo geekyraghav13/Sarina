@@ -8,6 +8,7 @@ import { initializeAnalytics, logAppOpen } from './app/services/firebaseAnalytic
 import { usePaymentStore } from './app/store/paymentStore';
 import * as RevenueCatService from './app/services/revenueCatService';
 import Purchases from 'react-native-purchases';
+import './app/i18n'; // Initialize i18n
 
 // Keep splash screen visible while loading
 SplashScreen.preventAutoHideAsync();

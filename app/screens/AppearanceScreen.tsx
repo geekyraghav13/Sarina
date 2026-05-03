@@ -6,6 +6,8 @@ import { ModeCard } from '../components/ModeCard';
 import { useUserProfile } from '../store/userProfile';
 import { RootStackParamList } from '../navigation/types';
 import { getVideoForAppearance, VIDEO_SOURCES } from '../utils/videoSelector';
+import { logScreenView } from '../services/firebaseAnalytics';
+import { useTranslation } from 'react-i18next';
 
 type AppearanceScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -16,39 +18,34 @@ interface AppearanceScreenProps {
   navigation: AppearanceScreenNavigationProp;
 }
 
-const APPEARANCE_STYLES = [
-  {
-    id: 'realistic',
-    title: 'Realistic',
-    description: 'Photorealistic and lifelike appearance',
-    icon: '📸',
-  },
-  {
-    id: 'anime',
-    title: 'Anime',
-    description: 'Beautiful anime-style character',
-    icon: '✨',
-  },
-  {
-    id: 'fantasy',
-    title: 'Fantasy',
-    description: 'Magical and ethereal look',
-    icon: '🌙',
-  },
-  {
-    id: 'minimal',
-    title: 'Minimal',
-    description: 'Simple and elegant design',
-    icon: '💫',
-  },
-];
+const APPEARANCE_STYLE_IDS = ['realistic', 'anime', 'fantasy', 'minimal'];
+const APPEARANCE_ICONS: { [key: string]: string } = {
+  realistic: '📸',
+  anime: '✨',
+  fantasy: '🌙',
+  minimal: '💫',
+};
 
 export const AppearanceScreen: React.FC<AppearanceScreenProps> = ({
   navigation,
 }) => {
+  const { t } = useTranslation();
   const [selectedAppearance, setSelectedAppearance] = useState<string>('');
   const { setProfile } = useUserProfile();
   const [videoSource, setVideoSource] = useState(VIDEO_SOURCES.FANTASY);
+
+  // Build appearance styles from translations
+  const APPEARANCE_STYLES = APPEARANCE_STYLE_IDS.map(id => ({
+    id,
+    title: t(`appearance.${id}`),
+    description: t(`appearance.${id}_desc`),
+    icon: APPEARANCE_ICONS[id],
+  }));
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Appearance');
+  }, []);
 
   const handleAppearanceSelect = (id: string) => {
     setSelectedAppearance(id);
@@ -80,9 +77,9 @@ export const AppearanceScreen: React.FC<AppearanceScreenProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.step}>Step 5 of 8</Text>
-          <Text style={styles.title}>Choose Appearance Style</Text>
-          <Text style={styles.subtitle}>How should she look?</Text>
+          <Text style={styles.step}>{t('appearance.step', { current: 4, total: 8 })}</Text>
+          <Text style={styles.title}>{t('appearance.title')}</Text>
+          <Text style={styles.subtitle}>{t('appearance.subtitle')}</Text>
         </View>
 
         <View style={styles.cardsContainer}>
@@ -105,7 +102,7 @@ export const AppearanceScreen: React.FC<AppearanceScreenProps> = ({
               onPress={handleBack}
               activeOpacity={0.7}
             >
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -117,7 +114,7 @@ export const AppearanceScreen: React.FC<AppearanceScreenProps> = ({
               activeOpacity={0.8}
               disabled={!selectedAppearance}
             >
-              <Text style={styles.nextButtonText}>Next</Text>
+              <Text style={styles.nextButtonText}>{t('common.next')}</Text>
             </TouchableOpacity>
           </View>
         </View>

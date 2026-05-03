@@ -17,6 +17,10 @@ import {
   signInWithGoogle,
   initializeGoogleSignIn,
 } from '../services/authService';
+import { logScreenView } from '../services/firebaseAnalytics';
+import { checkOnboardingCompleted } from './SummaryScreen';
+import { getDocumentREST } from '../services/firestoreRestService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -50,6 +54,9 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     // Initialize Google Sign-In on mount
     initializeGoogleSignIn();
 
+    // Track screen view
+    logScreenView('SignIn');
+
     // Animate entrance
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -79,10 +86,49 @@ export const SignInScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
       const user = await signInWithGoogle();
 
       console.log('✅ Google Sign-In successful:', user.uid);
-      setLoading(false);
 
-      // Use replace instead of navigate to reset the stack and go to Summary
-      navigation.replace('Summary');
+      // Check if user is a returning user (has completed onboarding before)
+      const hasCompletedOnboarding = await checkOnboardingCompleted(user.uid);
+
+      // Check if user document exists in Firestore (indicates previous usage)
+      let userDocExists = false;
+      try {
+        const userDoc = await getDocumentREST('users', user.uid);
+        userDocExists = userDoc !== null;
+        console.log('📄 User document exists:', userDocExists);
+      } catch (error) {
+        console.warn('⚠️ Could not check user document:', error);
+      }
+
+      // If user has completed onboarding OR has existing user document,
+      // they are a returning user - take them directly to the main app
+      if (hasCompletedOnboarding || userDocExists) {
+        console.log('👋 Returning user detected! Restoring previous state...');
+
+        // Restore onboarding completion flag if it was cleared (e.g., app reinstall)
+        if (!hasCompletedOnboarding && userDocExists) {
+          const key = `@onboarding_completed_${user.uid}`;
+          await AsyncStorage.setItem(key, 'true');
+          console.log('✅ Restored onboarding completion flag for returning user');
+        }
+
+        // Wait briefly for AppNavigator to detect the onboarding completion
+        // The AppNavigator polls every 500ms, so we wait a bit to let it switch stacks
+        // This ensures smooth transition to MainTabs (Home screen)
+        // Keep loading spinner active during this transition
+        console.log('⏳ Waiting for AppNavigator to update navigation stack...');
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        // AppNavigator should have switched to main app stack by now
+        // Don't navigate manually - let AppNavigator handle it
+        console.log('✅ Navigation stack updated - user will see Home screen');
+        setLoading(false);
+      } else {
+        console.log('🆕 New user detected! Continuing onboarding...');
+        setLoading(false);
+        // New user - continue with onboarding
+        navigation.replace('Summary');
+      }
     } catch (error: any) {
       console.error('❌ Sign-in error:', error);
       setLoading(false);

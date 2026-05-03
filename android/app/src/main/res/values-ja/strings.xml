@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Configuration -->
+    <string name="app_name">Sarina AI Companion</string>
+    <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
+    <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_logo_text">Sarina</string>
+    <string name="welcome_tagline">あなたのAIコンパニオン</string>
+    <string name="welcome_feature_chat">チャット</string>
+    <string name="welcome_feature_photo">写真をリクエスト</string>
+    <string name="welcome_feature_video">ビデオ通話</string>
+    <string name="welcome_feature_more">その他多数</string>
+    <string name="welcome_button_start">はじめる</string>
+
+    <!-- Report Screen -->
+    <string name="report_header_title">問題を報告</string>
+    <string name="report_info_text">いただいた報告は真摯に受け止めます。安全で敬意あふれる環境を維持するため、すべての送信内容は当社チームが確認します。</string>
+    <string name="report_section_reason">理由を選択</string>
+    <string name="report_section_description">問題を説明</string>
+    <string name="report_reason_inappropriate">不適切なコンテンツ</string>
+    <string name="report_reason_harassment">嫌がらせやいじめ</string>
+    <string name="report_reason_spam">スパムまたは誤解を招く内容</string>
+    <string name="report_reason_privacy">プライバシーに関する懸念</string>
+    <string name="report_reason_technical">技術的な問題</string>
+    <string name="report_reason_other">その他</string>
+    <string name="report_placeholder_description">報告内容の詳細を入力してください…</string>
+    <string name="report_char_count">%1$d / 500 文字</string>
+    <string name="report_button_submit">報告を送信</string>
+    <string name="report_button_submitting">送信中…</string>
+    <string name="report_footer_text">報告は機密扱いとなり、すべての方のアプリ体験向上に役立てられます。</string>
+    <string name="report_alert_reason_required">報告の理由を選択してください。</string>
+    <string name="report_alert_details_required">報告内容の詳細を入力してください。</string>
+    <string name="report_alert_submitted_title">報告を送信しました</string>
+    <string name="report_alert_submitted_message">ご報告ありがとうございます。内容を確認し、適切な対応を行います。</string>
+    <string name="report_alert_button_ok">OK</string>
+
+    <!-- Summary Screen -->
+    <string name="summary_title_meet">%1$s に会う</string>
+    <string name="summary_title_meet_default">あなたのAIに会う</string>
+
+    <!-- Appearance Screen -->
+    <string name="appearance_style_realistic">リアル</string>
+    <string name="appearance_style_anime">アニメ</string>
+    <string name="appearance_style_fantasy">ファンタジー</string>
+    <string name="appearance_style_minimal">ミニマル</string>
+
+    <!-- Mode Screen -->
+    <string name="mode_friendly">フレンドリー</string>
+    <string name="mode_caring">思いやり</string>
+
+    <!-- Name Screen -->
+    <string name="name_placeholder">名前を入力…</string>
+
+    <!-- Chat Screen -->
+    <string name="chat_input_placeholder">こんにちは</string>
+
+    <!-- Voice Call Screen -->
+    <string name="voice_permission_title">マイクの権限</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_share_title">Sarina AI を共有</string>
+
+    <!-- Credits/Paywall Screen -->
+    <string name="credits_price_default">$0.99</string>
+    <string name="premium_entitlement_id" translatable="false">premium</string>
+    <string name="product_identifier_unknown">不明</string>
+
+    <!-- Common UI Elements -->
+    <string name="common_back_icon">←</string>
+    <string name="common_checkmark">✓</string>
+    <string name="common_required">必須</string>
+
+    <!-- Feature Icons (Emojis) -->
+    <string name="icon_chat" translatable="false">💬</string>
+    <string name="icon_photo" translatable="false">📸</string>
+    <string name="icon_video_call" translatable="false">📞</string>
+    <string name="icon_sparkles" translatable="false">✨</string>
+    <string name="icon_warning" translatable="false">⚠️</string>
+    <string name="icon_prohibited" translatable="false">🚫</string>
+    <string name="icon_email" translatable="false">📧</string>
+    <string name="icon_lock" translatable="false">🔒</string>
+    <string name="icon_wrench" translatable="false">🔧</string>
+    <string name="icon_message" translatable="false">💬</string>
+    <string name="icon_shield" translatable="false">🛡️</string>
+</resources>

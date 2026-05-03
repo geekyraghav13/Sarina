@@ -7,6 +7,8 @@ import { usePaymentStore } from '../store/paymentStore';
 import * as RevenueCatService from '../services/revenueCatService';
 import { useGirlfriendStore } from '../store/girlfriendStore';
 import { LinearGradient } from 'expo-linear-gradient';
+import { logScreenView, logAdImpression, logPurchase } from '../services/firebaseAnalytics';
+import { getCurrentUser } from '../services/authService';
 
 type CustomCreditsPaywallNavigationProp = StackNavigationProp<RootStackParamList, 'CustomCreditsPaywall'>;
 type CustomCreditsPaywallRouteProp = RouteProp<RootStackParamList, 'CustomCreditsPaywall'>;
@@ -28,6 +30,19 @@ export const CustomCreditsPaywallScreen: React.FC<CustomCreditsPaywallProps> = (
 
   useEffect(() => {
     loadProductInfo();
+
+    // Track screen view
+    logScreenView('CustomCreditsPaywall');
+
+    // Log ad_impression when credits paywall is shown
+    logAdImpression({
+      ad_platform: 'credits_paywall',
+      ad_format: 'credits_offer',
+      ad_source: 'sarina_credits',
+      value: 0.99, // 10 minutes for $0.99
+      currency: 'USD',
+      ad_unit_name: 'credits_10_minutes',
+    });
   }, []);
 
   const loadProductInfo = async () => {
@@ -75,6 +90,23 @@ export const CustomCreditsPaywallScreen: React.FC<CustomCreditsPaywallProps> = (
 
       if (result.success) {
         console.log('✅ Credits purchase successful!');
+
+        // Log purchase event to Firebase Analytics
+        const user = getCurrentUser();
+        if (user) {
+          await logPurchase({
+            transaction_id: `credits_${Date.now()}_${user.uid}`,
+            value: 0.99,
+            currency: 'USD',
+            items: [{
+              item_id: 'credits_10_minutes',
+              item_name: '10 Minutes Credits',
+              item_category: 'credits',
+              quantity: 1,
+              price: 0.99,
+            }],
+          });
+        }
 
         // Wait for sync to complete
         await new Promise(resolve => setTimeout(resolve, 1500));

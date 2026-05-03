@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Configuration -->
+    <string name="app_name">Sarina AI Companion</string>
+    <string name="expo_splash_screen_resize_mode" translatable="false">contain</string>
+    <string name="expo_splash_screen_status_bar_translucent" translatable="false">false</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_logo_text">Sarina</string>
+    <string name="welcome_tagline">您的 AI 伴侣</string>
+    <string name="welcome_feature_chat">聊天</string>
+    <string name="welcome_feature_photo">请求照片</string>
+    <string name="welcome_feature_video">视频通话</string>
+    <string name="welcome_feature_more">更多功能</string>
+    <string name="welcome_button_start">开始使用</string>
+
+    <!-- Report Screen -->
+    <string name="report_header_title">举报问题</string>
+    <string name="report_info_text">我们认真对待您的举报。所有提交内容都将由我们的团队审核，以维护安全和尊重的环境。</string>
+    <string name="report_section_reason">选择原因</string>
+    <string name="report_section_description">描述问题</string>
+    <string name="report_reason_inappropriate">不当内容</string>
+    <string name="report_reason_harassment">骚扰或欺凌</string>
+    <string name="report_reason_spam">垃圾信息或误导</string>
+    <string name="report_reason_privacy">隐私问题</string>
+    <string name="report_reason_technical">技术问题</string>
+    <string name="report_reason_other">其他</string>
+    <string name="report_placeholder_description">请提供有关您举报的详细信息…</string>
+    <string name="report_char_count">%1$d / 500 个字符</string>
+    <string name="report_button_submit">提交举报</string>
+    <string name="report_button_submitting">提交中…</string>
+    <string name="report_footer_text">举报内容保密，有助于我们为所有人改善应用体验。</string>
+    <string name="report_alert_reason_required">请选择举报原因。</string>
+    <string name="report_alert_details_required">请提供有关您举报的详细信息。</string>
+    <string name="report_alert_submitted_title">举报已提交</string>
+    <string name="report_alert_submitted_message">感谢您的举报。我们将进行审核并采取适当措施。</string>
+    <string name="report_alert_button_ok">确定</string>
+
+    <!-- Summary Screen -->
+    <string name="summary_title_meet">认识 %1$s</string>
+    <string name="summary_title_meet_default">认识您的 AI</string>
+
+    <!-- Appearance Screen -->
+    <string name="appearance_style_realistic">写实</string>
+    <string name="appearance_style_anime">动漫</string>
+    <string name="appearance_style_fantasy">奇幻</string>
+    <string name="appearance_style_minimal">简约</string>
+
+    <!-- Mode Screen -->
+    <string name="mode_friendly">友善</string>
+    <string name="mode_caring">体贴</string>
+
+    <!-- Name Screen -->
+    <string name="name_placeholder">输入名称…</string>
+
+    <!-- Chat Screen -->
+    <string name="chat_input_placeholder">你好</string>
+
+    <!-- Voice Call Screen -->
+    <string name="voice_permission_title">麦克风权限</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_share_title">分享 Sarina AI</string>
+
+    <!-- Credits/Paywall Screen -->
+    <string name="credits_price_default">$0.99</string>
+    <string name="premium_entitlement_id" translatable="false">premium</string>
+    <string name="product_identifier_unknown">未知</string>
+
+    <!-- Common UI Elements -->
+    <string name="common_back_icon">←</string>
+    <string name="common_checkmark">✓</string>
+    <string name="common_required">必填</string>
+
+    <!-- Feature Icons (Emojis) -->
+    <string name="icon_chat" translatable="false">💬</string>
+    <string name="icon_photo" translatable="false">📸</string>
+    <string name="icon_video_call" translatable="false">📞</string>
+    <string name="icon_sparkles" translatable="false">✨</string>
+    <string name="icon_warning" translatable="false">⚠️</string>
+    <string name="icon_prohibited" translatable="false">🚫</string>
+    <string name="icon_email" translatable="false">📧</string>
+    <string name="icon_lock" translatable="false">🔒</string>
+    <string name="icon_wrench" translatable="false">🔧</string>
+    <string name="icon_message" translatable="false">💬</string>
+    <string name="icon_shield" translatable="false">🛡️</string>
+</resources>

@@ -17,6 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCurrentUser } from '../services/authService';
+import { logScreenView } from '../services/firebaseAnalytics';
 
 const { width, height } = Dimensions.get('window');
 const WELCOME_SEEN_KEY = '@welcome_seen';
@@ -26,6 +27,11 @@ type WelcomeScreenProps = {
 };
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Welcome');
+  }, []);
+
   const handleGetStarted = async () => {
     try {
       // Mark welcome screen as seen with user-specific key

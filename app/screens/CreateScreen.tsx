@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
+import { Video, ResizeMode } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+
+const { width, height } = Dimensions.get('window');
 
 type CreateScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -15,172 +19,129 @@ interface CreateScreenProps {
 }
 
 export const CreateScreen: React.FC<CreateScreenProps> = ({ navigation }) => {
-  const fadeAnim = useState(new Animated.Value(0))[0];
-  const slideAnim = useState(new Animated.Value(30))[0];
-  const scaleAnim = useState(new Animated.Value(0.9))[0];
-  const iconScales = [
-    useState(new Animated.Value(0))[0],
-    useState(new Animated.Value(0))[0],
-    useState(new Animated.Value(0))[0],
-  ];
+  const video = React.useRef<Video>(null);
 
   useEffect(() => {
-    // Animate entrance
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Animate icons sequentially
-    iconScales.forEach((anim, index) => {
-      Animated.spring(anim, {
-        toValue: 1,
-        delay: 400 + index * 150,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
-    });
+    // Play video on mount
+    if (video.current) {
+      video.current.playAsync();
+    }
   }, []);
 
   const handleStart = () => {
-    navigation.navigate('Age');
+    navigation.navigate('LanguageSelection');
   };
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={['#0f0c29', '#302b63', '#24243e']}
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        {/* Decorative Circles */}
-        <View style={styles.circlesContainer}>
-          <View style={[styles.circle, styles.circle1]} />
-          <View style={[styles.circle, styles.circle2]} />
-          <View style={[styles.circle, styles.circle3]} />
-          <View style={[styles.circle, styles.circle4]} />
-        </View>
+      {/* Background Video */}
+      <Video
+        ref={video}
+        source={require('../../assets/onboarding-bg.mp4')}
+        style={styles.backgroundVideo}
+        resizeMode={ResizeMode.COVER}
+        isLooping
+        shouldPlay
+        isMuted
+      />
 
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [
-                { translateY: slideAnim },
-                { scale: scaleAnim }
-              ]
-            }
-          ]}
-        >
-          {/* Top Section - Icon Grid */}
-          <View style={styles.topSection}>
-            <View style={styles.iconGrid}>
-              <Animated.View style={[styles.iconBox, { transform: [{ scale: iconScales[0] }] }]}>
-                <LinearGradient
-                  colors={['#FF6B9D', '#FF8FAB']}
-                  style={styles.iconGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Ionicons name="chatbubbles" size={40} color="#FFFFFF" />
-                </LinearGradient>
-                <Text style={styles.iconLabel}>Chat</Text>
-              </Animated.View>
+      {/* Dark Overlay */}
+      <View style={styles.overlay} />
 
-              <Animated.View style={[styles.iconBox, { transform: [{ scale: iconScales[1] }] }]}>
-                <LinearGradient
-                  colors={['#C06C84', '#D88FA8']}
-                  style={styles.iconGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Ionicons name="call" size={40} color="#FFFFFF" />
-                </LinearGradient>
-                <Text style={styles.iconLabel}>Voice</Text>
-              </Animated.View>
-
-              <Animated.View style={[styles.iconBox, { transform: [{ scale: iconScales[2] }] }]}>
-                <LinearGradient
-                  colors={['#6C5B7B', '#8B7B9B']}
-                  style={styles.iconGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Ionicons name="heart" size={40} color="#FFFFFF" />
-                </LinearGradient>
-                <Text style={styles.iconLabel}>Connect</Text>
-              </Animated.View>
-            </View>
+      {/* Content */}
+      <View style={styles.content}>
+        {/* Top Section - Title */}
+        <View style={styles.topSection}>
+          <View style={styles.titleContainer}>
+            <Text style={styles.createText}>Create Your</Text>
+            <LinearGradient
+              colors={['#FF6B9D', '#FF8FAB', '#FFB3C1']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.titleGradientWrapper}
+            >
+              <Text style={styles.companionText}>AI Companion</Text>
+            </LinearGradient>
           </View>
 
-          {/* Bottom Section - Text & Button */}
-          <View style={styles.bottomSection}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Create Your</Text>
-              <LinearGradient
-                colors={['#FF6B9D', '#FF8FAB', '#C06C84']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.titleAccentGradient}
-              >
-                <Text style={styles.titleAccent}>AI Companion</Text>
-              </LinearGradient>
-              <Text style={styles.subtitle}>
-                Personalized conversations and connections tailored just for you
-              </Text>
+          <Text style={styles.subtitle}>
+            Design a personalized AI companion that understands and connects with you
+          </Text>
+        </View>
 
-              {/* Feature List */}
-              <View style={styles.featureList}>
-                <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                  <Text style={styles.featureText}>Customize personality & appearance</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                  <Text style={styles.featureText}>Natural voice conversations</Text>
-                </View>
-                <View style={styles.featureItem}>
-                  <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                  <Text style={styles.featureText}>Available 24/7</Text>
-                </View>
+        {/* Middle Section - Features */}
+        <View style={styles.middleSection}>
+          <BlurView intensity={20} style={styles.featureCard}>
+            <View style={styles.featureRow}>
+              <View style={styles.featureIconWrapper}>
+                <LinearGradient
+                  colors={['#FF6B9D', '#FF3D71']}
+                  style={styles.featureIconGradient}
+                >
+                  <Ionicons name="color-palette" size={24} color="#FFFFFF" />
+                </LinearGradient>
+              </View>
+              <View style={styles.featureTextContainer}>
+                <Text style={styles.featureTitle}>Customize Appearance</Text>
+                <Text style={styles.featureDesc}>Choose style, personality & traits</Text>
               </View>
             </View>
 
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={handleStart}
-              activeOpacity={0.8}
+            <View style={styles.featureRow}>
+              <View style={styles.featureIconWrapper}>
+                <LinearGradient
+                  colors={['#A855F7', '#7C3AED']}
+                  style={styles.featureIconGradient}
+                >
+                  <Ionicons name="chatbubbles" size={24} color="#FFFFFF" />
+                </LinearGradient>
+              </View>
+              <View style={styles.featureTextContainer}>
+                <Text style={styles.featureTitle}>Natural Conversations</Text>
+                <Text style={styles.featureDesc}>Chat via text or voice calls</Text>
+              </View>
+            </View>
+
+            <View style={styles.featureRow}>
+              <View style={styles.featureIconWrapper}>
+                <LinearGradient
+                  colors={['#3B82F6', '#2563EB']}
+                  style={styles.featureIconGradient}
+                >
+                  <Ionicons name="sparkles" size={24} color="#FFFFFF" />
+                </LinearGradient>
+              </View>
+              <View style={styles.featureTextContainer}>
+                <Text style={styles.featureTitle}>Always Available</Text>
+                <Text style={styles.featureDesc}>Connect anytime, anywhere</Text>
+              </View>
+            </View>
+          </BlurView>
+        </View>
+
+        {/* Bottom Section - Button */}
+        <View style={styles.bottomSection}>
+          <TouchableOpacity
+            style={styles.startButton}
+            onPress={handleStart}
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={['#FF6B9D', '#FF3D71']}
+              style={styles.buttonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
             >
-              <LinearGradient
-                colors={['#FF6B9D', '#FF3263']}
-                style={styles.buttonGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Text style={styles.primaryButtonText}>Start Creating</Text>
-                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </LinearGradient>
+              <Text style={styles.buttonText}>Start Creating</Text>
+              <Ionicons name="arrow-forward-circle" size={24} color="#FFFFFF" />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <Text style={styles.disclaimer}>
+            Takes less than 2 minutes to set up
+          </Text>
+        </View>
+      </View>
     </View>
   );
 };
@@ -188,144 +149,123 @@ export const CreateScreen: React.FC<CreateScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f0c29',
+    backgroundColor: '#000000',
   },
-  gradient: {
-    flex: 1,
-  },
-  circlesContainer: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-  circle: {
+  backgroundVideo: {
     position: 'absolute',
-    borderRadius: 1000,
-    opacity: 0.08,
+    top: 0,
+    left: 0,
+    width: width,
+    height: height,
   },
-  circle1: {
-    width: 350,
-    height: 350,
-    backgroundColor: '#FF6B9D',
-    top: -150,
-    right: -100,
-  },
-  circle2: {
-    width: 250,
-    height: 250,
-    backgroundColor: '#C06C84',
-    bottom: -50,
-    left: -80,
-  },
-  circle3: {
-    width: 180,
-    height: 180,
-    backgroundColor: '#6C5B7B',
-    top: 150,
-    left: -50,
-  },
-  circle4: {
-    width: 200,
-    height: 200,
-    backgroundColor: '#FF8FAB',
-    bottom: 200,
-    right: -60,
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   content: {
     flex: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 24,
     paddingTop: 80,
     paddingBottom: 50,
+    paddingHorizontal: 24,
   },
   topSection: {
     alignItems: 'center',
-    paddingTop: 20,
-  },
-  iconGrid: {
-    flexDirection: 'row',
     gap: 20,
-    justifyContent: 'center',
-    flexWrap: 'wrap',
   },
-  iconBox: {
+  titleContainer: {
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
-  iconGradient: {
-    width: 90,
-    height: 90,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#FF6B9D',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 10,
-  },
-  iconLabel: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    opacity: 0.9,
-  },
-  bottomSection: {
-    gap: 24,
-  },
-  header: {
-    alignItems: 'center',
-    gap: 16,
-  },
-  title: {
-    fontSize: 40,
+  createText: {
+    fontSize: 36,
     fontWeight: '300',
     color: '#FFFFFF',
     textAlign: 'center',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
-  titleAccentGradient: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+  titleGradientWrapper: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
-  titleAccent: {
-    fontSize: 40,
+  companionText: {
+    fontSize: 44,
     fontWeight: '800',
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: 0.5,
+    textShadowColor: 'rgba(255, 107, 157, 0.5)',
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 12,
   },
   subtitle: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.75)',
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.85)',
     textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 8,
-  },
-  featureList: {
-    gap: 12,
-    marginTop: 8,
-    alignItems: 'flex-start',
-    width: '100%',
+    lineHeight: 24,
     paddingHorizontal: 20,
+    marginTop: 8,
   },
-  featureItem: {
+  middleSection: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  featureCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 24,
+    padding: 24,
+    gap: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    overflow: 'hidden',
+  },
+  featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 16,
   },
-  featureText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
-    opacity: 0.85,
+  featureIconWrapper: {
+    shadowColor: '#FF6B9D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  primaryButton: {
+  featureIconGradient: {
+    width: 56,
+    height: 56,
     borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  featureTextContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  featureTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  featureDesc: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 20,
+  },
+  bottomSection: {
+    gap: 16,
+    alignItems: 'center',
+  },
+  startButton: {
+    width: '100%',
+    borderRadius: 20,
     overflow: 'hidden',
-    shadowColor: '#FF3263',
+    shadowColor: '#FF3D71',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.5,
     shadowRadius: 16,
     elevation: 12,
   },
@@ -333,13 +273,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
-    gap: 8,
+    paddingVertical: 20,
+    gap: 12,
   },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+  buttonText: {
+    fontSize: 20,
     fontWeight: '700',
+    color: '#FFFFFF',
     letterSpacing: 0.5,
+  },
+  disclaimer: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.6)',
+    textAlign: 'center',
+    marginTop: 4,
   },
 });

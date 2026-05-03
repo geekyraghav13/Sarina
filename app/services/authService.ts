@@ -77,6 +77,14 @@ export const signInWithGoogle = async (): Promise<User> => {
       console.warn('⚠️ Could not log in to RevenueCat:', error.message);
     });
 
+    // Set RevenueCat customer attributes (email, displayName)
+    RevenueCatService.setUserAttributes({
+      email: user.email || undefined,
+      displayName: user.displayName || undefined,
+    }).catch((error) => {
+      console.warn('⚠️ Could not set RevenueCat attributes:', error.message);
+    });
+
     // Initialize user document in Firestore (non-blocking)
     // Don't let Firestore errors block authentication
     initializeUserDocument(user).catch((error) => {
@@ -581,6 +589,14 @@ export const signInWithApple = async (): Promise<User> => {
     // Log in user to RevenueCat
     RevenueCatService.loginRevenueCatUser(user.uid).catch((error) => {
       console.warn('⚠️ Could not log in to RevenueCat:', error.message);
+    });
+
+    // Set RevenueCat customer attributes (email, displayName)
+    RevenueCatService.setUserAttributes({
+      email: credential.email || user.email || undefined,
+      displayName: user.displayName || undefined,
+    }).catch((error) => {
+      console.warn('⚠️ Could not set RevenueCat attributes:', error.message);
     });
 
     // Update user profile with Apple user info if available

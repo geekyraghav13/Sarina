@@ -19,9 +19,7 @@ export interface FirebaseCharacter {
 
 // Firebase project details
 const FIREBASE_PROJECT_ID = 'sarina-ai-2b2c1';
-// API key should be loaded from environment configuration
-import ENV from '../config/env';
-const FIREBASE_API_KEY = ENV.FIREBASE_API_KEY || 'AIzaSyCoso8vP9ZY6fCGq3g-bgOyEdLDja9Dyo0';
+const FIREBASE_API_KEY = 'AIzaSyCoso8vP9ZY6fCGq3g-bgOyEdLDja9Dyo0';
 
 /**
  * Fetch characters from Firebase Remote Config using client SDK endpoint

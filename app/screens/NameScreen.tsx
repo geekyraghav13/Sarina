@@ -12,6 +12,8 @@ import { VideoBackground } from '../components/VideoBackground';
 import { useUserProfile } from '../store/userProfile';
 import { useVideoForProfile } from '../hooks/useVideoForProfile';
 import { RootStackParamList } from '../navigation/types';
+import { logScreenView } from '../services/firebaseAnalytics';
+import { useTranslation } from 'react-i18next';
 
 type NameScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Name'>;
 
@@ -33,9 +35,15 @@ const RANDOM_NAMES = [
 ];
 
 export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
+  const { t } = useTranslation();
   const { setProfile } = useUserProfile();
   const videoSource = useVideoForProfile();
   const [name, setName] = useState('');
+
+  // Track screen view
+  React.useEffect(() => {
+    logScreenView('Name');
+  }, []);
 
   const handleRandomName = () => {
     const randomName =
@@ -65,16 +73,16 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.step}>Step 7 of 8</Text>
-          <Text style={styles.title}>Give Her a Name</Text>
-          <Text style={styles.subtitle}>What should we call her?</Text>
+          <Text style={styles.step}>{t('name.step', { current: 7, total: 8 })}</Text>
+          <Text style={styles.title}>{t('name.title')}</Text>
+          <Text style={styles.subtitle}>{t('name.subtitle')}</Text>
         </View>
 
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.input}
-              placeholder="Enter name..."
+              placeholder={t('name.placeholder')}
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
               value={name}
               onChangeText={setName}
@@ -99,7 +107,7 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
               onPress={handleBack}
               activeOpacity={0.7}
             >
-              <Text style={styles.backButtonText}>Back</Text>
+              <Text style={styles.backButtonText}>{t('common.back')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -111,7 +119,7 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
               activeOpacity={0.8}
               disabled={!name.trim()}
             >
-              <Text style={styles.nextButtonText}>Next</Text>
+              <Text style={styles.nextButtonText}>{t('common.next')}</Text>
             </TouchableOpacity>
           </View>
         </View>
