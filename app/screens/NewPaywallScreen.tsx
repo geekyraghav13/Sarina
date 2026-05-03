@@ -8,11 +8,10 @@ import { useGirlfriendStore } from '../store/girlfriendStore';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 import * as RevenueCatService from '../services/revenueCatService';
 import { canStartCall } from '../services/creditService';
-import { logPaywallShown, logSubscriptionPurchased } from '../services/analyticsService';
 import { getCurrentUser } from '../services/authService';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logAdImpression, logPurchase, logScreenView } from '../services/firebaseAnalytics';
+import { logPurchase, logScreenView } from '../services/firebaseAnalytics';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -176,26 +175,6 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
     try {
       console.log('🎨 Presenting RevenueCat Native Paywall');
 
-      // Log paywall shown to analytics
-      const user = getCurrentUser();
-      if (user) {
-        logPaywallShown(
-          callAction ? 'call_credits_required' : 'manual_navigation',
-          characterName,
-          undefined // balance not available in this context
-        );
-
-        // Log Firebase ad_impression event
-        await logAdImpression({
-          ad_platform: 'subscription_paywall',
-          ad_format: 'subscription_offer',
-          ad_source: 'sarina_premium',
-          value: 9.99,
-          currency: 'USD',
-          ad_unit_name: 'premium_subscription',
-        });
-      }
-
       // Present the RevenueCat native paywall
       // This will show the paywall you configured in RevenueCat dashboard
       const result = await RevenueCatUI.presentPaywall({
@@ -238,18 +217,11 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         setIsPremium(subInfo.isPremium);
         setSubscriptionType(subInfo.tier as any);
 
-        // Log subscription purchase to analytics
+        // Log Firebase purchase event
         const user = getCurrentUser();
         if (user && customerInfo) {
           const activeEntitlement = customerInfo.entitlements.active['premium'];
           const productIdentifier = activeEntitlement?.productIdentifier || 'unknown';
-          logSubscriptionPurchased(
-            user.uid,
-            subInfo.tier || 'premium',
-            0, // price not available from RevenueCat
-            'USD'
-          );
-
           // Log Firebase purchase event
           await logPurchase({
             transaction_id: `subscription_${Date.now()}_${user.uid}`,
@@ -269,7 +241,10 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         // Show alert: "You have been subscribed"
         // When OK pressed → Navigate to Home Screen
         // Use setTimeout to ensure the alert is shown properly after paywall dismisses
+        console.log('🔔 About to show subscription success alert');
+        setLoading(false); // Hide loading state before showing alert
         setTimeout(() => {
+          console.log('🔔 Executing Alert.alert now');
           Alert.alert(
             'Subscription Confirmed',
             'You have been subscribed',
@@ -329,7 +304,10 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         setSubscriptionType(restoredSubInfo.tier as any);
 
         // Use setTimeout to ensure the alert is shown properly after paywall dismisses
+        console.log('🔔 About to show restore success alert');
+        setLoading(false); // Hide loading state before showing alert
         setTimeout(() => {
+          console.log('🔔 Executing Alert.alert for restore');
           Alert.alert(
             'Purchases Restored',
             'Your subscription has been successfully restored!',

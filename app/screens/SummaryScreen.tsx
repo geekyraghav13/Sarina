@@ -11,6 +11,7 @@ import { logOnboardingComplete } from '../services/firebaseAnalytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCurrentUser } from '../services/authService';
 import { useTranslation } from 'react-i18next';
+import * as RevenueCatService from '../services/revenueCatService';
 
 const ONBOARDING_COMPLETED_KEY = '@onboarding_completed';
 
@@ -57,6 +58,25 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
       console.log('✅ Onboarding completed for user:', user?.uid);
     } catch (error) {
       console.error('Failed to save onboarding completion:', error);
+    }
+
+    // Sync user profile to RevenueCat attributes
+    try {
+      const user = getCurrentUser();
+      await RevenueCatService.syncUserProfileToAttributes({
+        email: user?.email,
+        displayName: user?.displayName,
+        age: profile.age,
+        personality: profile.personality,
+        interests: profile.interests,
+        appearance: profile.appearance,
+        mode: profile.mode,
+        tone: profile.tone,
+      });
+      console.log('✅ User profile synced to RevenueCat');
+    } catch (error) {
+      console.warn('⚠️ Could not sync profile to RevenueCat:', error);
+      // Don't block user flow if this fails
     }
 
     // Initialize default girlfriend from onboarding with custom name

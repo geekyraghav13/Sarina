@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 60,
+    paddingTop: 40,
     paddingHorizontal: 24,
     alignItems: 'center',
   },
@@ -150,8 +150,8 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 32,
+    paddingTop: 16,
+    paddingBottom: 20,
   },
   title: {
     fontSize: 32,
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingBottom: 120,
   },
   languageCard: {
     width: (width - 48) / 2,

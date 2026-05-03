@@ -629,3 +629,106 @@ export const getSubscriptionInfo = async (): Promise<{
     return { tier: 'free', expirationDate: null, isPremium: false };
   }
 };
+
+/**
+ * Set RevenueCat customer attributes for user segmentation and analytics
+ * Attributes help organize, filter, and segment users in RevenueCat dashboard
+ */
+export const setUserAttributes = async (attributes: {
+  email?: string;
+  displayName?: string;
+  phoneNumber?: string;
+  [key: string]: string | undefined;
+}): Promise<void> => {
+  try {
+    console.log('📊 Setting RevenueCat customer attributes...');
+
+    // Set reserved attributes using helper methods
+    if (attributes.email) {
+      await Purchases.setEmail(attributes.email);
+      console.log('✅ Email attribute set:', attributes.email);
+    }
+
+    if (attributes.displayName) {
+      await Purchases.setDisplayName(attributes.displayName);
+      console.log('✅ Display name attribute set:', attributes.displayName);
+    }
+
+    if (attributes.phoneNumber) {
+      await Purchases.setPhoneNumber(attributes.phoneNumber);
+      console.log('✅ Phone number attribute set');
+    }
+
+    // Set custom attributes (filter out reserved ones)
+    const customAttributes: { [key: string]: string } = {};
+    for (const [key, value] of Object.entries(attributes)) {
+      if (!['email', 'displayName', 'phoneNumber'].includes(key) && value !== undefined) {
+        customAttributes[key] = value;
+      }
+    }
+
+    if (Object.keys(customAttributes).length > 0) {
+      await Purchases.setAttributes(customAttributes);
+      console.log('✅ Custom attributes set:', Object.keys(customAttributes));
+    }
+
+    console.log('✅ All RevenueCat attributes set successfully');
+  } catch (error) {
+    console.error('❌ Error setting RevenueCat attributes:', error);
+    // Don't throw - attribute setting is non-critical
+  }
+};
+
+/**
+ * Sync user profile data to RevenueCat attributes
+ * Call this after onboarding completion or profile updates
+ */
+export const syncUserProfileToAttributes = async (profile: {
+  email?: string | null;
+  displayName?: string | null;
+  age?: number;
+  personality?: string[];
+  interests?: string[];
+  appearance?: string;
+  mode?: string;
+  tone?: string[];
+}): Promise<void> => {
+  try {
+    console.log('🔄 Syncing user profile to RevenueCat attributes...');
+
+    const attributes: { [key: string]: string } = {};
+
+    // Reserved attributes
+    if (profile.email) attributes.email = profile.email;
+    if (profile.displayName) attributes.displayName = profile.displayName;
+
+    // Custom attributes (must be strings, max 500 chars)
+    if (profile.age) attributes.age = profile.age.toString();
+    if (profile.personality && profile.personality.length > 0) {
+      attributes.personality = profile.personality.join(',').substring(0, 500);
+    }
+    if (profile.interests && profile.interests.length > 0) {
+      attributes.interests = profile.interests.join(',').substring(0, 500);
+    }
+    if (profile.appearance) attributes.appearance = profile.appearance;
+    if (profile.mode) attributes.mode = profile.mode;
+    if (profile.tone && profile.tone.length > 0) {
+      attributes.tone = profile.tone.join(',').substring(0, 500);
+    }
+
+    await setUserAttributes(attributes);
+
+    // Sync immediately for targeting purposes
+    // @ts-ignore - syncAttributesAndOfferingsIfNeeded might not be in types yet
+    if (Purchases.syncAttributesAndOfferingsIfNeeded) {
+      // @ts-ignore
+      await Purchases.syncAttributesAndOfferingsIfNeeded();
+      console.log('✅ Attributes synced to RevenueCat servers');
+    }
+
+    console.log('✅ User profile synced to RevenueCat attributes');
+  } catch (error) {
+    console.error('❌ Error syncing profile to RevenueCat:', error);
+    // Don't throw - attribute syncing is non-critical
+  }
+};
