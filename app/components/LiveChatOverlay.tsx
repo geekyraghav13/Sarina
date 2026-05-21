@@ -8,6 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { LiveChatMessage } from './LiveChatMessage';
+import { FREE_MESSAGE_LIMIT } from '../store/paymentStore';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -77,13 +78,15 @@ export const LiveChatOverlay: React.FC<LiveChatOverlayProps> = ({
         {displayMessages.map((message, index) => {
           const isUser = message.sender === 'You' || message.sender === 'User';
 
-          // Count how many AI messages came before this one (excluding welcome message at index 0)
-          const aiMessagesBeforeThis = displayMessages
-            .slice(0, index + 1)
-            .filter((m, i) => m.sender !== 'You' && m.sender !== 'User' && i > 0).length;
+          // Count user messages sent BEFORE this AI reply (within the visible window).
+          // Free users get FREE_MESSAGE_LIMIT un-blurred replies; AI replies that
+          // come after the limit-th user message are locked behind the paywall.
+          const userMessagesBeforeThis = displayMessages
+            .slice(0, index)
+            .filter((m) => m.sender === 'You' || m.sender === 'User').length;
 
-          // Lock AI messages after the first one if user is not premium
-          const isLocked = !isPremium && !isUser && aiMessagesBeforeThis > 1;
+          const isLocked =
+            !isPremium && !isUser && userMessagesBeforeThis > FREE_MESSAGE_LIMIT;
 
           return (
             <LiveChatMessage

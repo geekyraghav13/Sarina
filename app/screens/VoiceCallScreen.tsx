@@ -27,6 +27,11 @@ import {
   logCreditDeductionBatch,
   logCreditsExhausted,
 } from '../services/analyticsService';
+import { useSoftReviewPrompt } from '../hooks/useSoftReviewPrompt';
+
+// Minimum call duration that counts as a "satisfying" experience worth
+// asking for a review. Anything shorter is likely a misfire.
+const REVIEW_PROMPT_MIN_CALL_SECONDS = 60;
 
 type VoiceCallScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -49,6 +54,9 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
 
   // Get premium status from store
   const { isPremium } = usePaymentStore();
+
+  const { showIfEligible: showReviewPromptIfEligible, promptElement: reviewPromptElement } =
+    useSoftReviewPrompt('voice_call_ended');
 
   // State management
   const [callDuration, setCallDuration] = useState(0);
@@ -626,7 +634,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
       {
         text: 'End Call',
         style: 'destructive',
-        onPress: () => {
+        onPress: async () => {
           // DOUBLE-DEDUCTION FIX: Mark call as manually ended to prevent onCallEnd from deducting again
           manuallyEndedRef.current = true;
 
@@ -638,7 +646,17 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
             premiumCheckIntervalRef.current = null;
           }
           stopCall();
-          navigation.navigate('Chat', { fromOnboarding: false });
+
+          // Capture duration BEFORE navigation unmounts this screen.
+          const durationForReview = totalCallSecondsRef.current || callDuration;
+          const navigateBack = () =>
+            navigation.navigate('Chat', { fromOnboarding: false });
+
+          if (durationForReview >= REVIEW_PROMPT_MIN_CALL_SECONDS) {
+            await showReviewPromptIfEligible(navigateBack);
+          } else {
+            navigateBack();
+          }
         },
       },
     ]);
@@ -774,6 +792,7 @@ export const VoiceCallScreen: React.FC<VoiceCallScreenProps> = ({
           </TouchableOpacity>
         )}
       </View>
+      {reviewPromptElement}
     </SafeAreaView>
   );
 };

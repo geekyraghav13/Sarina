@@ -38,6 +38,11 @@ import {
 } from '../services/geminiService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCurrentUser } from '../services/authService';
+import { useSoftReviewPrompt } from '../hooks/useSoftReviewPrompt';
+
+// Trigger the soft review prompt mid-chat for engaged users — picked just
+// before the 10-message free paywall so we catch them while still happy.
+const CHAT_REVIEW_PROMPT_THRESHOLD = 7;
 
 interface Message {
   id: string;
@@ -99,9 +104,12 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
     freeMessagesCount,
     loadSubscriptionStatus,
     canSendMessage,
-    incrementMessageCount,
+    incrementFreeMessages,
     getRemainingMessages,
   } = usePaymentStore();
+
+  const { showIfEligible: showReviewPromptIfEligible, promptElement: reviewPromptElement } =
+    useSoftReviewPrompt('chat_engagement');
 
   // Load subscription status on mount
   useEffect(() => {
@@ -250,12 +258,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
 
   const handleSend = async () => {
     if (inputText.trim() && !isAITyping) {
-      // Check message limit for non-premium users
+      // Check free message limit for non-premium users
       if (!canSendMessage()) {
-        const remaining = getRemainingMessages();
         Alert.alert(
-          'Message Limit Reached',
-          `You've reached your daily limit of 50 messages. Upgrade to premium for unlimited messaging!`,
+          'Free Messages Used',
+          `You've used all 10 of your free messages. Upgrade to premium for unlimited chatting!`,
           [
             { text: 'Cancel', style: 'cancel' },
             {
@@ -283,13 +290,19 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
 
       addMessage(girlfriendId, newMessage);
 
-      // Increment message count for limit tracking
-      await incrementMessageCount();
+      // Increment lifetime free-message count for non-premium users
+      await incrementFreeMessages();
 
       // Track message sent
       const newCount = messageCount + 1;
       setMessageCount(newCount);
       logMessageSent(girlfriendId, userMessageText.length, newCount);
+
+      // Engagement-based review prompt — fires once per cooldown for users
+      // who have an extended chat session. Non-blocking; modal overlays chat.
+      if (newCount === CHAT_REVIEW_PROMPT_THRESHOLD) {
+        showReviewPromptIfEligible();
+      }
 
       setInputText('');
       setIsAITyping(true);
@@ -522,6 +535,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ navigation, route }) => 
           </TouchableOpacity>
         </View>
       </View>
+      {reviewPromptElement}
     </View>
   );
 };

@@ -12,6 +12,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCurrentUser } from '../services/authService';
 import { useTranslation } from 'react-i18next';
 import * as RevenueCatService from '../services/revenueCatService';
+import { useSoftReviewPrompt } from '../hooks/useSoftReviewPrompt';
 
 const ONBOARDING_COMPLETED_KEY = '@onboarding_completed';
 
@@ -29,6 +30,8 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
   const { profile } = useUserProfile();
   const videoSource = useVideoForProfile();
   const { initializeDefaultGirlfriend } = useGirlfriendStore();
+  const { showIfEligible: showReviewPromptIfEligible, promptElement: reviewPromptElement } =
+    useSoftReviewPrompt('onboarding_completed');
 
   // Track screen view
   React.useEffect(() => {
@@ -50,15 +53,10 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
     // Firebase: Track onboarding complete
     logOnboardingComplete();
 
-    // Save onboarding completion flag with user-specific key
-    try {
-      const user = getCurrentUser();
-      const key = user ? `${ONBOARDING_COMPLETED_KEY}_${user.uid}` : ONBOARDING_COMPLETED_KEY;
-      await AsyncStorage.setItem(key, 'true');
-      console.log('✅ Onboarding completed for user:', user?.uid);
-    } catch (error) {
-      console.error('Failed to save onboarding completion:', error);
-    }
+    // NOTE: onboarding_completed flag is intentionally NOT saved here.
+    // It is saved by ChatScreen.navigateToHome() after the user has seen Chat.
+    // Saving it here causes AppNavigator's 500ms polling to destroy the
+    // Onboarding Stack before navigation.replace('Chat') can fire.
 
     // Sync user profile to RevenueCat attributes
     try {
@@ -82,10 +80,14 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
     // Initialize default girlfriend from onboarding with custom name
     initializeDefaultGirlfriend(profile.name);
 
-    // NEW: Navigate directly to Chat with first-time flags
-    navigation.replace('Chat', {
-      fromOnboarding: true,
-      isFirstLaunch: true,
+    // Show soft review prompt at the onboarding completion peak.
+    // If cooldown blocks it, navigation runs immediately; otherwise the
+    // hook fires `onComplete` after the user closes the modal.
+    await showReviewPromptIfEligible(() => {
+      navigation.replace('Chat', {
+        fromOnboarding: true,
+        isFirstLaunch: true,
+      });
     });
   };
 
@@ -197,6 +199,7 @@ export const SummaryScreen: React.FC<SummaryScreenProps> = ({ navigation }) => {
           </View>
         </View>
       </ScrollView>
+      {reviewPromptElement}
     </View>
   );
 };
