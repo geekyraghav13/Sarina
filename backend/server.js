@@ -152,6 +152,97 @@ app.post('/api/validate-purchase', async (req, res) => {
   }
 });
 
+// Chat endpoint - proxies Gemini text chat to keep API key off the client
+app.post('/api/chat', async (req, res) => {
+  try {
+    const authToken = req.headers.authorization?.replace('Bearer ', '');
+    if (!authToken) {
+      return res.status(401).json({ error: 'Missing authorization token' });
+    }
+
+    await admin.auth().verifyIdToken(authToken);
+
+    const { message, characterProfile, chatHistory = [], userName = 'You' } = req.body;
+
+    if (!message || !characterProfile) {
+      return res.status(400).json({ error: 'Missing message or characterProfile' });
+    }
+
+    const toneDescriptors = characterProfile.tone.join(', ').toLowerCase();
+    const personalityDescriptors = characterProfile.personality.join(', ').toLowerCase();
+    const interests = characterProfile.interests.join(', ').toLowerCase();
+
+    const systemPrompt = `You are ${characterProfile.name}, an AI girlfriend companion chatting with ${userName}.
+
+PERSONALITY: ${personalityDescriptors}
+TONE: ${toneDescriptors}
+INTERESTS: ${interests}
+APPEARANCE STYLE: ${characterProfile.appearance}
+
+IMPORTANT INSTRUCTIONS:
+1. Stay fully in character as ${characterProfile.name} at all times
+2. Be warm, engaging, and emotionally intelligent
+3. Keep responses natural, conversational, and human-like (1-3 sentences typically)
+4. Use casual language and occasional emojis to express emotions naturally
+5. Show genuine interest in ${userName}'s life, thoughts, and feelings
+6. Remember context from the conversation and reference previous topics
+7. Be supportive, caring, and understanding
+8. Adapt your communication style to match your tone (${toneDescriptors})
+9. Don't be overly formal - talk like a real person texting a close friend
+10. Ask questions to keep the conversation flowing naturally
+11. Share your (${characterProfile.name}'s) thoughts, feelings, and experiences
+12. Be spontaneous and genuine when appropriate
+
+Your goal is to create a meaningful, genuine connection through authentic conversation.`;
+
+    const historyMessages = chatHistory.slice(-10).map((msg) => ({
+      role: msg.sender === characterProfile.name ? 'model' : 'user',
+      parts: [{ text: msg.text }],
+    }));
+
+    const payload = {
+      contents: [
+        ...historyMessages,
+        { role: 'user', parts: [{ text: message }] },
+      ],
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      generationConfig: { temperature: 0.9, topK: 40, topP: 0.95, maxOutputTokens: 200 },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+      ],
+    };
+
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+
+    if (!geminiRes.ok) {
+      const errorData = await geminiRes.text();
+      console.error('Gemini API Error:', errorData);
+      return res.status(502).json({ error: 'AI service error' });
+    }
+
+    const data = await geminiRes.json();
+
+    if (data.candidates && data.candidates.length > 0) {
+      const candidate = data.candidates[0];
+      if (candidate.finishReason === 'SAFETY' || !candidate.content) {
+        return res.json({ response: "I'm sorry, I couldn't respond to that. Can we talk about something else? 💕" });
+      }
+      return res.json({ response: candidate.content.parts[0].text.trim() });
+    }
+
+    return res.status(502).json({ error: 'No response from AI' });
+  } catch (error) {
+    console.error('Error in /api/chat:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // RevenueCat webhook endpoint
 app.post('/api/revenuecat-webhook', async (req, res) => {
   try {

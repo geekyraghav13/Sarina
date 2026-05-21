@@ -12,11 +12,17 @@ import {
 } from 'react-native';
 import { logScreenView } from '../services/analyticsService';
 import { deleteAccount } from '../services/authService';
+import { useGirlfriendStore } from '../store/girlfriendStore';
+import { useUserProfile } from '../store/userProfile';
+import { usePaymentStore } from '../store/paymentStore';
 
 interface SettingsScreenProps {}
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const { resetProfile } = useUserProfile();
+  const { resetStore: resetGirlfriendStore } = useGirlfriendStore();
+  const { resetStore: resetPaymentStore } = usePaymentStore();
 
   React.useEffect(() => {
     logScreenView('Settings');
@@ -120,6 +126,10 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = () => {
             setIsDeleting(true);
             try {
               await deleteAccount();
+              // Reset all in-memory stores so in-session re-onboarding starts clean
+              resetProfile();
+              resetPaymentStore();
+              await resetGirlfriendStore();
               Alert.alert(
                 'Account Deleted',
                 'Your account and all associated data have been permanently deleted.',

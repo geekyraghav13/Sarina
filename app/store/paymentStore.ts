@@ -3,31 +3,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // import { checkPremiumStatus } from '../services/revenueCatService';
 
 const SUBSCRIPTION_KEY = '@subscription_status';
-const MESSAGE_LIMIT_KEY = '@message_limit_tracker';
-const MAX_MESSAGES_PER_DAY = 50;
-
-interface MessageLimitTracker {
-  count: number;
-  resetTime: number; // Unix timestamp when count resets (24 hours from first message)
-}
+export const FREE_MESSAGE_LIMIT = 10;
 
 interface PaymentStore {
   isPremium: boolean;
   freeMessagesCount: number;
   subscriptionType: 'weekly' | 'yearly' | null;
   expirationDate: string | null;
-  messageLimitTracker: MessageLimitTracker;
   setIsPremium: (status: boolean) => Promise<void>;
   setSubscriptionType: (type: 'weekly' | 'yearly' | null) => void;
   setExpirationDate: (date: string | null) => void;
-  incrementFreeMessages: () => void;
+  incrementFreeMessages: () => Promise<void>;
   hasUsedFreeMessage: () => boolean;
   canSendMessage: () => boolean;
-  incrementMessageCount: () => Promise<void>;
+  hasReachedFreeLimit: () => boolean;
   getRemainingMessages: () => number;
   loadSubscriptionStatus: () => Promise<void>;
   saveSubscriptionStatus: () => Promise<void>;
   syncWithRevenueCat: () => Promise<void>;
+  resetStore: () => void;
 }
 
 export const usePaymentStore = create<PaymentStore>((set, get) => ({
@@ -35,10 +29,6 @@ export const usePaymentStore = create<PaymentStore>((set, get) => ({
   freeMessagesCount: 0,
   subscriptionType: null,
   expirationDate: null,
-  messageLimitTracker: {
-    count: 0,
-    resetTime: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
-  },
 
   setIsPremium: async (status: boolean) => {
     set({ isPremium: status });
@@ -55,9 +45,10 @@ export const usePaymentStore = create<PaymentStore>((set, get) => ({
     get().saveSubscriptionStatus();
   },
 
-  incrementFreeMessages: () => {
+  incrementFreeMessages: async () => {
+    if (get().isPremium) return;
     set((state) => ({ freeMessagesCount: state.freeMessagesCount + 1 }));
-    get().saveSubscriptionStatus();
+    await get().saveSubscriptionStatus();
   },
 
   hasUsedFreeMessage: () => {
@@ -65,69 +56,20 @@ export const usePaymentStore = create<PaymentStore>((set, get) => ({
   },
 
   canSendMessage: () => {
-    const { isPremium, messageLimitTracker } = get();
-
-    // Premium users have unlimited messages
+    const { isPremium, freeMessagesCount } = get();
     if (isPremium) return true;
-
-    // Check if we need to reset the counter (24 hours passed)
-    const now = Date.now();
-    if (now >= messageLimitTracker.resetTime) {
-      // Reset counter
-      set({
-        messageLimitTracker: {
-          count: 0,
-          resetTime: now + 24 * 60 * 60 * 1000,
-        },
-      });
-      get().saveSubscriptionStatus();
-      return true;
-    }
-
-    // Check if under limit
-    return messageLimitTracker.count < MAX_MESSAGES_PER_DAY;
+    return freeMessagesCount < FREE_MESSAGE_LIMIT;
   },
 
-  incrementMessageCount: async () => {
-    const { isPremium, messageLimitTracker } = get();
-
-    // Don't track for premium users
-    if (isPremium) return;
-
-    // Check if we need to reset first
-    const now = Date.now();
-    if (now >= messageLimitTracker.resetTime) {
-      set({
-        messageLimitTracker: {
-          count: 1,
-          resetTime: now + 24 * 60 * 60 * 1000,
-        },
-      });
-    } else {
-      set({
-        messageLimitTracker: {
-          ...messageLimitTracker,
-          count: messageLimitTracker.count + 1,
-        },
-      });
-    }
-
-    await get().saveSubscriptionStatus();
+  hasReachedFreeLimit: () => {
+    const { isPremium, freeMessagesCount } = get();
+    return !isPremium && freeMessagesCount >= FREE_MESSAGE_LIMIT;
   },
 
   getRemainingMessages: () => {
-    const { isPremium, messageLimitTracker } = get();
-
-    // Premium users have unlimited
+    const { isPremium, freeMessagesCount } = get();
     if (isPremium) return -1; // -1 indicates unlimited
-
-    // Check if we need to reset
-    const now = Date.now();
-    if (now >= messageLimitTracker.resetTime) {
-      return MAX_MESSAGES_PER_DAY;
-    }
-
-    return Math.max(0, MAX_MESSAGES_PER_DAY - messageLimitTracker.count);
+    return Math.max(0, FREE_MESSAGE_LIMIT - freeMessagesCount);
   },
 
   loadSubscriptionStatus: async () => {
@@ -140,10 +82,6 @@ export const usePaymentStore = create<PaymentStore>((set, get) => ({
           freeMessagesCount: parsed.freeMessagesCount || 0,
           subscriptionType: parsed.subscriptionType || null,
           expirationDate: parsed.expirationDate || null,
-          messageLimitTracker: parsed.messageLimitTracker || {
-            count: 0,
-            resetTime: Date.now() + 24 * 60 * 60 * 1000,
-          },
         });
       }
     } catch (error) {
@@ -153,10 +91,10 @@ export const usePaymentStore = create<PaymentStore>((set, get) => ({
 
   saveSubscriptionStatus: async () => {
     try {
-      const { isPremium, freeMessagesCount, subscriptionType, expirationDate, messageLimitTracker } = get();
+      const { isPremium, freeMessagesCount, subscriptionType, expirationDate } = get();
       await AsyncStorage.setItem(
         SUBSCRIPTION_KEY,
-        JSON.stringify({ isPremium, freeMessagesCount, subscriptionType, expirationDate, messageLimitTracker })
+        JSON.stringify({ isPremium, freeMessagesCount, subscriptionType, expirationDate })
       );
     } catch (error) {
       console.error('Failed to save subscription status:', error);
@@ -171,5 +109,10 @@ export const usePaymentStore = create<PaymentStore>((set, get) => ({
     } catch (error) {
       console.error('Failed to sync with RevenueCat:', error);
     }
+  },
+
+  resetStore: () => {
+    set({ isPremium: false, freeMessagesCount: 0, subscriptionType: null, expirationDate: null });
+    console.log('🔄 PaymentStore reset to initial state');
   },
 }));

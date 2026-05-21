@@ -97,7 +97,7 @@ initializeFirestore(app, {
 
 ### Gemini API (Primary)
 - **Model**: gemini-2.0-flash-exp
-- **API Key**: AIzaSyBNDpbvXpCv7y3nVbDa13S3a5sOQIl7-PM
+- **API Key**: AIzaSyBuCNsxHn_0n_tmAwbrsl--tALW51SrJkk
 - **Endpoint**: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent
 - **Usage**: Main chat AI responses
 
@@ -429,7 +429,7 @@ npx eas build:list --platform ios --limit 5
 
 ### Required API Keys
 ```bash
-GEMINI_API_KEY=AIzaSyBNDpbvXpCv7y3nVbDa13S3a5sOQIl7-PM
+GEMINI_API_KEY=AIzaSyBuCNsxHn_0n_tmAwbrsl--tALW51SrJkk
 FIREBASE_API_KEY=AIzaSyCoso8vP9ZY6fCGq3g-bgOyEdLDja9Dyo0
 FIREBASE_PROJECT_ID=sarina-ai-2b2c1
 ```

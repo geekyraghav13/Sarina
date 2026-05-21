@@ -3,7 +3,7 @@
  * Handles Firestore credit operations (read-only from client side)
  */
 
-import { doc, getDoc, onSnapshot, collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { doc, getDoc, getDocs, onSnapshot, collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { firestore } from '../config/firebase';
 import { getCurrentUser } from './authService';
 
@@ -126,7 +126,7 @@ export const getRecentTransactions = async (limitCount: number = 10): Promise<Cr
       limit(limitCount)
     );
 
-    const snapshot = await getDoc(q as any);
+    const snapshot = await getDocs(q);
     const transactions: CreditTransaction[] = [];
 
     snapshot.forEach((doc: any) => {

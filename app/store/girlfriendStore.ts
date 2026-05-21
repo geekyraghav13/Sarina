@@ -42,6 +42,7 @@ interface GirlfriendStore {
   loadChatHistoriesFromStorage: () => Promise<void>;
   clearAllChats: () => Promise<void>;
   deleteConversation: (girlfriendId: string) => Promise<void>;
+  resetStore: () => Promise<void>;
 }
 
 // Default girlfriend from onboarding
@@ -246,6 +247,22 @@ export const useGirlfriendStore = create<GirlfriendStore>((set, get) => ({
       console.log(`🗑️ Deleted conversation for ${girlfriendId}`);
     } catch (error) {
       console.error('Failed to delete conversation:', error);
+    }
+  },
+
+  resetStore: async () => {
+    try {
+      set({
+        selectedGirlfriend: null,
+        girlfriends: mockGirlfriends,
+        chatHistories: {},
+        isLoading: false,
+        error: null,
+      });
+      await saveChatHistories({});
+      console.log('🔄 GirlfriendStore reset to initial state');
+    } catch (error) {
+      console.error('Failed to reset girlfriend store:', error);
     }
   },
 }));
