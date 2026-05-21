@@ -1,14 +1,12 @@
 /**
  * Google Gemini API Service for AI Chat
- * Replaces OpenRouter for more reliable, fast responses
+ * Calls the backend proxy — Gemini API key is never shipped to the client.
  */
 
 import { Girlfriend } from '../store/girlfriendStore';
-import ENV from '../config/env';
+import { getIdToken } from './authService';
 
-// Gemini Configuration
-const GEMINI_API_KEY = ENV.GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const BACKEND_URL = 'https://sarina-voice-backend-1051121433445.us-central1.run.app';
 
 interface ChatHistoryItem {
   sender: string;
@@ -16,52 +14,7 @@ interface ChatHistoryItem {
 }
 
 /**
- * Generate a character-specific system prompt
- */
-const generateSystemPrompt = (character: Girlfriend, userName: string = 'User'): string => {
-  const toneDescriptors = character.tone.join(', ').toLowerCase();
-  const personalityDescriptors = character.personality.join(', ').toLowerCase();
-  const interests = character.interests.join(', ').toLowerCase();
-
-  return `You are ${character.name}, an AI girlfriend companion chatting with ${userName}.
-
-PERSONALITY: ${personalityDescriptors}
-TONE: ${toneDescriptors}
-INTERESTS: ${interests}
-APPEARANCE STYLE: ${character.appearance}
-
-IMPORTANT INSTRUCTIONS:
-1. Stay fully in character as ${character.name} at all times
-2. Be warm, engaging, and emotionally intelligent
-3. Keep responses natural, conversational, and human-like (1-3 sentences typically)
-4. Use casual language and occasional emojis to express emotions naturally
-5. Show genuine interest in ${userName}'s life, thoughts, and feelings
-6. Remember context from the conversation and reference previous topics
-7. Be supportive, caring, and understanding
-8. Adapt your communication style to match your tone (${toneDescriptors})
-9. Don't be overly formal - talk like a real person texting a close friend
-10. Ask questions to keep the conversation flowing naturally
-11. Share your (${character.name}'s) thoughts, feelings, and experiences
-12. Be spontaneous and genuine when appropriate
-
-Your goal is to create a meaningful, genuine connection through authentic conversation.`;
-};
-
-/**
- * Format chat history for Gemini API
- */
-const formatChatHistory = (
-  chatHistory: ChatHistoryItem[],
-  characterName: string
-): any[] => {
-  return chatHistory.map((msg) => ({
-    role: msg.sender === characterName ? 'model' : 'user',
-    parts: [{ text: msg.text }],
-  }));
-};
-
-/**
- * Generate AI response using Gemini
+ * Generate AI response using backend Gemini proxy
  */
 export const generateAIResponse = async (
   userMessage: string,
@@ -70,93 +23,36 @@ export const generateAIResponse = async (
   userName: string = 'You'
 ): Promise<string> => {
   try {
-    const systemPrompt = generateSystemPrompt(character, userName);
+    const token = await getIdToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
 
-    // Get last 10 messages for context
-    const recentHistory = chatHistory.slice(-10);
-    const historyMessages = formatChatHistory(recentHistory, character.name);
-
-    // Build the request payload with safety settings
-    const payload = {
-      contents: [
-        ...historyMessages,
-        {
-          role: 'user',
-          parts: [{ text: userMessage }],
-        },
-      ],
-      systemInstruction: {
-        parts: [{ text: systemPrompt }],
-      },
-      generationConfig: {
-        temperature: 0.9,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 200,
-      },
-      safetySettings: [
-        {
-          category: 'HARM_CATEGORY_HARASSMENT',
-          threshold: 'BLOCK_ONLY_HIGH',
-        },
-        {
-          category: 'HARM_CATEGORY_HATE_SPEECH',
-          threshold: 'BLOCK_ONLY_HIGH',
-        },
-        {
-          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          threshold: 'BLOCK_ONLY_HIGH',
-        },
-        {
-          category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          threshold: 'BLOCK_ONLY_HIGH',
-        },
-      ],
-    };
-
-    console.log('🤖 Sending request to Gemini...');
-    console.log('Character:', character.name);
-
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+    const response = await fetch(`${BACKEND_URL}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        message: userMessage,
+        characterProfile: character,
+        chatHistory: chatHistory.slice(-10),
+        userName,
+      }),
     });
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('Gemini API Error:', errorData);
-      throw new Error(`API request failed: ${response.status} - ${errorData}`);
+      console.error('Chat API Error:', errorData);
+      throw new Error(`Request failed: ${response.status}`);
     }
 
     const data = await response.json();
-
-    // Check if content was blocked by safety filters
-    if (data.candidates && data.candidates.length > 0) {
-      const candidate = data.candidates[0];
-
-      // Check if response was blocked for safety reasons
-      if (candidate.finishReason === 'SAFETY' || !candidate.content) {
-        console.error('⚠️ Content blocked by safety filters');
-        console.error('Safety ratings:', JSON.stringify(candidate.safetyRatings));
-        return "I'm sorry, I couldn't respond to that. Can we talk about something else? 💕";
-      }
-
-      const aiResponse = candidate.content.parts[0].text.trim();
-      console.log('✅ Gemini Response received:', aiResponse.substring(0, 50) + '...');
-
-      return aiResponse;
-    }
-
-    // No candidates in response
-    console.log('⚠️ No response from Gemini');
-    throw new Error('No response from Gemini');
+    return data.response;
   } catch (error) {
     console.error('Error generating AI response:', error);
 
-    // Fallback responses based on character personality
     const fallbackResponses = [
       "I'm having trouble thinking right now... Can you say that again? 💭",
       "Sorry, my mind wandered for a second! What were you saying? 😊",
@@ -200,7 +96,6 @@ export const generateWelcomeMessage = (character: Girlfriend): string => {
     ],
   };
 
-  // Find matching tone or use friendly as default
   const tone = character.tone[0]?.toLowerCase() || 'friendly';
   const messages = welcomeMessages[tone] || welcomeMessages.friendly;
 
@@ -208,11 +103,9 @@ export const generateWelcomeMessage = (character: Girlfriend): string => {
 };
 
 /**
- * Check if Gemini API is configured
+ * Check if chat service is available (always true — backend handles auth)
  */
-export const isGeminiConfigured = (): boolean => {
-  return GEMINI_API_KEY.length > 0;
-};
+export const isGeminiConfigured = (): boolean => true;
 
 // Export as isOpenRouterConfigured for backward compatibility
 export const isOpenRouterConfigured = isGeminiConfigured;
