@@ -123,10 +123,10 @@ export const purchasePackage = async (
     const currency = packageToPurchase.product.currencyCode;
 
     logPurchase({
-      transactionId: customerInfo.originalAppUserId,
-      productId,
+      transaction_id: customerInfo.originalAppUserId,
       value: price,
       currency,
+      items: [{ item_id: productId, item_name: productId, item_category: 'subscription', quantity: 1, price }],
     });
 
     return {
@@ -301,7 +301,7 @@ export const syncCustomerInfoToFirestore = async (customerInfo: CustomerInfo, is
       if (customerInfo.allPurchaseDates && customerInfo.allPurchaseDates[productId]) {
         // For active subscriptions, we can't get exact expiration easily
         // Set expiration to 1 year from now for yearly, 1 week for weekly
-        const purchaseDate = new Date(customerInfo.allPurchaseDates[productId]);
+        const purchaseDate = new Date(customerInfo.allPurchaseDates[productId] as string);
         if (subscriptionTier === 'yearly') {
           expirationDate = new Date(purchaseDate.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
         } else if (subscriptionTier === 'weekly') {

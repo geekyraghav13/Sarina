@@ -13,7 +13,7 @@ import {
   ImageBackground,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getCurrentUser } from '../services/authService';
@@ -23,7 +23,7 @@ const { width, height } = Dimensions.get('window');
 const WELCOME_SEEN_KEY = '@welcome_seen';
 
 type WelcomeScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Welcome'>;
+  navigation: StackNavigationProp<RootStackParamList, 'Welcome'>;
 };
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {

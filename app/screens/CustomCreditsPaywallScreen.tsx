@@ -7,7 +7,7 @@ import { usePaymentStore } from '../store/paymentStore';
 import * as RevenueCatService from '../services/revenueCatService';
 import { useGirlfriendStore } from '../store/girlfriendStore';
 import { LinearGradient } from 'expo-linear-gradient';
-import { logScreenView, logAdImpression, logPurchase } from '../services/firebaseAnalytics';
+import { logScreenView, logPurchase } from '../services/firebaseAnalytics';
 import { getCurrentUser } from '../services/authService';
 
 type CustomCreditsPaywallNavigationProp = StackNavigationProp<RootStackParamList, 'CustomCreditsPaywall'>;
@@ -34,15 +34,6 @@ export const CustomCreditsPaywallScreen: React.FC<CustomCreditsPaywallProps> = (
     // Track screen view
     logScreenView('CustomCreditsPaywall');
 
-    // Log ad_impression when credits paywall is shown
-    logAdImpression({
-      ad_platform: 'credits_paywall',
-      ad_format: 'credits_offer',
-      ad_source: 'sarina_credits',
-      value: 0.99, // 10 minutes for $0.99
-      currency: 'USD',
-      ad_unit_name: 'credits_10_minutes',
-    });
   }, []);
 
   const loadProductInfo = async () => {

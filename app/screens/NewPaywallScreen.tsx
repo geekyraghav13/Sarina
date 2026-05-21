@@ -12,6 +12,7 @@ import { getCurrentUser } from '../services/authService';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logPurchase, logScreenView } from '../services/firebaseAnalytics';
+import { useSoftReviewPrompt } from '../hooks/useSoftReviewPrompt';
 
 type NewPaywallScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Paywall'>;
 type NewPaywallScreenRouteProp = RouteProp<RootStackParamList, 'Paywall'>;
@@ -26,6 +27,9 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
   const [showHomeButton, setShowHomeButton] = useState(false);
   const { setIsPremium, setSubscriptionType } = usePaymentStore();
   const { girlfriends } = useGirlfriendStore();
+
+  const { showIfEligible: showReviewPromptIfEligible, promptElement: reviewPromptElement } =
+    useSoftReviewPrompt('purchase_completed');
 
   // Get navigation params (from IncomingCallScreen)
   const { returnScreen, callAction, characterName, characterImageUrl } = route.params || {};
@@ -177,9 +181,7 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
 
       // Present the RevenueCat native paywall
       // This will show the paywall you configured in RevenueCat dashboard
-      const result = await RevenueCatUI.presentPaywall({
-        requiredEntitlementIdentifier: 'premium', // Your entitlement identifier
-      });
+      const result = await RevenueCatUI.presentPaywall({});
 
       console.log('📊 Paywall result:', result);
       // Show home button after paywall is dismissed
@@ -263,16 +265,17 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
                     console.log('✅ Onboarding marked as completed for user:', user.uid);
                   }
 
-                  // Small delay to let AppNavigator re-render with MainTabs in stack
-                  setTimeout(() => {
-                    // Navigate to Home Screen (MainTabs)
-                    // navigation.reset() clears the entire back stack, preventing Android back button
-                    // from returning to the paywall. User can only exit the app from MainTabs.
-                    navigation.reset({
-                      index: 0,
-                      routes: [{ name: 'MainTabs' }],
-                    });
-                  }, 100);
+                  // Soft review prompt — paid users are the happiest cohort,
+                  // so ask before we navigate away. Hook fires the nav reset
+                  // immediately when cooldown blocks the prompt.
+                  await showReviewPromptIfEligible(() => {
+                    setTimeout(() => {
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'MainTabs' }],
+                      });
+                    }, 100);
+                  });
                 },
               },
             ],
@@ -411,6 +414,7 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         )}
         <ActivityIndicator size="large" color="#FF3263" />
         <Text style={styles.loadingText}>Loading subscription options...</Text>
+        {reviewPromptElement}
       </View>
     );
   }
@@ -428,6 +432,7 @@ export const NewPaywallScreen: React.FC<NewPaywallScreenProps> = ({ navigation, 
         </TouchableOpacity>
       )}
       <ActivityIndicator size="large" color="#FF3263" />
+      {reviewPromptElement}
     </View>
   );
 };

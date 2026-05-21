@@ -11,7 +11,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/types';
 import { LinearGradient } from 'expo-linear-gradient';
-import { logAdImpression, logPurchase } from '../services/firebaseAnalytics';
+import { logPurchase } from '../services/firebaseAnalytics';
 
 type PaywallScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -33,17 +33,7 @@ export const PaywallScreen: React.FC<PaywallScreenProps> = ({
 }) => {
   const { characterName } = route.params;
 
-  // Log ad_impression when paywall is shown (Mandatory Event #2)
-  useEffect(() => {
-    logAdImpression({
-      ad_platform: 'paywall',
-      ad_format: 'subscription_offer',
-      ad_source: 'sarina_premium',
-      value: 9.99, // Adjust to your actual subscription price
-      currency: 'USD',
-      ad_unit_name: 'premium_monthly_offer',
-    });
-  }, []);
+  useEffect(() => {}, []);
 
   const handleClose = () => {
     // Go back to Chat Screen (fromOnboarding: false to prevent re-triggering call)

@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { getCurrentUser } from './authService';
 import { doc, getDoc } from 'firebase/firestore';
 import { firestore } from '../config/firebase';
+// @ts-ignore - react-native-iap is not installed; RevenueCat is used instead
 import * as RNIap from 'react-native-iap';
 
 // Product IDs - Android uses your Google Play Console IDs
@@ -135,7 +136,7 @@ export const purchaseSubscription = async (productId: string): Promise<PurchaseR
     // We wrap it in a promise that listens for the purchase result
     return new Promise((resolve, reject) => {
       // Set up one-time listeners for this purchase
-      const purchaseListener = RNIap.purchaseUpdatedListener((purchase) => {
+      const purchaseListener = RNIap.purchaseUpdatedListener((purchase: any) => {
         console.log('📦 Purchase received:', purchase);
 
         // Check if this is the purchase we're waiting for
@@ -173,7 +174,7 @@ export const purchaseSubscription = async (productId: string): Promise<PurchaseR
           google: { skus: [productId] }
         },
         type: 'subs'
-      }).catch((error) => {
+      }).catch((error: any) => {
         console.error('❌ requestPurchase error:', error);
         purchaseListener.remove();
         errorListener.remove();
@@ -281,7 +282,7 @@ export const restorePurchases = async (): Promise<PurchaseResult> => {
 
     // Find the most recent subscription purchase
     const subscriptionPurchase = purchases.find(
-      (purchase) =>
+      (purchase: any) =>
         purchase.productId === SUBSCRIPTION_IDS.WEEKLY ||
         purchase.productId === SUBSCRIPTION_IDS.YEARLY
     );
@@ -308,13 +309,13 @@ export const setupPurchaseListener = () => {
     console.log('👂 Setting up purchase listeners...');
 
     // Purchase update listener
-    purchaseUpdateSubscription = RNIap.purchaseUpdatedListener((purchase) => {
+    purchaseUpdateSubscription = RNIap.purchaseUpdatedListener((purchase: any) => {
       console.log('📦 Purchase received:', purchase.productId);
       // Handle the purchase (validate receipt, update Firestore, etc.)
     });
 
     // Purchase error listener
-    purchaseErrorSubscription = RNIap.purchaseErrorListener((error) => {
+    purchaseErrorSubscription = RNIap.purchaseErrorListener((error: any) => {
       console.error('❌ Purchase error:', error);
     });
 

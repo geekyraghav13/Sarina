@@ -7,6 +7,7 @@ import {
   RemoteConfig
 } from 'firebase/remote-config';
 import { getAnalytics, Analytics, isSupported } from 'firebase/analytics';
+// @ts-ignore - getReactNativePersistence is in the React Native bundle but not in the default typings
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore, Firestore, enableNetwork, initializeFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -40,7 +41,6 @@ let firestoreReady = false;
 // Using ONLY memory cache to avoid React Native offline persistence bugs
 export const firestore = initializeFirestore(app, {
   experimentalForceLongPolling: true, // Required for React Native
-  useFetchStreams: false, // Disable for React Native compatibility
   localCache: {
     kind: 'memory', // Memory-only cache - no disk persistence
   },
