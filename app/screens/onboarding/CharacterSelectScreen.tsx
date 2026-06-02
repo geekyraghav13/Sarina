@@ -27,6 +27,7 @@ import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
 import { logScreenView } from '../../services/firebaseAnalytics';
 import { fetchCharacters } from '../../services/characterService';
 import { Character, characterImageSource } from '../../data/characters';
+import { useOnboardingStrings } from '../../data/onboardingStrings';
 
 const { width } = Dimensions.get('window');
 const H_PADDING = 20;
@@ -79,6 +80,7 @@ const CharacterCard = ({
 
 export const CharacterSelectScreen: React.FC<Props> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const strings = useOnboardingStrings();
   const [characters, setCharacters] = React.useState<Character[] | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
@@ -116,10 +118,8 @@ export const CharacterSelectScreen: React.FC<Props> = ({ navigation }) => {
         ]}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Who catches your eye?</Text>
-          <Text style={styles.subtitle}>
-            Select a companion to begin your journey.
-          </Text>
+          <Text style={styles.title}>{strings.characterTitle}</Text>
+          <Text style={styles.subtitle}>{strings.characterSubtitle}</Text>
         </View>
 
         {characters === null ? (
@@ -158,7 +158,7 @@ export const CharacterSelectScreen: React.FC<Props> = ({ navigation }) => {
             end={{ x: 1, y: 0 }}
             style={styles.button}
           >
-            <Text style={styles.buttonText}>Start Chatting</Text>
+            <Text style={styles.buttonText}>{strings.startChatting}</Text>
             <Ionicons name="heart" size={18} color="#ffffff" />
           </LinearGradient>
         </TouchableOpacity>
