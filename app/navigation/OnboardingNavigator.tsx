@@ -1,0 +1,30 @@
+/**
+ * OnboardingNavigator — the new redesigned flow (Figma).
+ * Built screen-by-screen; new screens are registered here as they land.
+ */
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import {
+  createStackNavigator,
+  CardStyleInterpolators,
+} from '@react-navigation/stack';
+import { OnboardingStackParamList } from './onboardingTypes';
+import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
+
+const Stack = createStackNavigator<OnboardingStackParamList>();
+
+export const OnboardingNavigator: React.FC = () => {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+          cardStyle: { backgroundColor: '#131315' },
+        }}
+      >
+        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+};

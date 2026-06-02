@@ -3,7 +3,19 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
+import { useFonts } from 'expo-font';
+import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
+import {
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_700Bold,
+} from '@expo-google-fonts/dm-sans';
 import { AppNavigator } from './app/navigation/AppNavigator';
+import { OnboardingNavigator } from './app/navigation/OnboardingNavigator';
+
+// Preview switch for the new redesigned onboarding flow.
+// Set to false to fall back to the live production flow (AppNavigator).
+const SHOW_NEW_ONBOARDING = true;
 import { initializeAnalytics, logAppOpen } from './app/services/firebaseAnalytics';
 import { usePaymentStore } from './app/store/paymentStore';
 import * as RevenueCatService from './app/services/revenueCatService';
@@ -15,6 +27,14 @@ SplashScreen.preventAutoHideAsync();
 
 export default function App() {
   const [appIsReady, setAppIsReady] = useState(false);
+
+  // Load custom fonts used by the new onboarding flow
+  const [fontsLoaded] = useFonts({
+    DMSerifDisplay_400Regular,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_700Bold,
+  });
 
   // Initialize app resources
   useEffect(() => {
@@ -117,19 +137,19 @@ export default function App() {
 
   // Hide splash screen when app is ready
   const onLayoutRootView = useCallback(async () => {
-    if (appIsReady) {
+    if (appIsReady && fontsLoaded) {
       await SplashScreen.hideAsync();
     }
-  }, [appIsReady]);
+  }, [appIsReady, fontsLoaded]);
 
-  if (!appIsReady) {
+  if (!appIsReady || !fontsLoaded) {
     return null;
   }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <StatusBar style="light" />
-      <AppNavigator />
+      {SHOW_NEW_ONBOARDING ? <OnboardingNavigator /> : <AppNavigator />}
     </GestureHandlerRootView>
   );
 }
