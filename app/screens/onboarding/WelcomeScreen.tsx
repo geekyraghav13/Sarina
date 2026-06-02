@@ -54,7 +54,7 @@ const Cell = ({ source, height }: CellProps) => (
   </View>
 );
 
-export const WelcomeScreen: React.FC<Props> = () => {
+export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
 
   React.useEffect(() => {
@@ -62,9 +62,7 @@ export const WelcomeScreen: React.FC<Props> = () => {
   }, []);
 
   const handleStart = () => {
-    // TODO(flow): wire to screen 02 once it's built. No-op for now so the
-    // button is reviewable without a registered next route.
-    console.log('[Onboarding] Welcome → Start pressed');
+    navigation.navigate('Disclaimer');
   };
 
   return (
