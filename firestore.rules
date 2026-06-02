@@ -58,10 +58,11 @@ service cloud.firestore {
 
     // Characters collection (if you add it later)
     match /characters/{characterId} {
-      // Allow read to all authenticated users
-      allow read: if isAuthenticated();
+      // Public read so the pre-auth onboarding grid can load the catalog.
+      // Non-sensitive marketing data only (name, tagline, image URL).
+      allow read: if true;
 
-      // No write allowed from clients
+      // No write allowed from clients (seeded via Admin SDK only)
       allow write: if false;
     }
 

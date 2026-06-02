@@ -78,8 +78,8 @@ export const LanguageScreen: React.FC<Props> = ({ navigation }) => {
     } catch (e) {
       console.warn('Failed to persist language:', e);
     }
-    // TODO(flow): wire to screen 04 once it's built
     console.log('[Onboarding] Language selected:', selected);
+    navigation.navigate('CharacterSelect');
   };
 
   return (
