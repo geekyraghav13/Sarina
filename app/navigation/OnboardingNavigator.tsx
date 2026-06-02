@@ -14,6 +14,7 @@ import { DisclaimerScreen } from '../screens/onboarding/DisclaimerScreen';
 import { LanguageScreen } from '../screens/onboarding/LanguageScreen';
 import { CharacterSelectScreen } from '../screens/onboarding/CharacterSelectScreen';
 import { InterestsScreen } from '../screens/onboarding/InterestsScreen';
+import { TopicsScreen } from '../screens/onboarding/TopicsScreen';
 
 const Stack = createStackNavigator<OnboardingStackParamList>();
 
@@ -32,6 +33,7 @@ export const OnboardingNavigator: React.FC = () => {
         <Stack.Screen name="Language" component={LanguageScreen} />
         <Stack.Screen name="CharacterSelect" component={CharacterSelectScreen} />
         <Stack.Screen name="Interests" component={InterestsScreen} />
+        <Stack.Screen name="Topics" component={TopicsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

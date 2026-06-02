@@ -74,8 +74,8 @@ export const InterestsScreen: React.FC<Props> = ({ navigation }) => {
     } catch (e) {
       console.warn('Failed to persist interests:', e);
     }
-    // TODO(flow): wire to screen 06 once it's built
     console.log('[Onboarding] Interests selected:', chosen);
+    navigation.navigate('Topics');
   };
 
   return (
@@ -92,7 +92,7 @@ export const InterestsScreen: React.FC<Props> = ({ navigation }) => {
         >
           <Ionicons name="arrow-back" size={18} color="#e5e1e4" />
         </TouchableOpacity>
-        <Text style={styles.step}>{formatStep(strings.step, 3, 4)}</Text>
+        <Text style={styles.step}>{formatStep(strings.step, 1, 4)}</Text>
         <View style={styles.backBtnSpacer} />
       </View>
 

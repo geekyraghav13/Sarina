@@ -200,3 +200,48 @@ export const useOnboardingStrings = (): OnboardingStrings => {
   const { i18n } = useTranslation();
   return getOnboardingStrings(i18n.language);
 };
+
+/** Replace {placeholders} in a template, e.g. interpolate("Hi {name}", {name}). */
+export const interpolate = (
+  template: string,
+  vars: Record<string, string | number>
+): string => template.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
+
+// ── Screen 06 — "Customize {name}'s Interests" (topic chips) ──────────────────
+export type TopicsStrings = {
+  customizeTitle: string; // uses {name}
+  topicsSubtitle: string;
+  catMusic: string;
+  catLiterature: string;
+  catLifestyle: string;
+  ofSelected: string; // uses {n}
+  continueLabel: string;
+};
+
+export const TOPICS_STRINGS: Record<string, TopicsStrings> = {
+  en: { customizeTitle: "Customize {name}'s Interests", topicsSubtitle: 'Select the topics that spark her passion. This shapes her knowledge and conversation style.', catMusic: 'Music & Audio', catLiterature: 'Literature', catLifestyle: 'Lifestyle & Hobbies', ofSelected: 'of {n} Selected', continueLabel: 'Continue' },
+  es: { customizeTitle: 'Personaliza los intereses de {name}', topicsSubtitle: 'Elige los temas que despiertan su pasión. Esto moldea su conocimiento y su forma de conversar.', catMusic: 'Música y audio', catLiterature: 'Literatura', catLifestyle: 'Estilo de vida y aficiones', ofSelected: 'de {n} seleccionados', continueLabel: 'Continuar' },
+  fr: { customizeTitle: "Personnalisez les centres d'intérêt de {name}", topicsSubtitle: 'Choisissez les sujets qui éveillent sa passion. Cela façonne ses connaissances et son style de conversation.', catMusic: 'Musique et audio', catLiterature: 'Littérature', catLifestyle: 'Style de vie et loisirs', ofSelected: 'sur {n} sélectionnés', continueLabel: 'Continuer' },
+  de: { customizeTitle: 'Passe {name}s Interessen an', topicsSubtitle: 'Wähle die Themen, die ihre Leidenschaft wecken. Das prägt ihr Wissen und ihren Gesprächsstil.', catMusic: 'Musik & Audio', catLiterature: 'Literatur', catLifestyle: 'Lifestyle & Hobbys', ofSelected: 'von {n} ausgewählt', continueLabel: 'Weiter' },
+  ja: { customizeTitle: '{name}の興味をカスタマイズ', topicsSubtitle: '彼女の情熱を刺激する話題を選んでください。これが彼女の知識と会話のスタイルを形作ります。', catMusic: '音楽＆オーディオ', catLiterature: '文学', catLifestyle: 'ライフスタイル＆趣味', ofSelected: '/ {n} 選択中', continueLabel: '続ける' },
+  pt: { customizeTitle: 'Personalize os interesses de {name}', topicsSubtitle: 'Escolha os temas que despertam a paixão dela. Isso molda o conhecimento e o estilo de conversa dela.', catMusic: 'Música e áudio', catLiterature: 'Literatura', catLifestyle: 'Estilo de vida e hobbies', ofSelected: 'de {n} selecionados', continueLabel: 'Continuar' },
+  zh: { customizeTitle: '定制{name}的兴趣', topicsSubtitle: '选择能激发她热情的话题。这将塑造她的知识和对话风格。', catMusic: '音乐与音频', catLiterature: '文学', catLifestyle: '生活方式与爱好', ofSelected: '/ {n} 已选择', continueLabel: '继续' },
+  tr: { customizeTitle: '{name} için ilgi alanlarını özelleştir', topicsSubtitle: 'Tutkusunu ateşleyen konuları seç. Bu, bilgisini ve konuşma tarzını şekillendirir.', catMusic: 'Müzik ve Ses', catLiterature: 'Edebiyat', catLifestyle: 'Yaşam Tarzı ve Hobiler', ofSelected: '/ {n} seçildi', continueLabel: 'Devam et' },
+  ru: { customizeTitle: 'Настройте интересы {name}', topicsSubtitle: 'Выберите темы, которые разжигают её страсть. Это формирует её знания и стиль общения.', catMusic: 'Музыка и аудио', catLiterature: 'Литература', catLifestyle: 'Образ жизни и хобби', ofSelected: 'из {n} выбрано', continueLabel: 'Продолжить' },
+  hi: { customizeTitle: '{name} की रुचियाँ कस्टमाइज़ करें', topicsSubtitle: 'उन विषयों को चुनें जो उसके जुनून को जगाते हैं। यह उसके ज्ञान और बातचीत की शैली को आकार देता है।', catMusic: 'संगीत और ऑडियो', catLiterature: 'साहित्य', catLifestyle: 'लाइफस्टाइल और शौक', ofSelected: '{n} में से चयनित', continueLabel: 'जारी रखें' },
+  it: { customizeTitle: 'Personalizza gli interessi di {name}', topicsSubtitle: 'Scegli gli argomenti che accendono la sua passione. Questo plasma la sua conoscenza e il suo stile di conversazione.', catMusic: 'Musica e audio', catLiterature: 'Letteratura', catLifestyle: 'Stile di vita e hobby', ofSelected: 'di {n} selezionati', continueLabel: 'Continua' },
+  nl: { customizeTitle: 'Pas de interesses van {name} aan', topicsSubtitle: 'Kies de onderwerpen die haar passie aanwakkeren. Dit vormt haar kennis en gespreksstijl.', catMusic: 'Muziek & audio', catLiterature: 'Literatuur', catLifestyle: "Lifestyle & hobby's", ofSelected: 'van {n} geselecteerd', continueLabel: 'Doorgaan' },
+  id: { customizeTitle: 'Sesuaikan minat {name}', topicsSubtitle: 'Pilih topik yang membangkitkan gairahnya. Ini membentuk pengetahuan dan gaya percakapannya.', catMusic: 'Musik & Audio', catLiterature: 'Sastra', catLifestyle: 'Gaya Hidup & Hobi', ofSelected: 'dari {n} dipilih', continueLabel: 'Lanjutkan' },
+  th: { customizeTitle: 'ปรับแต่งความสนใจของ {name}', topicsSubtitle: 'เลือกหัวข้อที่จุดประกายความหลงใหลของเธอ สิ่งนี้จะกำหนดความรู้และสไตล์การสนทนาของเธอ', catMusic: 'เพลงและเสียง', catLiterature: 'วรรณกรรม', catLifestyle: 'ไลฟ์สไตล์และงานอดิเรก', ofSelected: 'จาก {n} ที่เลือก', continueLabel: 'ต่อไป' },
+  ar: { customizeTitle: 'خصّص اهتمامات {name}', topicsSubtitle: 'اختر المواضيع التي تشعل شغفها. هذا يشكّل معرفتها وأسلوبها في الحديث.', catMusic: 'الموسيقى والصوت', catLiterature: 'الأدب', catLifestyle: 'نمط الحياة والهوايات', ofSelected: 'من {n} مُختارة', continueLabel: 'متابعة' },
+};
+
+export const getTopicsStrings = (lang?: string): TopicsStrings => {
+  const code = (lang || 'en').split('-')[0].toLowerCase();
+  return TOPICS_STRINGS[code] || TOPICS_STRINGS.en;
+};
+
+export const useTopicsStrings = (): TopicsStrings => {
+  const { i18n } = useTranslation();
+  return getTopicsStrings(i18n.language);
+};

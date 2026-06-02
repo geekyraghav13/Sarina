@@ -8,5 +8,6 @@ export type OnboardingStackParamList = {
   Language: undefined;
   CharacterSelect: undefined;
   Interests: undefined;
-  // 06..12 added as each screen is implemented
+  Topics: undefined;
+  // 07..12 added as each screen is implemented
 };
