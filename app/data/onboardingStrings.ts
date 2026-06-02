@@ -245,3 +245,34 @@ export const useTopicsStrings = (): TopicsStrings => {
   const { i18n } = useTranslation();
   return getTopicsStrings(i18n.language);
 };
+
+// Localized labels for the topic chips. Keyed by language → canonical English
+// topic → localized label. English (and any missing entry) falls back to the
+// canonical English value, which is also what gets stored for the AI.
+export const TOPIC_LABELS: Record<string, Record<string, string>> = {
+  es: { 'Indie Rock': 'Rock indie', 'Classical Piano': 'Piano clásico', 'Techno': 'Tecno', 'Jazz': 'Jazz', 'Lo-Fi Beats': 'Ritmos Lo-Fi', 'Dark Romance': 'Romance oscuro', 'Sci-Fi': 'Ciencia ficción', 'Poetry': 'Poesía', 'Thrillers': 'Suspense', 'Gourmet Cooking': 'Cocina gourmet', 'Fitness': 'Fitness', 'Yoga': 'Yoga', 'Gaming': 'Videojuegos', 'Travel': 'Viajes', 'Photography': 'Fotografía' },
+  fr: { 'Indie Rock': 'Rock indé', 'Classical Piano': 'Piano classique', 'Techno': 'Techno', 'Jazz': 'Jazz', 'Lo-Fi Beats': 'Beats Lo-Fi', 'Dark Romance': 'Romance sombre', 'Sci-Fi': 'Science-fiction', 'Poetry': 'Poésie', 'Thrillers': 'Thrillers', 'Gourmet Cooking': 'Cuisine gastronomique', 'Fitness': 'Fitness', 'Yoga': 'Yoga', 'Gaming': 'Jeux vidéo', 'Travel': 'Voyages', 'Photography': 'Photographie' },
+  de: { 'Indie Rock': 'Indie-Rock', 'Classical Piano': 'Klassisches Klavier', 'Techno': 'Techno', 'Jazz': 'Jazz', 'Lo-Fi Beats': 'Lo-Fi-Beats', 'Dark Romance': 'Dark Romance', 'Sci-Fi': 'Science-Fiction', 'Poetry': 'Poesie', 'Thrillers': 'Thriller', 'Gourmet Cooking': 'Gourmetküche', 'Fitness': 'Fitness', 'Yoga': 'Yoga', 'Gaming': 'Gaming', 'Travel': 'Reisen', 'Photography': 'Fotografie' },
+  ja: { 'Indie Rock': 'インディーロック', 'Classical Piano': 'クラシックピアノ', 'Techno': 'テクノ', 'Jazz': 'ジャズ', 'Lo-Fi Beats': 'Lo-Fiビート', 'Dark Romance': 'ダークロマンス', 'Sci-Fi': 'SF', 'Poetry': '詩', 'Thrillers': 'スリラー', 'Gourmet Cooking': 'グルメ料理', 'Fitness': 'フィットネス', 'Yoga': 'ヨガ', 'Gaming': 'ゲーム', 'Travel': '旅行', 'Photography': '写真' },
+  pt: { 'Indie Rock': 'Rock indie', 'Classical Piano': 'Piano clássico', 'Techno': 'Techno', 'Jazz': 'Jazz', 'Lo-Fi Beats': 'Batidas Lo-Fi', 'Dark Romance': 'Romance sombrio', 'Sci-Fi': 'Ficção científica', 'Poetry': 'Poesia', 'Thrillers': 'Suspense', 'Gourmet Cooking': 'Culinária gourmet', 'Fitness': 'Fitness', 'Yoga': 'Yoga', 'Gaming': 'Jogos', 'Travel': 'Viagens', 'Photography': 'Fotografia' },
+  zh: { 'Indie Rock': '独立摇滚', 'Classical Piano': '古典钢琴', 'Techno': '电子乐', 'Jazz': '爵士乐', 'Lo-Fi Beats': 'Lo-Fi 节拍', 'Dark Romance': '黑暗浪漫', 'Sci-Fi': '科幻', 'Poetry': '诗歌', 'Thrillers': '惊悚', 'Gourmet Cooking': '美食烹饪', 'Fitness': '健身', 'Yoga': '瑜伽', 'Gaming': '游戏', 'Travel': '旅行', 'Photography': '摄影' },
+  tr: { 'Indie Rock': 'Indie Rock', 'Classical Piano': 'Klasik Piyano', 'Techno': 'Tekno', 'Jazz': 'Caz', 'Lo-Fi Beats': 'Lo-Fi Beat', 'Dark Romance': 'Karanlık Romantizm', 'Sci-Fi': 'Bilim Kurgu', 'Poetry': 'Şiir', 'Thrillers': 'Gerilim', 'Gourmet Cooking': 'Gurme Yemek', 'Fitness': 'Fitness', 'Yoga': 'Yoga', 'Gaming': 'Oyun', 'Travel': 'Seyahat', 'Photography': 'Fotoğrafçılık' },
+  ru: { 'Indie Rock': 'Инди-рок', 'Classical Piano': 'Классическое фортепиано', 'Techno': 'Техно', 'Jazz': 'Джаз', 'Lo-Fi Beats': 'Lo-Fi биты', 'Dark Romance': 'Тёмный романс', 'Sci-Fi': 'Научная фантастика', 'Poetry': 'Поэзия', 'Thrillers': 'Триллеры', 'Gourmet Cooking': 'Высокая кухня', 'Fitness': 'Фитнес', 'Yoga': 'Йога', 'Gaming': 'Игры', 'Travel': 'Путешествия', 'Photography': 'Фотография' },
+  hi: { 'Indie Rock': 'इंडी रॉक', 'Classical Piano': 'क्लासिकल पियानो', 'Techno': 'टेक्नो', 'Jazz': 'जैज़', 'Lo-Fi Beats': 'लो-फाई बीट्स', 'Dark Romance': 'डार्क रोमांस', 'Sci-Fi': 'साइंस फिक्शन', 'Poetry': 'कविता', 'Thrillers': 'थ्रिलर', 'Gourmet Cooking': 'गॉरमेट कुकिंग', 'Fitness': 'फिटनेस', 'Yoga': 'योग', 'Gaming': 'गेमिंग', 'Travel': 'यात्रा', 'Photography': 'फोटोग्राफी' },
+  it: { 'Indie Rock': 'Rock indie', 'Classical Piano': 'Pianoforte classico', 'Techno': 'Techno', 'Jazz': 'Jazz', 'Lo-Fi Beats': 'Beat Lo-Fi', 'Dark Romance': 'Romanticismo oscuro', 'Sci-Fi': 'Fantascienza', 'Poetry': 'Poesia', 'Thrillers': 'Thriller', 'Gourmet Cooking': 'Cucina gourmet', 'Fitness': 'Fitness', 'Yoga': 'Yoga', 'Gaming': 'Videogiochi', 'Travel': 'Viaggi', 'Photography': 'Fotografia' },
+  nl: { 'Indie Rock': 'Indierock', 'Classical Piano': 'Klassieke piano', 'Techno': 'Techno', 'Jazz': 'Jazz', 'Lo-Fi Beats': 'Lo-Fi beats', 'Dark Romance': 'Dark romance', 'Sci-Fi': 'Sciencefiction', 'Poetry': 'Poëzie', 'Thrillers': 'Thrillers', 'Gourmet Cooking': 'Gastronomisch koken', 'Fitness': 'Fitness', 'Yoga': 'Yoga', 'Gaming': 'Gamen', 'Travel': 'Reizen', 'Photography': 'Fotografie' },
+  id: { 'Indie Rock': 'Indie Rock', 'Classical Piano': 'Piano Klasik', 'Techno': 'Tekno', 'Jazz': 'Jazz', 'Lo-Fi Beats': 'Lo-Fi Beats', 'Dark Romance': 'Romansa Gelap', 'Sci-Fi': 'Fiksi Ilmiah', 'Poetry': 'Puisi', 'Thrillers': 'Thriller', 'Gourmet Cooking': 'Masakan Gourmet', 'Fitness': 'Kebugaran', 'Yoga': 'Yoga', 'Gaming': 'Gim', 'Travel': 'Perjalanan', 'Photography': 'Fotografi' },
+  th: { 'Indie Rock': 'อินดี้ร็อก', 'Classical Piano': 'เปียโนคลาสสิก', 'Techno': 'เทคโน', 'Jazz': 'แจ๊ส', 'Lo-Fi Beats': 'บีต Lo-Fi', 'Dark Romance': 'โรแมนซ์ด้านมืด', 'Sci-Fi': 'ไซไฟ', 'Poetry': 'บทกวี', 'Thrillers': 'ทริลเลอร์', 'Gourmet Cooking': 'อาหารกูร์เมต์', 'Fitness': 'ฟิตเนส', 'Yoga': 'โยคะ', 'Gaming': 'เกม', 'Travel': 'ท่องเที่ยว', 'Photography': 'การถ่ายภาพ' },
+  ar: { 'Indie Rock': 'روك مستقل', 'Classical Piano': 'بيانو كلاسيكي', 'Techno': 'تكنو', 'Jazz': 'جاز', 'Lo-Fi Beats': 'إيقاعات لو-فاي', 'Dark Romance': 'رومانسية داكنة', 'Sci-Fi': 'خيال علمي', 'Poetry': 'شعر', 'Thrillers': 'إثارة', 'Gourmet Cooking': 'طبخ راقٍ', 'Fitness': 'لياقة بدنية', 'Yoga': 'يوغا', 'Gaming': 'ألعاب', 'Travel': 'سفر', 'Photography': 'تصوير' },
+};
+
+export const getTopicLabel = (lang: string | undefined, topic: string): string => {
+  const code = (lang || 'en').split('-')[0].toLowerCase();
+  return TOPIC_LABELS[code]?.[topic] ?? topic;
+};
+
+/** Hook: returns a labeler that localizes a canonical English topic value. */
+export const useTopicLabel = (): ((topic: string) => string) => {
+  const { i18n } = useTranslation();
+  return (topic: string) => getTopicLabel(i18n.language, topic);
+};

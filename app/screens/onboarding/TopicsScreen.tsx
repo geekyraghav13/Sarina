@@ -25,7 +25,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
 import { logScreenView } from '../../services/firebaseAnalytics';
-import { useTopicsStrings, interpolate, TopicsStrings } from '../../data/onboardingStrings';
+import {
+  useTopicsStrings,
+  useTopicLabel,
+  interpolate,
+  TopicsStrings,
+} from '../../data/onboardingStrings';
 import { iconArrow } from './disclaimerIcons';
 
 const heartIcon = require('../../../assets/onboarding/heart-3d.jpg');
@@ -52,6 +57,7 @@ const CATEGORIES: Category[] = [
 export const TopicsScreen: React.FC<Props> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const strings: TopicsStrings = useTopicsStrings();
+  const topicLabel = useTopicLabel();
   const [name, setName] = React.useState<string>('Your Companion');
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
@@ -131,7 +137,7 @@ export const TopicsScreen: React.FC<Props> = ({ navigation }) => {
                     style={[styles.chip, isSel ? styles.chipOn : styles.chipOff]}
                   >
                     <Text style={[styles.chipText, isSel && styles.chipTextOn]}>
-                      {topic}
+                      {topicLabel(topic)}
                     </Text>
                   </TouchableOpacity>
                 );
