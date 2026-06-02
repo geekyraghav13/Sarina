@@ -85,8 +85,7 @@ export const DisclaimerScreen: React.FC<Props> = ({ navigation }) => {
   }, []);
 
   const handleAgree = () => {
-    // TODO(flow): wire to screen 03 once it's built
-    console.log('[Onboarding] Disclaimer → I Agree & Am 18+ pressed');
+    navigation.navigate('Language');
   };
 
   const handleTerms = () => {
