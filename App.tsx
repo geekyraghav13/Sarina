@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts } from 'expo-font';
@@ -10,23 +9,21 @@ import {
   DMSans_500Medium,
   DMSans_700Bold,
 } from '@expo-google-fonts/dm-sans';
-import { AppNavigator } from './app/navigation/AppNavigator';
 import { OnboardingNavigator } from './app/navigation/OnboardingNavigator';
+import './app/i18n'; // Initialize i18n (Expo Go safe)
 
 // Preview switch for the new redesigned onboarding flow.
-// Set to false to fall back to the live production flow (AppNavigator).
+// When true, the app renders ONLY the new OnboardingNavigator and loads NO
+// native modules (Firebase, RevenueCat, etc.) — so it runs in Expo Go.
+// Set to false to restore the full production app (AppNavigator).
 const SHOW_NEW_ONBOARDING = true;
-import { initializeAnalytics, logAppOpen } from './app/services/firebaseAnalytics';
-import { usePaymentStore } from './app/store/paymentStore';
-import * as RevenueCatService from './app/services/revenueCatService';
-import Purchases from 'react-native-purchases';
-import './app/i18n'; // Initialize i18n
 
 // Keep splash screen visible while loading
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const [appIsReady, setAppIsReady] = useState(false);
+  // In preview mode there's no native init to wait for.
+  const [appIsReady, setAppIsReady] = useState(SHOW_NEW_ONBOARDING);
 
   // Load custom fonts used by the new onboarding flow
   const [fontsLoaded] = useFonts({
@@ -36,9 +33,19 @@ export default function App() {
     DMSans_700Bold,
   });
 
-  // Initialize app resources
+  // Initialize app resources (production flow only). The native modules are
+  // lazily required here so Expo Go preview never imports them.
   useEffect(() => {
+    if (SHOW_NEW_ONBOARDING) {
+      return; // Skip all native initialization in preview mode
+    }
+
     async function prepare() {
+      const { initializeAnalytics, logAppOpen } = require('./app/services/firebaseAnalytics');
+      const { usePaymentStore } = require('./app/store/paymentStore');
+      const RevenueCatService = require('./app/services/revenueCatService');
+      const Purchases = require('react-native-purchases').default;
+
       try {
         // Initialize Firebase Analytics (critical)
         await initializeAnalytics();
@@ -65,7 +72,7 @@ export default function App() {
           // Set up customer info listener to auto-sync purchases to Firestore
           // IMPORTANT: This listener fires on ANY customer info change (purchase, restore, app reopen)
           // We should NOT treat every update as a new purchase to avoid duplicate credit allocation
-          Purchases.addCustomerInfoUpdateListener(async (customerInfo) => {
+          Purchases.addCustomerInfoUpdateListener(async (customerInfo: any) => {
             console.log('🔔 RevenueCat customer info updated!');
             console.log('Entitlements:', JSON.stringify(customerInfo.entitlements.active));
             console.log('Active Subscriptions:', JSON.stringify(customerInfo.activeSubscriptions));
@@ -146,10 +153,15 @@ export default function App() {
     return null;
   }
 
+  // Production app is required lazily so preview mode never imports native deps.
+  const RootNavigator = SHOW_NEW_ONBOARDING
+    ? OnboardingNavigator
+    : require('./app/navigation/AppNavigator').AppNavigator;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <StatusBar style="light" />
-      {SHOW_NEW_ONBOARDING ? <OnboardingNavigator /> : <AppNavigator />}
+      <RootNavigator />
     </GestureHandlerRootView>
   );
 }
