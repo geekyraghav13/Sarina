@@ -36,24 +36,23 @@ type Props = {
 
 type Language = { code: string; name: string };
 
-// Design's six + existing app locales + requested additions.
+// Design's six + existing app locales + requested additions, sorted A–Z.
 const LANGUAGES: Language[] = [
+  { code: 'ar', name: 'Arabic' },
+  { code: 'zh', name: 'Chinese' },
+  { code: 'nl', name: 'Dutch' },
   { code: 'en', name: 'English' },
-  { code: 'es', name: 'Spanish' },
   { code: 'fr', name: 'French' },
   { code: 'de', name: 'German' },
+  { code: 'hi', name: 'Hindi' },
+  { code: 'id', name: 'Indonesian' },
+  { code: 'it', name: 'Italian' },
   { code: 'ja', name: 'Japanese' },
   { code: 'pt', name: 'Portuguese' },
-  { code: 'zh', name: 'Chinese' },
-  { code: 'tr', name: 'Turkish' },
   { code: 'ru', name: 'Russian' },
-  { code: 'hi', name: 'Hindi' },
-  { code: 'it', name: 'Italian' },
-  { code: 'nl', name: 'Dutch' },
-  { code: 'id', name: 'Indonesian' },
+  { code: 'es', name: 'Spanish' },
   { code: 'th', name: 'Thai' },
-  { code: 'ar', name: 'Arabic (Egypt)' },
-  { code: 'es-MX', name: 'Spanish (Mexico)' },
+  { code: 'tr', name: 'Turkish' },
 ];
 
 const Radio = ({ selected }: { selected: boolean }) => (
