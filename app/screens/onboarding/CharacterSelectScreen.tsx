@@ -103,8 +103,8 @@ export const CharacterSelectScreen: React.FC<Props> = ({ navigation }) => {
     } catch (e) {
       console.warn('Failed to persist selected character:', e);
     }
-    // TODO(flow): wire to screen 05 once it's built
     console.log('[Onboarding] Character selected:', chosen.name);
+    navigation.navigate('Interests');
   };
 
   return (
