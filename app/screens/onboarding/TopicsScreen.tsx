@@ -95,8 +95,8 @@ export const TopicsScreen: React.FC<Props> = ({ navigation }) => {
     } catch (e) {
       console.warn('Failed to persist topics:', e);
     }
-    // TODO(flow): wire to screen 07 once it's built
     console.log('[Onboarding] Topics selected:', [...selected]);
+    navigation.navigate('Name');
   };
 
   return (

@@ -2,6 +2,8 @@
  * Navigation param list for the new onboarding flow (Figma redesign).
  * Screens are added here one at a time as the flow is built out.
  */
+import { Character } from '../data/characters';
+
 export type OnboardingStackParamList = {
   Welcome: undefined;
   Disclaimer: undefined;
@@ -9,5 +11,10 @@ export type OnboardingStackParamList = {
   CharacterSelect: undefined;
   Interests: undefined;
   Topics: undefined;
-  // 07..12 added as each screen is implemented
+  Name: undefined;
+  Auth: undefined;
+  Home: undefined;
+  Discover: undefined;
+  Settings: undefined;
+  Chat: { character?: Character } | undefined;
 };

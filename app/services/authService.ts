@@ -5,6 +5,7 @@
 
 import {
   signInWithCredential,
+  signInAnonymously,
   GoogleAuthProvider,
   OAuthProvider,
   signOut as firebaseSignOut,
@@ -98,6 +99,47 @@ export const signInWithGoogle = async (): Promise<User> => {
     console.error('Error code:', error.code);
     console.error('Error message:', error.message);
     throw new Error(error.message || 'Google Sign-In failed');
+  }
+};
+
+/**
+ * Sign in anonymously (guest)
+ *
+ * Creates a throwaway Firebase Auth user with no email/credentials. The account
+ * can later be upgraded to Google/Apple by linking, preserving the same uid and
+ * all Firestore data. Requires Anonymous sign-in to be enabled in Firebase Auth.
+ */
+export const signInAsGuest = async (): Promise<User> => {
+  try {
+    console.log('👤 Starting anonymous (guest) sign-in...');
+
+    const userCredential = await signInAnonymously(auth);
+    const user = userCredential.user;
+
+    console.log('✅ Guest sign-in successful:', user.uid);
+
+    // Log in user to RevenueCat (non-blocking)
+    RevenueCatService.loginRevenueCatUser(user.uid).catch((error) => {
+      console.warn('⚠️ Could not log in to RevenueCat:', error.message);
+    });
+
+    // Initialize user document in Firestore (non-blocking)
+    initializeUserDocument(user).catch((error) => {
+      console.warn('⚠️ Could not initialize guest user document immediately:', error.message);
+      console.log('ℹ️ User document will be created on next successful connection');
+    });
+
+    return user;
+  } catch (error: any) {
+    console.error('❌ Guest sign-in failed:', error);
+    console.error('Error code:', error.code);
+
+    if (error.code === 'auth/operation-not-allowed') {
+      throw new Error(
+        'Guest sign-in is not enabled. Enable Anonymous sign-in in Firebase Console → Authentication.'
+      );
+    }
+    throw new Error(error.message || 'Guest sign-in failed');
   }
 };
 

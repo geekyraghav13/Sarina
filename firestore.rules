@@ -29,6 +29,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Per-character chat history (new onboarding/chat flow).
+    // Owner-only read/write of their own conversations.
+    match /users/{userId}/conversations/{conversationId} {
+      allow read, write: if isOwner(userId);
+    }
+
     // Call sessions collection
     match /call_sessions/{sessionId} {
       // Allow read if user owns the session

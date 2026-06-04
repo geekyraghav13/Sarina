@@ -86,3 +86,7 @@ test-firebase-connection.js
 # Backend environment
 backend/.env
 functions/.env
+
+# Release signing secrets (never commit)
+keystore.properties
+android/keystore.properties

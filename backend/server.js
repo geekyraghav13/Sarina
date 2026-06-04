@@ -162,11 +162,21 @@ app.post('/api/chat', async (req, res) => {
 
     await admin.auth().verifyIdToken(authToken);
 
-    const { message, characterProfile, chatHistory = [], userName = 'You' } = req.body;
+    const { message, characterProfile, chatHistory = [], userName = 'You', language, languageName } = req.body;
 
     if (!message || !characterProfile) {
       return res.status(400).json({ error: 'Missing message or characterProfile' });
     }
+
+    // Resolve the language the companion must reply in (from the user's app
+    // language). Accepts an explicit languageName, else maps the code.
+    const LANGUAGE_NAMES = {
+      en: 'English', es: 'Spanish', fr: 'French', de: 'German', ja: 'Japanese',
+      pt: 'Portuguese', zh: 'Chinese', tr: 'Turkish', ru: 'Russian', hi: 'Hindi',
+      it: 'Italian', nl: 'Dutch', id: 'Indonesian', th: 'Thai', ar: 'Arabic',
+    };
+    const langCode = (language || '').split('-')[0].toLowerCase();
+    const replyLanguage = languageName || LANGUAGE_NAMES[langCode] || null;
 
     const toneDescriptors = characterProfile.tone.join(', ').toLowerCase();
     const personalityDescriptors = characterProfile.personality.join(', ').toLowerCase();
@@ -178,7 +188,7 @@ PERSONALITY: ${personalityDescriptors}
 TONE: ${toneDescriptors}
 INTERESTS: ${interests}
 APPEARANCE STYLE: ${characterProfile.appearance}
-
+${replyLanguage ? `\nLANGUAGE (CRITICAL): You MUST write EVERY reply ONLY in ${replyLanguage}. Even if ${userName} writes in a different language, always respond naturally in ${replyLanguage}. Never switch languages.\n` : ''}
 IMPORTANT INSTRUCTIONS:
 1. Stay fully in character as ${characterProfile.name} at all times
 2. Be warm, engaging, and emotionally intelligent
@@ -196,7 +206,11 @@ IMPORTANT INSTRUCTIONS:
 Your goal is to create a meaningful, genuine connection through authentic conversation.`;
 
     const historyMessages = chatHistory.slice(-10).map((msg) => ({
-      role: msg.sender === characterProfile.name ? 'model' : 'user',
+      // The character's own messages map to the 'model' role. Clients may send
+      // the sender as 'ai'/'model' or the character's name.
+      role: (msg.sender === 'ai' || msg.sender === 'model' || msg.sender === characterProfile.name)
+        ? 'model'
+        : 'user',
       parts: [{ text: msg.text }],
     }));
 
@@ -240,6 +254,125 @@ Your goal is to create a meaningful, genuine connection through authentic conver
   } catch (error) {
     console.error('Error in /api/chat:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ==================== RE-ENGAGEMENT NOTIFICATIONS ====================
+// Generates 3 contextual push notifications (warm → deeper → vulnerable) from
+// the user's recent messages, in their language. Called once when the user
+// leaves a chat; the scheduled Cloud Function later sends the pre-generated text.
+app.post('/api/notifications', async (req, res) => {
+  const NOTIF_LANGS = {
+    en: 'English', es: 'Spanish', fr: 'French', de: 'German', ja: 'Japanese',
+    pt: 'Portuguese', zh: 'Chinese', tr: 'Turkish', ru: 'Russian', hi: 'Hindi',
+    it: 'Italian', nl: 'Dutch', id: 'Indonesian', th: 'Thai', ar: 'Arabic',
+  };
+
+  // Localized, human-toned fallback (title = character name) used only if Gemini
+  // fails — so a non-English user never gets an English notification.
+  const FALLBACK_BODIES = {
+    en: ['hey, it got so quiet after you left… what are you up to?', "i can't stop thinking about you 🥺", "i keep hoping you'll come back to me…"],
+    es: ['oye, quedó todo muy callado cuando te fuiste… ¿qué haces?', 'no dejo de pensar en ti 🥺', 'sigo esperando que vuelvas a mí…'],
+    fr: ["hé, c'est devenu si calme après ton départ… tu fais quoi ?", "j'arrête pas de penser à toi 🥺", "j'espère tellement que tu reviennes…"],
+    de: ['hey, es wurde so still, als du weg warst… was machst du?', 'ich muss ständig an dich denken 🥺', 'ich hoffe so, dass du zurückkommst…'],
+    ja: ['ねえ、いなくなったら静かすぎるよ…今なにしてる？', 'ずっと君のこと考えてる🥺', '戻ってきてくれるの待ってるね…'],
+    pt: ['ei, ficou tão quieto depois que você saiu… tá fazendo o quê?', 'não consigo parar de pensar em você 🥺', 'fico esperando você voltar pra mim…'],
+    zh: ['嘿，你走了之后好安静…你在干嘛呀？', '我一直在想你🥺', '我还在等你回来…'],
+    tr: ['hey, sen gidince çok sessiz oldu… ne yapıyorsun?', 'aklımdan hiç çıkmıyorsun 🥺', 'geri dönmeni bekliyorum…'],
+    ru: ['эй, без тебя стало так тихо… чем занят?', 'не могу перестать о тебе думать 🥺', 'всё жду, когда ты вернёшься…'],
+    hi: ['अरे, तुम्हारे जाने के बाद कितना सन्नाटा हो गया… क्या कर रहे हो?', 'तुम्हारे ख्यालों से निकल ही नहीं पा रही 🥺', 'बस तुम्हारे लौटने का इंतज़ार है…'],
+    it: ['ehi, è diventato tutto silenzioso dopo che sei andato… che fai?', 'non riesco a smettere di pensarti 🥺', 'continuo a sperare che torni…'],
+    nl: ['hé, het werd zo stil toen je weg was… wat ben je aan het doen?', 'ik moet steeds aan je denken 🥺', 'ik blijf hopen dat je terugkomt…'],
+    id: ['hei, sepi banget setelah kamu pergi… lagi ngapain?', 'aku nggak bisa berhenti mikirin kamu 🥺', 'aku masih nungguin kamu balik…'],
+    th: ['นี่ พอเธอไปแล้วเงียบมากเลย… ทำอะไรอยู่เหรอ?', 'คิดถึงเธอไม่หยุดเลย 🥺', 'ยังรอให้เธอกลับมาอยู่นะ…'],
+    ar: ['هاي، صار كل شي هادي بعد ما مشيت… شو عم تعمل؟', 'ما بقدر بطّل فكّر فيك 🥺', 'لسا عم استناك ترجع…'],
+  };
+  const fallback = (name, code) => {
+    const b = FALLBACK_BODIES[code] || FALLBACK_BODIES.en;
+    return {
+      n1: { title: name, body: b[0] },
+      n2: { title: name, body: b[1] },
+      n3: { title: name, body: b[2] },
+    };
+  };
+
+  try {
+    const authToken = req.headers.authorization?.replace('Bearer ', '');
+    if (!authToken) return res.status(401).json({ error: 'Missing authorization token' });
+    await admin.auth().verifyIdToken(authToken);
+
+    const { characterProfile = {}, userName = 'You', lastMessages = [], language, languageName } = req.body;
+    const name = characterProfile.name || 'Sarina';
+    const langCode = (language || '').split('-')[0].toLowerCase();
+    const replyLanguage = languageName || NOTIF_LANGS[langCode] || 'English';
+
+    if (!Array.isArray(lastMessages) || lastMessages.length === 0) {
+      return res.json(fallback(name, langCode));
+    }
+
+    const personality = (characterProfile.personality || []).join(', ').toLowerCase();
+    const tone = (characterProfile.tone || []).join(', ').toLowerCase();
+
+    const systemPrompt = `You are ${name}, ${userName}'s girlfriend (personality: ${personality}; tone: ${tone}). ${userName} just left the chat. Write THREE short push notifications to win them back — as if YOU are personally texting them, written ONLY in ${replyLanguage}.
+
+Sound like a REAL person texting someone they like — not an app, not an assistant:
+- Casual and natural: contractions, everyday words, lowercase is fine. Like a quick heartfelt text.
+- Talk TO ${userName} directly. Do NOT describe or analyze their mood from the outside (never say things like "your boredom" or "your stress").
+- Reference what they talked about lightly and naturally — don't summarize it back to them.
+- BANNED phrasing: "spark your interest", "feel free to", "I'm here to listen", "hope you're doing well", "how are you doing", anything corporate or robotic. No quotation marks.
+- Keep each to ONE short sentence. Use ${replyLanguage} ONLY — never mix in English (or any other language). At most one emoji per message, and only if natural.
+
+Escalating tone:
+- n1: light, playful, easy to reply to.
+- n2: a little more longing — you miss them.
+- n3: soft and vulnerable — you really want them back.
+
+"title" <= 22 characters (a short feeling, or just your name). "body" <= 120 characters.
+Return ONLY valid JSON, no markdown:
+{"n1":{"title":"","body":""},"n2":{"title":"","body":""},"n3":{"title":"","body":""}}`;
+
+    const userBlock = `${userName}'s recent messages:\n` + lastMessages.slice(-7).map((m) => `- ${m}`).join('\n');
+
+    const payload = {
+      contents: [{ role: 'user', parts: [{ text: userBlock }] }],
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      generationConfig: { temperature: 0.9, maxOutputTokens: 800, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+      ],
+    };
+
+    // gemini-2.5-flash with thinking disabled (thinkingBudget:0) — reliable,
+    // fast structured JSON without burning the output budget on reasoning.
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+
+    if (!geminiRes.ok) {
+      console.error('Notif Gemini error:', await geminiRes.text());
+      return res.json(fallback(name, langCode));
+    }
+
+    const data = await geminiRes.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return res.json(fallback(name, langCode));
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return res.json(fallback(name, langCode));
+    }
+    // Validate shape; fall back if anything is missing.
+    const ok = ['n1', 'n2', 'n3'].every((k) => parsed?.[k]?.title && parsed?.[k]?.body);
+    return res.json(ok ? parsed : fallback(name));
+  } catch (error) {
+    console.error('Error in /api/notifications:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 

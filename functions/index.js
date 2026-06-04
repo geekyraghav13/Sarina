@@ -522,6 +522,113 @@ exports.reconcileCrashedCalls = onSchedule(
   }
 );
 
+// ==================== RE-ENGAGEMENT PUSH NOTIFICATIONS ====================
+
+/**
+ * Sends the pre-generated re-engagement notifications.
+ * Runs every 15 minutes. Finds users whose nextNotifyAt has passed and who have
+ * fewer than 3 notifications sent this cycle, sends the next one via FCM, then
+ * advances the schedule (n1 +3h → n2 +12h → n3 +24h from leftChatAt; then stops).
+ */
+const { getMessaging } = require('firebase-admin/messaging');
+
+const NOTIFY_OFFSETS_MS = [
+  3 * 60 * 60 * 1000, // n1 — +3h  (set by the client on leave)
+  12 * 60 * 60 * 1000, // n2 — +12h
+  24 * 60 * 60 * 1000, // n3 — +24h
+];
+
+// Random 0–50 min added so sends land at organic times, not exact intervals.
+const jitterMs = () => Math.floor(Math.random() * 50 * 60 * 1000);
+
+exports.sendReengagementNotifications = onSchedule(
+  {
+    schedule: 'every 15 minutes',
+    timeZone: 'UTC',
+    memory: '256MiB',
+    maxInstances: 1,
+  },
+  async () => {
+    const now = Timestamp.now();
+    console.log('🔔 Re-engagement check at', now.toDate().toISOString());
+
+    // nextNotifyAt is null when the cycle is paused/finished, so those are
+    // excluded by this range query. notifyCount<3 is filtered in code.
+    const snap = await db
+      .collection('users')
+      .where('nextNotifyAt', '<=', now)
+      .limit(500)
+      .get();
+
+    if (snap.empty) {
+      console.log('  nothing due');
+      return;
+    }
+
+    let sent = 0;
+    const messaging = getMessaging();
+
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      const count = d.notifyCount || 0;
+      const token = d.pushToken;
+      const pending = d.pendingNotifications || {};
+      const ref = doc.ref;
+
+      if (count >= 3 || !token) {
+        await ref.update({ nextNotifyAt: null }).catch(() => {});
+        continue;
+      }
+
+      const notif = pending[`n${count + 1}`];
+      if (!notif || !notif.body) {
+        await ref.update({ nextNotifyAt: null }).catch(() => {});
+        continue;
+      }
+
+      try {
+        await messaging.send({
+          token,
+          notification: { title: notif.title || 'Sarina', body: notif.body },
+          data: {
+            type: 'reengage',
+            characterId: String(d.lastCharacterId || ''),
+          },
+          android: { priority: 'high' },
+        });
+
+        const newCount = count + 1;
+        const leftMs = d.leftChatAt ? d.leftChatAt.toMillis() : now.toMillis();
+        const nextAt =
+          newCount < 3
+            ? Timestamp.fromMillis(leftMs + NOTIFY_OFFSETS_MS[newCount] + jitterMs())
+            : null;
+
+        await ref.update({ notifyCount: newCount, nextNotifyAt: nextAt });
+        sent++;
+      } catch (err) {
+        const code = err && err.errorInfo ? err.errorInfo.code : err.code;
+        console.warn(`  send failed for ${doc.id}: ${code}`);
+        // Token is dead — clear it and stop the cycle for this user.
+        if (
+          code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token' ||
+          code === 'messaging/invalid-argument'
+        ) {
+          await ref.update({ pushToken: FieldValue.delete(), nextNotifyAt: null }).catch(() => {});
+        } else {
+          // Transient — retry in the next run.
+          await ref
+            .update({ nextNotifyAt: Timestamp.fromMillis(now.toMillis() + 15 * 60 * 1000) })
+            .catch(() => {});
+        }
+      }
+    }
+
+    console.log(`✅ Re-engagement: sent ${sent} notification(s)`);
+  }
+);
+
 // ==================== FLAGGED ACCOUNTS REVIEW DASHBOARD ====================
 
 const { reviewDashboard } = require('./reviewDashboard');

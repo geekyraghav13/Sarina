@@ -5,6 +5,13 @@ apply plugin: "com.google.gms.google-services"
 
 def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 
+// Release signing secrets are kept out of version control (android/keystore.properties).
+def keystoreProps = new Properties()
+def keystorePropsFile = rootProject.file("keystore.properties")
+if (keystorePropsFile.exists()) {
+    keystoreProps.load(new FileInputStream(keystorePropsFile))
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -93,7 +100,7 @@ android {
         applicationId 'com.x8284.katrina'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 81
+        versionCode 88
         versionName "2.9.21"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
@@ -107,9 +114,9 @@ android {
         }
         release {
             storeFile file('katrina-release.jks')
-            storePassword 'a143b5cfe4ecd6dab8634e3534c7aa8b'
-            keyAlias 'bbabcdda9c8eb0477e426fe11be469b7'
-            keyPassword '494b078f33042e97e86675b3436ac1f2'
+            storePassword keystoreProps['RELEASE_STORE_PASSWORD'] ?: System.getenv('RELEASE_STORE_PASSWORD') ?: ''
+            keyAlias keystoreProps['RELEASE_KEY_ALIAS'] ?: System.getenv('RELEASE_KEY_ALIAS') ?: ''
+            keyPassword keystoreProps['RELEASE_KEY_PASSWORD'] ?: System.getenv('RELEASE_KEY_PASSWORD') ?: ''
         }
     }
     buildTypes {
