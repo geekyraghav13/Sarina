@@ -23,6 +23,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Modal,
+  Pressable,
+  Linking,
+  Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -33,14 +37,31 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
 import { useTranslation } from 'react-i18next';
-import { logScreenView } from '../../services/firebaseAnalytics';
+import {
+  logScreenView,
+  logChatStart,
+  logMessageSent,
+  logPaywallViewed,
+} from '../../services/firebaseAnalytics';
+import { useSoftReviewPrompt } from '../../hooks/useSoftReviewPrompt';
 import { useChatStrings, interpolate } from '../../data/onboardingStrings';
 import { Character, characterImageSource } from '../../data/characters';
 import { getStory } from '../../data/stories';
 import { generateReply, generateNotifications, ChatTurn } from '../../services/chatApi';
 import { pauseCycle, recordActivity, updateAppOpen, PendingNotifications } from '../../services/userEngagementService';
-import { loadConversation, saveConversation, StoredTurn } from '../../services/chatHistoryService';
+import { loadConversation, saveConversation, clearConversation, StoredTurn } from '../../services/chatHistoryService';
 import { usePaymentStore, FREE_MESSAGE_LIMIT } from '../../store/paymentStore';
+
+// After this many user messages in a session, surface the soft review prompt
+// (engagement peak). Cooldown-gated so it only ever shows to genuine fans.
+const REVIEW_AT_MESSAGE = 12;
+
+// After this many user messages, "she" calls the user — an incoming call that
+// lands non-premium users on the paywall (conversion hook). Fires once.
+const AUTO_CALL_AT_MESSAGE = 2;
+
+// Where "Report conversation" (3-dot menu) sends the report email.
+const REPORT_EMAIL = 'helpjalpat@gmail.com';
 import { auth } from '../../config/firebase';
 import { presentPaywall } from '../../services/paywall';
 
@@ -96,6 +117,31 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
   const [isTyping, setIsTyping] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [timestamp] = React.useState(() => formatTime(new Date()));
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [kbOpen, setKbOpen] = React.useState(false);
+
+  // Track the keyboard so we can collapse the bottom safe-area inset while it's
+  // open (otherwise KeyboardAvoidingView leaves a nav-bar-sized gap above it).
+  React.useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => setKbOpen(true));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKbOpen(false));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
+
+  // Peak moment #2: a user who's exchanged a dozen messages is genuinely
+  // engaged — ask for a review. Cooldown-gated so it never double-prompts with
+  // the character-select prompt. Fires once per session via the ref guard.
+  const { showIfEligible, promptElement } = useSoftReviewPrompt('chat_engaged');
+  // Returning to a chat that already has history is itself a fan signal — ask
+  // for a review when a previous conversation is opened (cooldown-gated).
+  const { showIfEligible: showReopenReview, promptElement: reopenPromptElement } =
+    useSoftReviewPrompt('previous_chat_opened');
+  const reviewAskedRef = React.useRef(false);
+  const chatStartLoggedRef = React.useRef(false);
+  const autoCallFiredRef = React.useRef(false);
 
   // Freemium (global 10-message limit via paymentStore).
   const isPremium = usePaymentStore((s) => s.isPremium);
@@ -117,6 +163,13 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
         if (uid) await rc.loginRevenueCatUser(uid);
         const premium = await rc.checkPremiumStatus();
         await setIsPremium(!!premium);
+        // Refill the per-plan call-credit bucket if a new billing period started
+        // (client-side renewal detection). No-op within the same period.
+        if (premium) {
+          try {
+            await rc.syncVoiceAllowance();
+          } catch {}
+        }
       } catch (e: any) {
         console.log('[Chat] RevenueCat init skipped:', e?.message);
       }
@@ -141,6 +194,11 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
         if (char) setCharacter(char);
       } catch {}
 
+      if (!chatStartLoggedRef.current) {
+        chatStartLoggedRef.current = true;
+        logChatStart(char?.name || 'Sarina');
+      }
+
       const story = getStory(char?.id, i18n.language, char?.name || 'Sarina');
       const storyMsgs: Message[] = story.map((text, i) => ({
         id: `story-${i}`,
@@ -160,6 +218,12 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
       }));
 
       setMessages([...storyMsgs, ...savedMsgs]);
+
+      // Opening a chat that already has saved history = a returning, engaged
+      // user → surface the soft review prompt (cooldown-gated).
+      if (saved.length > 0) {
+        showReopenReview();
+      }
     })();
   }, []);
 
@@ -223,6 +287,7 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
 
   // Present the RevenueCat paywall; on purchase/restore refresh premium & unlock.
   const openPaywall = async () => {
+    logPaywallViewed('chat_free_limit');
     const result = await presentPaywall();
     if (result === null) {
       Alert.alert(
@@ -232,6 +297,76 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
       return;
     }
     await setIsPremium(result);
+  };
+
+  // Tapping the call button starts the incoming-call → paywall/call flow.
+  const openCall = () => {
+    navigation.navigate('IncomingCall', { character: character ?? undefined });
+  };
+
+  // ── 3-dot menu actions ─────────────────────────────────────────────────────
+  // Delete: wipe the saved conversation (local + cloud) and reset the canvas to
+  // just the fresh opening story.
+  const handleDelete = () => {
+    setMenuOpen(false);
+    Alert.alert(
+      strings.deleteTitle,
+      interpolate(strings.deleteBody, { name }),
+      [
+        { text: strings.cancel, style: 'cancel' },
+        {
+          text: strings.deleteConfirm,
+          style: 'destructive',
+          onPress: async () => {
+            if (character?.id) {
+              try {
+                await clearConversation(character.id);
+              } catch {}
+            }
+            const story = getStory(character?.id, i18n.language, name);
+            setMessages(
+              story.map((text, i) => ({ id: `story-${i}`, sender: 'ai' as const, text, ts: 0 }))
+            );
+            pendingRef.current = null;
+            autoCallFiredRef.current = false;
+            reviewAskedRef.current = false;
+          },
+        },
+      ]
+    );
+  };
+
+  // Report: open the user's mail app pre-filled to support with a transcript of
+  // the real conversation (story bubbles excluded) for context.
+  const handleReport = async () => {
+    setMenuOpen(false);
+    const transcript = messages
+      .filter((m) => !m.id.startsWith('story-'))
+      .slice(-30)
+      .map((m) => `${m.sender === 'user' ? userName : name}: ${m.text}`)
+      .join('\n');
+    const uid = auth.currentUser?.uid || 'unknown';
+    const subject = `Report a conversation — ${name}`;
+    const body =
+      `Please describe the issue:\n\n\n` +
+      `------------------------------\n` +
+      `Reported character: ${name}\n` +
+      `User: ${userName}\n` +
+      `User ID: ${uid}\n` +
+      `App: Sarina\n\n` +
+      `Recent conversation:\n${transcript || '(no messages yet)'}`;
+    const url = `mailto:${REPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(strings.menuReport, `${REPORT_EMAIL}`);
+    }
+  };
+
+  // Upgrade: present the main subscription paywall.
+  const handleUpgrade = () => {
+    setMenuOpen(false);
+    openPaywall();
   };
 
   const send = async (text: string) => {
@@ -247,6 +382,16 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
     const userMsg: Message = { id: `u-${Date.now()}`, sender: 'user', text: trimmed, ts: Date.now() };
     // Each user message consumes one free message (no-op for premium users).
     incrementFreeMessages();
+
+    // Analytics + review trigger. Count this user's messages so far (the prior
+    // turns plus this one) to drive both the message_sent number and the
+    // engagement-peak review prompt.
+    const userMsgNumber = messages.filter((m) => m.sender === 'user').length + 1;
+    logMessageSent(name, trimmed.length);
+    if (userMsgNumber >= REVIEW_AT_MESSAGE && !reviewAskedRef.current) {
+      reviewAskedRef.current = true;
+      showIfEligible();
+    }
     // Snapshot history (story + prior turns) to send as context.
     const history: ChatTurn[] = messages.map((m) => ({ sender: m.sender, text: m.text }));
     history.push({ sender: 'user', text: trimmed });
@@ -266,6 +411,23 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
       persist(finalMsgs);
       // Arm/refresh the re-engagement cycle now (foreground = reliable).
       armReengagement(finalMsgs.filter((m) => m.sender === 'user').map((m) => m.text));
+
+      // Conversion hook: after the user's Nth message, "she" calls — landing
+      // non-premium users on the paywall. Premium users already have access, so
+      // we skip them. Fires once, after her reply so it feels natural.
+      if (
+        !isPremium &&
+        userMsgNumber >= AUTO_CALL_AT_MESSAGE &&
+        !autoCallFiredRef.current
+      ) {
+        autoCallFiredRef.current = true;
+        setTimeout(() => {
+          navigation.navigate('IncomingCall', {
+            character: character ?? undefined,
+            auto: true,
+          });
+        }, 1200);
+      }
     } finally {
       setIsTyping(false);
       setSending(false);
@@ -276,7 +438,11 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
     <View style={styles.container}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        // SDK 54 forces Android edge-to-edge, where windowSoftInputMode=adjustResize
+        // is a no-op — so the keyboard would draw over the composer. Avoiding on
+        // BOTH platforms lifts the input + send button above the keyboard so the
+        // user can type and send without dismissing it (WhatsApp-style).
+        behavior="padding"
         keyboardVerticalOffset={0}
       >
         {/* Message canvas */}
@@ -348,7 +514,7 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
               </TouchableOpacity>
 
               {/* Locked composer */}
-              <View style={[styles.inputRow, { paddingBottom: insets.bottom + 12 }]}>
+              <View style={[styles.inputRow, { paddingBottom: kbOpen ? 12 : insets.bottom + 12 }]}>
                 <TouchableOpacity
                   activeOpacity={0.85}
                   onPress={openPaywall}
@@ -380,7 +546,7 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
                 ))}
               </ScrollView>
 
-              <View style={[styles.inputRow, { paddingBottom: insets.bottom + 12 }]}>
+              <View style={[styles.inputRow, { paddingBottom: kbOpen ? 12 : insets.bottom + 12 }]}>
                 <TouchableOpacity style={styles.plusBtn} activeOpacity={0.8}>
                   <Ionicons name="add" size={22} color="#a0a0a5" />
                 </TouchableOpacity>
@@ -442,12 +608,49 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
           <TouchableOpacity
             style={[styles.iconBtn, styles.callBtn]}
             activeOpacity={0.8}
-            onPress={openPaywall}
+            onPress={openCall}
           >
             <Ionicons name="call" size={18} color="#ffb2b9" />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            activeOpacity={0.8}
+            onPress={() => setMenuOpen(true)}
+          >
+            <Ionicons name="ellipsis-vertical" size={20} color="#ffb2b9" />
+          </TouchableOpacity>
         </View>
       </BlurView>
+
+      {/* 3-dot menu */}
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <Pressable style={styles.menuBackdrop} onPress={() => setMenuOpen(false)}>
+          <View style={[styles.menuCard, { top: insets.top + 52 }]}>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={handleUpgrade}>
+              <Ionicons name="star" size={18} color="#f5c451" />
+              <Text style={styles.menuText}>{strings.menuUpgrade}</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={handleReport}>
+              <Ionicons name="flag-outline" size={18} color="#e5e1e4" />
+              <Text style={styles.menuText}>{strings.menuReport}</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={handleDelete}>
+              <Ionicons name="trash-outline" size={18} color="#ff5070" />
+              <Text style={[styles.menuText, { color: '#ff5070' }]}>{strings.menuDelete}</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {promptElement}
+      {reopenPromptElement}
     </View>
   );
 };
@@ -483,7 +686,43 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 4,
+  },
+  // 3-dot menu
+  menuBackdrop: {
+    flex: 1,
+  },
+  menuCard: {
+    position: 'absolute',
+    right: 12,
+    minWidth: 210,
+    backgroundColor: '#1a1a22',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#353437',
+    paddingVertical: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 16,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  menuText: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 15,
+    color: '#e5e1e4',
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#2a2a2c',
+    marginHorizontal: 8,
   },
   limitChip: {
     flexDirection: 'row',

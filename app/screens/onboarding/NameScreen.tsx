@@ -26,7 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
-import { logScreenView } from '../../services/firebaseAnalytics';
+import { logScreenView, logNameEntered } from '../../services/firebaseAnalytics';
 import { useNameStrings, interpolate } from '../../data/onboardingStrings';
 import { SvgXml } from 'react-native-svg';
 import { iconArrow } from './disclaimerIcons';
@@ -55,6 +55,16 @@ export const NameScreen: React.FC<Props> = ({ navigation }) => {
         }
       })
       .catch(() => {});
+
+    // Ask for push-notification permission here, before the user picks a name.
+    // The OS prompt surfaces early in onboarding; the FCM token is persisted later
+    // (OnboardingNavigator/ChatScreen once signed in). Native module → lazy-require
+    // + guard so the screen stays Expo-Go-safe. Idempotent: only prompts if needed.
+    (async () => {
+      try {
+        await require('../../services/notificationService').registerForPushNotifications();
+      } catch {}
+    })();
   }, []);
 
   const trimmed = name.trim();
@@ -68,6 +78,7 @@ export const NameScreen: React.FC<Props> = ({ navigation }) => {
       console.warn('Failed to persist name:', e);
     }
     console.log('[Onboarding] Name entered:', trimmed);
+    logNameEntered(!!trimmed);
     navigation.navigate('Auth');
   };
 
