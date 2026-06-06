@@ -24,10 +24,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
-import { logScreenView } from '../../services/firebaseAnalytics';
+import { logScreenView, logCharacterSelected } from '../../services/firebaseAnalytics';
 import { fetchCharacters } from '../../services/characterService';
 import { Character, characterImageSource } from '../../data/characters';
 import { useOnboardingStrings } from '../../data/onboardingStrings';
+import { useSoftReviewPrompt } from '../../hooks/useSoftReviewPrompt';
 
 const { width } = Dimensions.get('window');
 const H_PADDING = 20;
@@ -83,6 +84,9 @@ export const CharacterSelectScreen: React.FC<Props> = ({ navigation }) => {
   const strings = useOnboardingStrings();
   const [characters, setCharacters] = React.useState<Character[] | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  // Peak moment: the user just picked "their" girlfriend — a high-delight beat.
+  // Gated by the 60-day cooldown in reviewPromptService so it never nags.
+  const { showIfEligible, promptElement } = useSoftReviewPrompt('character_selected');
 
   React.useEffect(() => {
     logScreenView('Onboarding_CharacterSelect');
@@ -104,7 +108,10 @@ export const CharacterSelectScreen: React.FC<Props> = ({ navigation }) => {
       console.warn('Failed to persist selected character:', e);
     }
     console.log('[Onboarding] Character selected:', chosen.name);
-    navigation.navigate('Interests');
+    logCharacterSelected(chosen.id, chosen.name);
+    // Show the soft review prompt if eligible, then continue. If the cooldown
+    // hasn't elapsed, this navigates immediately (onComplete fires right away).
+    showIfEligible(() => navigation.navigate('Interests'));
   };
 
   return (
@@ -163,6 +170,8 @@ export const CharacterSelectScreen: React.FC<Props> = ({ navigation }) => {
           </LinearGradient>
         </TouchableOpacity>
       </BlurView>
+
+      {promptElement}
     </View>
   );
 };

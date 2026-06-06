@@ -33,7 +33,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
-import { logScreenView } from '../../services/firebaseAnalytics';
+import {
+  logScreenView,
+  logAuthCompleted,
+  logOnboardingComplete,
+} from '../../services/firebaseAnalytics';
 import { useAuthStrings } from '../../data/onboardingStrings';
 import { Character, characterImageSource } from '../../data/characters';
 
@@ -93,6 +97,8 @@ export const AuthScreen: React.FC<Props> = ({ navigation }) => {
       auth.initializeGoogleSignIn();
       const user = await auth.signInWithGoogle();
       console.log('✅ Signed in with Google:', user.uid);
+      logAuthCompleted('google');
+      logOnboardingComplete();
       proceed();
     } catch (error: any) {
       const msg: string = error?.message || 'Sign-in failed. Please try again.';
@@ -117,6 +123,8 @@ export const AuthScreen: React.FC<Props> = ({ navigation }) => {
       const { signInAsGuest } = require('../../services/guestAuth');
       const user = await signInAsGuest();
       console.log('✅ Signed in as guest:', user.uid);
+      logAuthCompleted('guest');
+      logOnboardingComplete();
       proceed();
     } catch (error: any) {
       Alert.alert('Could not continue', error?.message || 'Please try again.');

@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
-import { logScreenView } from '../../services/firebaseAnalytics';
+import { logScreenView, logLanguageSelected } from '../../services/firebaseAnalytics';
 import { iconArrow } from './disclaimerIcons';
 
 const bgImage = require('../../../assets/onboarding/language-bg.jpg');
@@ -79,6 +79,7 @@ export const LanguageScreen: React.FC<Props> = ({ navigation }) => {
       console.warn('Failed to persist language:', e);
     }
     console.log('[Onboarding] Language selected:', selected);
+    logLanguageSelected(selected);
     navigation.navigate('CharacterSelect');
   };
 

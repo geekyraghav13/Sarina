@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
-import { logScreenView } from '../../services/firebaseAnalytics';
+import { logScreenView, logInterestsSelected } from '../../services/firebaseAnalytics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   useOnboardingStrings,
@@ -75,6 +75,7 @@ export const InterestsScreen: React.FC<Props> = ({ navigation }) => {
       console.warn('Failed to persist interests:', e);
     }
     console.log('[Onboarding] Interests selected:', chosen);
+    logInterestsSelected(chosen);
     navigation.navigate('Topics');
   };
 

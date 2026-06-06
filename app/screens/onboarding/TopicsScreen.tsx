@@ -24,7 +24,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
-import { logScreenView } from '../../services/firebaseAnalytics';
+import { logScreenView, logTopicsSelected } from '../../services/firebaseAnalytics';
 import {
   useTopicsStrings,
   useTopicLabel,
@@ -96,6 +96,7 @@ export const TopicsScreen: React.FC<Props> = ({ navigation }) => {
       console.warn('Failed to persist topics:', e);
     }
     console.log('[Onboarding] Topics selected:', [...selected]);
+    logTopicsSelected([...selected]);
     navigation.navigate('Name');
   };
 

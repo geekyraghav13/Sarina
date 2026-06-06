@@ -17,4 +17,6 @@ export type OnboardingStackParamList = {
   Discover: undefined;
   Settings: undefined;
   Chat: { character?: Character } | undefined;
+  IncomingCall: { character?: Character; auto?: boolean } | undefined;
+  VoiceCall: { character?: Character } | undefined;
 };

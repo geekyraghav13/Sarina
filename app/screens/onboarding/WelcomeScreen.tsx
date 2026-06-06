@@ -18,7 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
-import { logScreenView } from '../../services/firebaseAnalytics';
+import { logScreenView, logOnboardingStart } from '../../services/firebaseAnalytics';
 
 // ── Collage images (bundled from Figma design) ───────────────────────────────
 const imgIsabella = require('../../../assets/onboarding/isabella.jpg');
@@ -59,6 +59,7 @@ export const WelcomeScreen: React.FC<Props> = ({ navigation }) => {
 
   React.useEffect(() => {
     logScreenView('Onboarding_Welcome');
+    logOnboardingStart();
   }, []);
 
   const handleStart = () => {

@@ -38,7 +38,7 @@ import { updateAppOpen } from '../../services/userEngagementService';
 import { auth } from '../../config/firebase';
 import { BottomNav } from './BottomNav';
 
-const APP_VERSION = 'v2.9.21';
+const APP_VERSION = 'v2.9.25';
 const PRIVACY_URL = 'https://sarina-ai-companion.lovable.app/privacy';
 const TERMS_URL = 'https://sarina-ai-companion.lovable.app/terms';
 const SUPPORT_EMAIL = 'helpjalpat@gmail.com';
