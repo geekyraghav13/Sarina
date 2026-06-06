@@ -9,6 +9,8 @@ import { getCurrentUser } from './authService';
 import { doc, updateDoc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '../config/firebase';
 import { logPurchase } from './firebaseAnalytics';
+import { ensureAllowanceForPeriod, addTopupCredits } from './voiceCreditsService';
+import ENV from '../config/env';
 
 // RevenueCat API Keys
 const REVENUECAT_API_KEYS = {
@@ -627,6 +629,80 @@ export const getSubscriptionInfo = async (): Promise<{
   } catch (error) {
     console.error('❌ Error getting subscription info:', error);
     return { tier: 'free', expirationDate: null, isPremium: false };
+  }
+};
+
+/**
+ * Voice-calling allowance sync (new flow).
+ *
+ * Reads the active plan + current period expiration from RevenueCat and asks
+ * voiceCreditsService to (re)allocate the per-plan minute bucket if a new billing
+ * period has started. Safe to call on app open and after a purchase — it only
+ * resets the balance when the period actually changes, so a depleted user waits
+ * for renewal. No-op for non-premium users.
+ *
+ * Allowance: weekly = 60s, yearly = 3000s (set in voiceCreditsService.PLAN_SECONDS).
+ */
+export const syncVoiceAllowance = async (): Promise<void> => {
+  try {
+    const customerInfo = await getCustomerInfo();
+    if (!customerInfo) return;
+
+    const activeEntitlements = Object.values(customerInfo.entitlements.active);
+    let tier = 'free';
+    let periodEnd: string | null = null;
+
+    const tierFromProductId = (pid: string): string => {
+      if (pid.includes('weekly')) return 'weekly';
+      if (pid.includes('yearly') || pid.includes('annual')) return 'yearly';
+      return 'free';
+    };
+
+    if (activeEntitlements.length > 0) {
+      const ent = activeEntitlements[0];
+      tier = tierFromProductId(ent.productIdentifier || '');
+      periodEnd = ent.expirationDate || null;
+    } else if (customerInfo.activeSubscriptions && customerInfo.activeSubscriptions.length > 0) {
+      tier = tierFromProductId(customerInfo.activeSubscriptions[0]);
+    }
+
+    if (tier === 'free') return;
+    await ensureAllowanceForPeriod(tier, periodEnd);
+  } catch (error) {
+    console.warn('⚠️ syncVoiceAllowance failed:', error);
+  }
+};
+
+/**
+ * Grant the voice-credit top-up after a successful consumable purchase (new flow).
+ *
+ * Reads the latest non-subscription (consumable) transaction from RevenueCat and
+ * grants ENV.VOICE_TOPUP_SECONDS into the separate top-up bucket via
+ * voiceCreditsService.addTopupCredits (which dedups by transaction id, so this is
+ * safe to call after every top-up purchase). Returns true if credits were granted.
+ *
+ * NOTE: this writes the new `voice_topup_seconds` field — NOT the legacy
+ * `voice_balance_seconds` path of syncConsumablePurchaseToFirestore.
+ */
+export const syncTopupPurchase = async (): Promise<boolean> => {
+  try {
+    const customerInfo = await getCustomerInfo();
+    if (!customerInfo) return false;
+
+    const txns = customerInfo.nonSubscriptionTransactions || [];
+    if (txns.length === 0) {
+      console.warn('⚠️ syncTopupPurchase: no consumable transactions found');
+      return false;
+    }
+
+    const latest = txns[txns.length - 1];
+    const txnId = latest.transactionIdentifier;
+    if (!txnId) return false;
+
+    return await addTopupCredits(ENV.VOICE_TOPUP_SECONDS, txnId);
+  } catch (error) {
+    console.warn('⚠️ syncTopupPurchase failed:', error);
+    return false;
   }
 };
 
