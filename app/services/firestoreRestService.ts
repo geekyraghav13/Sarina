@@ -394,13 +394,13 @@ export async function recordCallStart(
   console.error(`❌ CRITICAL: Failed to record call start after ${MAX_RETRIES} attempts:`, lastError);
 
   // Log to Firebase Analytics for monitoring
-  const { logCallStartRecordFailed } = await import('./analyticsService');
-  logCallStartRecordFailed(
+  const { logEvent } = await import('./firebaseAnalytics');
+  logEvent('call_start_record_failed', {
     uid,
-    callId,
-    lastError?.message || 'Unknown error',
-    MAX_RETRIES
-  );
+    call_id: callId,
+    error: lastError?.message || 'Unknown error',
+    retries: MAX_RETRIES,
+  });
 
   return false; // Failure
 }

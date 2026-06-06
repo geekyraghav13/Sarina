@@ -102,6 +102,23 @@ export const setUserProperties = async (properties: Record<string, string>): Pro
   }
 };
 
+/**
+ * Generic event logger for ad-hoc events that don't have a dedicated helper
+ * (e.g. review-prompt events). Guarded + Expo-Go-safe like the rest of this file.
+ */
+export const logEvent = async (
+  name: string,
+  params?: Record<string, any>
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+  try {
+    await analytics().logEvent(name, params);
+    console.log(`📊 Event: ${name}`, params || '');
+  } catch (error) {
+    console.error(`❌ Failed to log event ${name}:`, error);
+  }
+};
+
 // ============================================================================
 // CORE EVENTS
 // ============================================================================
@@ -469,6 +486,147 @@ export const logInterestsSelected = async (interests: string[]): Promise<void> =
   }
 };
 
+// ============================================================================
+// NEW ONBOARDING FLOW EVENTS (Figma flow: Welcome → … → Auth → Chat)
+// These map 1:1 to the screens in app/screens/onboarding/*.
+// ============================================================================
+
+/**
+ * Log character selection (new flow — CharacterSelectScreen).
+ */
+export const logCharacterSelected = async (
+  characterId: string,
+  characterName: string,
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('character_selected', {
+      character_id: characterId,
+      character_name: characterName,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Character selected:', characterName);
+  } catch (error) {
+    console.error('❌ Failed to log character_selected:', error);
+  }
+};
+
+/**
+ * Log topic selection (new flow — TopicsScreen).
+ */
+export const logTopicsSelected = async (topics: string[]): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('topics_selected', {
+      selected_topics: topics.join(','),
+      topic_count: topics.length,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Topics selected:', topics);
+  } catch (error) {
+    console.error('❌ Failed to log topics_selected:', error);
+  }
+};
+
+/**
+ * Log name entry (new flow — NameScreen).
+ */
+export const logNameEntered = async (hasCustomName: boolean): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('name_entered', {
+      has_custom_name: hasCustomName,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Name entered:', hasCustomName ? 'custom' : 'skipped');
+  } catch (error) {
+    console.error('❌ Failed to log name_entered:', error);
+  }
+};
+
+/**
+ * Log auth completion (new flow — AuthScreen).
+ */
+export const logAuthCompleted = async (
+  method: 'google' | 'guest',
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('auth_completed', {
+      method,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Auth completed:', method);
+  } catch (error) {
+    console.error('❌ Failed to log auth_completed:', error);
+  }
+};
+
+/**
+ * Log incoming-call screen shown (new flow — IncomingCallScreen).
+ */
+export const logIncomingCallShown = async (
+  characterName: string,
+  source: 'manual' | 'auto_after_messages' = 'manual',
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('incoming_call_shown', {
+      character_name: characterName,
+      source,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Incoming call shown:', characterName, source);
+  } catch (error) {
+    console.error('❌ Failed to log incoming_call_shown:', error);
+  }
+};
+
+/**
+ * Log incoming-call answered.
+ */
+export const logIncomingCallAnswered = async (
+  characterName: string,
+  isPremium: boolean,
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('incoming_call_answered', {
+      character_name: characterName,
+      is_premium: isPremium,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Incoming call answered:', characterName);
+  } catch (error) {
+    console.error('❌ Failed to log incoming_call_answered:', error);
+  }
+};
+
+/**
+ * Log incoming-call declined.
+ */
+export const logIncomingCallDeclined = async (
+  characterName: string,
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('incoming_call_declined', {
+      character_name: characterName,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Incoming call declined:', characterName);
+  } catch (error) {
+    console.error('❌ Failed to log incoming_call_declined:', error);
+  }
+};
+
 /**
  * Log appearance style selection
  */
@@ -676,6 +834,40 @@ export const logPaywallViewed = async (source: string): Promise<void> => {
 };
 
 /**
+ * Log the voice-credit top-up paywall being shown (placement-based soft paywall).
+ */
+export const logTopupPaywallViewed = async (): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('topup_paywall_viewed', {
+      source: 'voice_call',
+      timestamp: Date.now(),
+    });
+    console.log('📊 Top-up paywall viewed');
+  } catch (error) {
+    console.error('❌ Failed to log top-up paywall viewed:', error);
+  }
+};
+
+/**
+ * Log a successful voice-credit top-up purchase.
+ */
+export const logTopupPurchased = async (seconds: number): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+
+  try {
+    await analytics().logEvent('topup_purchased', {
+      seconds,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Top-up purchased:', seconds, 'seconds');
+  } catch (error) {
+    console.error('❌ Failed to log top-up purchased:', error);
+  }
+};
+
+/**
  * Log paywall dismissed
  */
 export const logPaywallDismissed = async (source: string): Promise<void> => {
@@ -759,6 +951,13 @@ export default {
   logOnboardingStart,
   logOnboardingStep,
   logLanguageSelected,
+  logCharacterSelected,
+  logTopicsSelected,
+  logNameEntered,
+  logAuthCompleted,
+  logIncomingCallShown,
+  logIncomingCallAnswered,
+  logIncomingCallDeclined,
   logPersonalitySelected,
   logInterestsSelected,
   logAppearanceSelected,

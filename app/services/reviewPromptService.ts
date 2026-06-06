@@ -1,7 +1,7 @@
 import * as StoreReview from 'expo-store-review';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Linking, Platform } from 'react-native';
-import { logAnalyticsEvent } from './analyticsService';
+import { logEvent } from './firebaseAnalytics';
 
 const SOFT_PROMPT_LAST_SHOWN_KEY = '@review_prompt_last_shown';
 const SOFT_PROMPT_COUNT_KEY = '@review_prompt_count';
@@ -59,7 +59,7 @@ export const recordSoftPromptShown = async (trigger: string): Promise<void> => {
       (Number.isFinite(prevCount) ? prevCount + 1 : 1).toString(),
     );
     try {
-      logAnalyticsEvent('review_soft_prompt_shown', { trigger });
+      logEvent('review_soft_prompt_shown', { trigger });
     } catch {
       // analytics failures must not affect the user flow
     }
@@ -85,7 +85,7 @@ export const openNativeReviewWidget = async (
     await StoreReview.requestReview();
 
     try {
-      logAnalyticsEvent('review_native_widget_requested', { trigger });
+      logEvent('review_native_widget_requested', { trigger });
     } catch {
       // analytics failures must not affect the user flow
     }
@@ -119,7 +119,7 @@ export const openFeedbackEmail = async (
       console.warn('Cannot open mailto URL:', url);
     }
     try {
-      logAnalyticsEvent('review_feedback_email_opened', { trigger, sentiment });
+      logEvent('review_feedback_email_opened', { trigger, sentiment });
     } catch {
       // analytics failures must not affect the user flow
     }

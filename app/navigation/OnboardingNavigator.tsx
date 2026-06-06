@@ -21,6 +21,8 @@ import { TopicsScreen } from '../screens/onboarding/TopicsScreen';
 import { NameScreen } from '../screens/onboarding/NameScreen';
 import { AuthScreen } from '../screens/onboarding/AuthScreen';
 import { ChatScreen } from '../screens/onboarding/ChatScreen';
+import { IncomingCallScreen } from '../screens/onboarding/IncomingCallScreen';
+import { VoiceCallScreen } from '../screens/onboarding/VoiceCallScreen';
 import { HomeScreen } from '../screens/onboarding/HomeScreen';
 import { DiscoverScreen } from '../screens/onboarding/DiscoverScreen';
 import { SettingsScreen } from '../screens/onboarding/SettingsScreen';
@@ -36,15 +38,31 @@ export const OnboardingNavigator: React.FC = () => {
     React.useState<keyof OnboardingStackParamList | null>(null);
 
   React.useEffect(() => {
+    let cancelled = false;
     const start = Date.now();
-    const unsub = onAuthStateChanged(auth, (user) => {
-      const route: keyof OnboardingStackParamList = user ? 'Discover' : 'Welcome';
+    (async () => {
+      // Wait until Firebase has finished restoring the persisted session from
+      // AsyncStorage. Using authStateReady() (rather than unsubscribing on the
+      // first onAuthStateChanged emission) avoids the race where the listener
+      // fires a premature `null` before rehydration completes — which would
+      // bounce a returning user back to Welcome instead of landing on Discover.
+      try {
+        await auth.authStateReady();
+      } catch {
+        // Older SDK / unexpected failure — fall back to current state below.
+      }
+      const route: keyof OnboardingStackParamList = auth.currentUser
+        ? 'Discover'
+        : 'Welcome';
       // Keep the splash up for a minimum moment so it doesn't flash.
       const wait = Math.max(0, 1400 - (Date.now() - start));
-      setTimeout(() => setInitialRoute(route), wait);
-      unsub();
-    });
-    return unsub;
+      setTimeout(() => {
+        if (!cancelled) setInitialRoute(route);
+      }, wait);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Re-engagement: once signed in (now or later), register the push token and
@@ -54,6 +72,11 @@ export const OnboardingNavigator: React.FC = () => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user || engagedUid.current === user.uid) return;
       engagedUid.current = user.uid;
+      // Tie analytics + crashlytics to this user (guarded / Expo-Go-safe).
+      try {
+        require('../services/firebaseAnalytics').setUserId(user.uid);
+        require('../services/crashlytics').setCrashlyticsUserId(user.uid);
+      } catch {}
       let token: string | null = null;
       try {
         token = await require('../services/notificationService').registerForPushNotifications();
@@ -91,6 +114,16 @@ export const OnboardingNavigator: React.FC = () => {
         <Stack.Screen name="Discover" component={DiscoverScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Chat" component={ChatScreen} />
+        <Stack.Screen
+          name="IncomingCall"
+          component={IncomingCallScreen}
+          options={{ cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS }}
+        />
+        <Stack.Screen
+          name="VoiceCall"
+          component={VoiceCallScreen}
+          options={{ cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
