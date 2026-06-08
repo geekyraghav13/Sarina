@@ -157,6 +157,10 @@ app.post('/api/validate-purchase', async (req, res) => {
  * Firestore so it can be reviewed in the Firebase Console. Fire-and-forget:
  * never awaited and never throws, so logging can't slow down or break a reply.
  */
+// Messages auto-delete 30 days after they're written, via a Firestore TTL
+// policy on the `expireAt` field (see backend deploy/setup notes).
+const CHAT_LOG_RETENTION_DAYS = 30;
+
 function logChatMessage(userId, characterProfile = {}, userMessage, aiReply, language, wasBlocked) {
   admin
     .firestore()
@@ -170,6 +174,9 @@ function logChatMessage(userId, characterProfile = {}, userMessage, aiReply, lan
       language: language || null,
       wasBlocked: !!wasBlocked,
       timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      expireAt: admin.firestore.Timestamp.fromMillis(
+        Date.now() + CHAT_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000
+      ),
     })
     .catch((error) => console.error('Error logging chat message:', error));
 }
