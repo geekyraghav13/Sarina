@@ -38,6 +38,8 @@ export const presentPaywall = async (): Promise<boolean | null> => {
         return true;
       }
     }
+    // Paywall shown but the user left without buying — abandonment signal.
+    try { require('./firebaseAnalytics').logPaywallDismissed('subscription'); } catch {}
     return false;
   } catch (e: any) {
     console.warn('[paywall] unavailable:', e?.message);
@@ -85,6 +87,7 @@ export const purchaseVoiceTopup = async (): Promise<boolean | null> => {
       }
       return true;
     }
+    try { require('./firebaseAnalytics').logPaywallDismissed('topup'); } catch {}
     return false;
   } catch (e: any) {
     console.warn('[paywall] top-up unavailable:', e?.message);

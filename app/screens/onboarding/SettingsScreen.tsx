@@ -26,7 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { OnboardingStackParamList } from '../../navigation/onboardingTypes';
-import { logScreenView } from '../../services/firebaseAnalytics';
+import { logScreenView, logAccountSignedOut } from '../../services/firebaseAnalytics';
 import {
   useSettingsStrings,
   useDeleteAccountStrings,
@@ -110,6 +110,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const doLogout = async () => {
+    try { logAccountSignedOut(); } catch {}
     try { await firebaseSignOut(auth); } catch {}
     try {
       const { GoogleSignin } = require('@react-native-google-signin/google-signin');

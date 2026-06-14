@@ -11,6 +11,26 @@
 
 import rawAppCharacters from '../../firebase-characters.json';
 
+/**
+ * Category filter taxonomy (drives the top scrollable bar on the character
+ * grids). A character can belong to several (e.g. ["Latina","Realistic"]).
+ * "All" is a virtual tab handled in the UI — it is never stored on a character.
+ */
+export const CHARACTER_CATEGORIES = [
+  'Realistic',
+  'Anime',
+  'Latina',
+  'Asian',
+  'Ebony',
+  'Fantasy',
+  'Cosplay',
+] as const;
+
+export type CharacterCategory = (typeof CHARACTER_CATEGORIES)[number];
+
+/** The virtual "show everything" tab shown first in the filter bar. */
+export const ALL_CATEGORY = 'All';
+
 export interface Character {
   id: string;
   name: string;
@@ -20,6 +40,10 @@ export interface Character {
   personality: string[];
   interests: string[];
   tone: string[];
+  /** Filter categories for the top bar (e.g. ["Latina","Realistic"]). */
+  categories: string[];
+  /** Bespoke opening-story bubbles (overrides the generic story when present). */
+  story?: string[];
   /** Remote (Firebase Storage) image URL — present once seeded to the backend. */
   imageUrl?: string;
   /** Bundled fallback image (Figma 6 only) used when there's no remote URL. */
@@ -27,6 +51,23 @@ export interface Character {
   /** Sort order; lower shows first. Figma heroes occupy 0..5. */
   order: number;
 }
+
+/**
+ * Map a legacy `appearance` value to filter categories, so the existing roster
+ * shows up under the new bar even before the generated characters land.
+ */
+export const categoriesFromAppearance = (appearance?: string): string[] => {
+  switch ((appearance || '').toLowerCase()) {
+    case 'realistic':
+      return ['Realistic'];
+    case 'anime':
+      return ['Anime'];
+    case 'fantasy':
+      return ['Fantasy'];
+    default:
+      return ['Realistic'];
+  }
+};
 
 // Bundled images for the 6 Figma hero characters (offline fallback).
 const figmaImages: Record<string, number> = {
@@ -51,6 +92,7 @@ export const FIGMA_CHARACTERS: Character[] = [
     personality: ['Confident', 'Ambitious'],
     interests: ['Business', 'Fine Wine'],
     tone: ['Commanding', 'Sophisticated'],
+    categories: ['Realistic'],
     localImage: figmaImages.victoria,
     order: 0,
   },
@@ -62,6 +104,7 @@ export const FIGMA_CHARACTERS: Character[] = [
     personality: ['Bold', 'Free-spirited'],
     interests: ['Music', 'Motorcycles'],
     tone: ['Edgy', 'Playful'],
+    categories: ['Realistic'],
     localImage: figmaImages.jax,
     order: 1,
   },
@@ -73,6 +116,7 @@ export const FIGMA_CHARACTERS: Character[] = [
     personality: ['Daring', 'Passionate'],
     interests: ['Travel', 'Dancing'],
     tone: ['Fiery', 'Direct'],
+    categories: ['Latina', 'Realistic'],
     localImage: figmaImages.elena,
     order: 2,
   },
@@ -84,6 +128,7 @@ export const FIGMA_CHARACTERS: Character[] = [
     personality: ['Flirty', 'Alluring'],
     interests: ['Poetry', 'Wine Tasting'],
     tone: ['Sultry', 'Teasing'],
+    categories: ['Realistic'],
     localImage: figmaImages.maya,
     order: 3,
   },
@@ -95,6 +140,7 @@ export const FIGMA_CHARACTERS: Character[] = [
     personality: ['Enigmatic', 'Deep'],
     interests: ['Astrology', 'Art'],
     tone: ['Mysterious', 'Soft'],
+    categories: ['Fantasy', 'Realistic'],
     localImage: figmaImages.luna,
     order: 4,
   },
@@ -106,6 +152,7 @@ export const FIGMA_CHARACTERS: Character[] = [
     personality: ['Strong', 'Independent'],
     interests: ['Fitness', 'Adventure'],
     tone: ['Bold', 'Warm'],
+    categories: ['Realistic'],
     localImage: figmaImages.sophia,
     order: 5,
   },
@@ -124,6 +171,7 @@ const legacyCharacters: Character[] = (rawAppCharacters as any[])
     personality: c.personality ?? [],
     interests: c.interests ?? [],
     tone: c.tone ?? [],
+    categories: c.categories ?? categoriesFromAppearance(c.appearance),
     imageUrl: c.imageUrl,
     order: FIGMA_CHARACTERS.length + i,
   }));
