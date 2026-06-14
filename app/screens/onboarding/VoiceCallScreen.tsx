@@ -39,6 +39,7 @@ import {
   logVoiceCallStart,
   logVoiceCallEnd,
   logTopupPaywallViewed,
+  logCreditsDepleted,
 } from '../../services/firebaseAnalytics';
 import { useCallStrings, interpolate } from '../../data/onboardingStrings';
 import { Character, characterImageSource } from '../../data/characters';
@@ -151,6 +152,7 @@ export const VoiceCallScreen: React.FC<Props> = ({ navigation, route }) => {
     hangUpVapi();
     await flush();
     logVoiceCallEnd(name, elapsedRef.current);
+    logCreditsDepleted('voice_call');
     promptOutOfCredits();
   };
 

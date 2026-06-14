@@ -11,6 +11,7 @@
 import { auth } from '../config/firebase';
 import { Character } from '../data/characters';
 import type { PendingNotifications } from './userEngagementService';
+import { logAiReplyReceived, logAiReplyFailed } from './firebaseAnalytics';
 
 const BACKEND_URL = 'https://sarina-voice-backend-1051121433445.us-central1.run.app';
 
@@ -77,6 +78,7 @@ export const generateReply = async (
   userName: string,
   lang: string
 ): Promise<string> => {
+  const startedAt = Date.now();
   try {
     const user = auth.currentUser;
     if (!user) throw new Error('Not authenticated');
@@ -100,13 +102,21 @@ export const generateReply = async (
 
     if (!response.ok) {
       console.warn('Chat API error:', response.status, await response.text());
+      logAiReplyFailed(`http_${response.status}`, character.id);
       return fallbackFor(lang);
     }
 
     const data = await response.json();
-    return (data?.response as string) || fallbackFor(lang);
+    const reply = data?.response as string | undefined;
+    if (!reply) {
+      logAiReplyFailed('empty_response', character.id);
+      return fallbackFor(lang);
+    }
+    logAiReplyReceived(character.id, Date.now() - startedAt);
+    return reply;
   } catch (error) {
     console.warn('generateReply failed:', error);
+    logAiReplyFailed('exception', character.id);
     return fallbackFor(lang);
   }
 };

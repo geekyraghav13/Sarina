@@ -10,13 +10,17 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Character, FALLBACK_CHARACTERS } from '../data/characters';
+import {
+  Character,
+  FALLBACK_CHARACTERS,
+  categoriesFromAppearance,
+} from '../data/characters';
 
 const PROJECT_ID = 'sarina-ai-2b2c1';
 const API_KEY = 'AIzaSyCoso8vP9ZY6fCGq3g-bgOyEdLDja9Dyo0';
-const CHARACTERS_URL =
+const CHARACTERS_BASE_URL =
   `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}` +
-  `/databases/(default)/documents/characters?key=${API_KEY}&pageSize=100`;
+  `/databases/(default)/documents/characters?key=${API_KEY}&pageSize=300`;
 
 const CACHE_KEY = 'cached_characters_v1';
 
@@ -50,6 +54,10 @@ const parseDocument = (doc: any, index: number): Character | null => {
     personality: fsArray(f.personality),
     interests: fsArray(f.interests),
     tone: fsArray(f.tone),
+    categories: f.categories
+      ? fsArray(f.categories)
+      : categoriesFromAppearance(fsString(f.appearance)),
+    story: f.story ? fsArray(f.story) : undefined,
     imageUrl: fsString(f.imageUrl) || undefined,
     order: f.order ? fsNumber(f.order) : index,
   };
@@ -63,11 +71,20 @@ const parseDocument = (doc: any, index: number): Character | null => {
  */
 export const fetchCharacters = async (): Promise<Character[]> => {
   try {
-    const res = await fetch(CHARACTERS_URL);
-    if (!res.ok) throw new Error(`Firestore HTTP ${res.status}`);
+    // Page through the collection (rosters can run into the hundreds) following
+    // Firestore's nextPageToken until the whole collection is read.
+    const docs: any[] = [];
+    let pageToken: string | undefined;
+    do {
+      const url =
+        CHARACTERS_BASE_URL + (pageToken ? `&pageToken=${pageToken}` : '');
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Firestore HTTP ${res.status}`);
+      const data = await res.json();
+      docs.push(...(data.documents ?? []));
+      pageToken = data.nextPageToken;
+    } while (pageToken);
 
-    const data = await res.json();
-    const docs: any[] = data.documents ?? [];
     const characters = docs
       .map(parseDocument)
       .filter((c): c is Character => c !== null)

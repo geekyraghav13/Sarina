@@ -307,12 +307,18 @@ export const logOnboardingComplete = async (): Promise<void> => {
 /**
  * Log when user starts chat session
  */
-export const logChatStart = async (characterName: string): Promise<void> => {
+export const logChatStart = async (
+  characterName: string,
+  characterId?: string,
+  category?: string,
+): Promise<void> => {
   if (!isAnalyticsAvailable()) return;
 
   try {
     await analytics().logEvent('chat_start', {
       character_name: characterName,
+      ...(characterId && { character_id: characterId }),
+      ...(category && { category }),
       timestamp: Date.now(),
     });
     console.log(`📊 Chat start logged: ${characterName}`);
@@ -324,17 +330,157 @@ export const logChatStart = async (characterName: string): Promise<void> => {
 /**
  * Log when user sends a message
  */
-export const logMessageSent = async (characterName: string, messageLength: number): Promise<void> => {
+export const logMessageSent = async (
+  characterName: string,
+  messageLength: number,
+  characterId?: string,
+  category?: string,
+): Promise<void> => {
   if (!isAnalyticsAvailable()) return;
 
   try {
     await analytics().logEvent('message_sent', {
       character_name: characterName,
       message_length: messageLength,
+      ...(characterId && { character_id: characterId }),
+      ...(category && { category }),
       timestamp: Date.now(),
     });
   } catch (error) {
     console.error('❌ Failed to log message sent:', error);
+  }
+};
+
+/**
+ * Log a chat engagement-depth milestone (user hit 1/5/10/25/50 messages in a
+ * conversation). Drives the engagement funnel + volume that screen views can't.
+ */
+export const logMessageMilestone = async (
+  count: number,
+  characterId?: string,
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+  try {
+    await analytics().logEvent('message_milestone', {
+      count,
+      ...(characterId && { character_id: characterId }),
+      timestamp: Date.now(),
+    });
+    console.log('📊 Message milestone:', count);
+  } catch (error) {
+    console.error('❌ Failed to log message_milestone:', error);
+  }
+};
+
+/**
+ * Log when the user hits the free-message limit (the core monetization trigger).
+ */
+export const logFreeLimitReached = async (characterId?: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+  try {
+    await analytics().logEvent('free_limit_reached', {
+      ...(characterId && { character_id: characterId }),
+      timestamp: Date.now(),
+    });
+    console.log('📊 Free limit reached');
+  } catch (error) {
+    console.error('❌ Failed to log free_limit_reached:', error);
+  }
+};
+
+/**
+ * Log when a character's opening story is shown (measures the story hook).
+ */
+export const logStoryViewed = async (characterId?: string): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+  try {
+    await analytics().logEvent('story_viewed', {
+      ...(characterId && { character_id: characterId }),
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    console.error('❌ Failed to log story_viewed:', error);
+  }
+};
+
+/**
+ * Log an AI reply successfully rendered, with round-trip latency (health).
+ */
+export const logAiReplyReceived = async (
+  characterId: string | undefined,
+  latencyMs: number,
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+  try {
+    await analytics().logEvent('ai_reply_received', {
+      ...(characterId && { character_id: characterId }),
+      latency_ms: latencyMs,
+      timestamp: Date.now(),
+    });
+  } catch (error) {
+    console.error('❌ Failed to log ai_reply_received:', error);
+  }
+};
+
+/**
+ * Log when the AI reply failed and a fallback line was shown (health/quality).
+ */
+export const logAiReplyFailed = async (
+  reason: string,
+  characterId?: string,
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+  try {
+    await analytics().logEvent('ai_reply_failed', {
+      reason,
+      ...(characterId && { character_id: characterId }),
+      timestamp: Date.now(),
+    });
+    console.log('📊 AI reply failed:', reason);
+  } catch (error) {
+    console.error('❌ Failed to log ai_reply_failed:', error);
+  }
+};
+
+/**
+ * Log a category-filter pill selection on a character grid (content discovery).
+ */
+export const logCategorySelected = async (
+  category: string,
+  surface: 'onboarding' | 'discover',
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+  try {
+    await analytics().logEvent('category_selected', {
+      category,
+      surface,
+      timestamp: Date.now(),
+    });
+    console.log('📊 Category selected:', category, surface);
+  } catch (error) {
+    console.error('❌ Failed to log category_selected:', error);
+  }
+};
+
+/**
+ * Log a tap on a character card in the Discover grid (browse → chat).
+ */
+export const logCharacterCardTapped = async (
+  characterId: string,
+  characterName: string,
+  category?: string,
+): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+  try {
+    await analytics().logEvent('character_card_tapped', {
+      character_id: characterId,
+      character_name: characterName,
+      ...(category && { category }),
+      timestamp: Date.now(),
+    });
+    console.log('📊 Character card tapped:', characterName);
+  } catch (error) {
+    console.error('❌ Failed to log character_card_tapped:', error);
   }
 };
 
@@ -497,6 +643,7 @@ export const logInterestsSelected = async (interests: string[]): Promise<void> =
 export const logCharacterSelected = async (
   characterId: string,
   characterName: string,
+  category?: string,
 ): Promise<void> => {
   if (!isAnalyticsAvailable()) return;
 
@@ -504,11 +651,25 @@ export const logCharacterSelected = async (
     await analytics().logEvent('character_selected', {
       character_id: characterId,
       character_name: characterName,
+      ...(category && { category }),
       timestamp: Date.now(),
     });
     console.log('📊 Character selected:', characterName);
   } catch (error) {
     console.error('❌ Failed to log character_selected:', error);
+  }
+};
+
+/**
+ * Log when the user signs out (account lifecycle).
+ */
+export const logAccountSignedOut = async (): Promise<void> => {
+  if (!isAnalyticsAvailable()) return;
+  try {
+    await analytics().logEvent('account_signed_out', { timestamp: Date.now() });
+    console.log('📊 Account signed out');
+  } catch (error) {
+    console.error('❌ Failed to log account_signed_out:', error);
   }
 };
 
@@ -800,7 +961,7 @@ export const logPhotoViewed = async (characterName: string): Promise<void> => {
 /**
  * Log chat session duration
  */
-export const logChatSessionEnd = async (characterName: string, duration: number, messageCount: number): Promise<void> => {
+export const logChatSessionEnd = async (characterName: string, duration: number, messageCount: number, characterId?: string): Promise<void> => {
   if (!isAnalyticsAvailable()) return;
 
   try {
@@ -808,6 +969,7 @@ export const logChatSessionEnd = async (characterName: string, duration: number,
       character_name: characterName,
       duration_seconds: duration,
       message_count: messageCount,
+      ...(characterId && { character_id: characterId }),
       timestamp: Date.now(),
     });
     console.log('📊 Chat session ended:', characterName, duration, messageCount);
@@ -971,16 +1133,28 @@ export default {
   logScreenView,
   logChatStart,
   logMessageSent,
+  logMessageMilestone,
+  logFreeLimitReached,
+  logStoryViewed,
+  logAiReplyReceived,
+  logAiReplyFailed,
   logChatSessionEnd,
   logVoiceCallStart,
   logVoiceCallEnd,
   logPhotoRequest,
   logPhotoViewed,
 
+  // Discovery
+  logCategorySelected,
+  logCharacterCardTapped,
+
   // Paywall & Credits
   logPaywallViewed,
   logPaywallDismissed,
   logCreditsDepleted,
+
+  // Account
+  logAccountSignedOut,
 
   // Character Management
   logCharacterRegenerated,

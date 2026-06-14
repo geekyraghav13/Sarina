@@ -41,6 +41,10 @@ import {
   logScreenView,
   logChatStart,
   logMessageSent,
+  logMessageMilestone,
+  logFreeLimitReached,
+  logStoryViewed,
+  logChatSessionEnd,
   logPaywallViewed,
 } from '../../services/firebaseAnalytics';
 import { useSoftReviewPrompt } from '../../hooks/useSoftReviewPrompt';
@@ -142,6 +146,11 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
   const reviewAskedRef = React.useRef(false);
   const chatStartLoggedRef = React.useRef(false);
   const autoCallFiredRef = React.useRef(false);
+  const freeLimitLoggedRef = React.useRef(false);
+  // Session-depth tracking for chat_session_end (refs avoid stale closures).
+  const sessionStartRef = React.useRef(Date.now());
+  const userMsgCountRef = React.useRef(0);
+  const sessionCharRef = React.useRef<Character | null>(null);
 
   // Freemium (global 10-message limit via paymentStore).
   const isPremium = usePaymentStore((s) => s.isPremium);
@@ -150,6 +159,25 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
   const incrementFreeMessages = usePaymentStore((s) => s.incrementFreeMessages);
   const setIsPremium = usePaymentStore((s) => s.setIsPremium);
   const reachedLimit = !isPremium && freeUsed >= FREE_MESSAGE_LIMIT;
+
+  // Keep a ref of the active character so the unmount handler (below) can read it
+  // without a stale closure.
+  React.useEffect(() => {
+    sessionCharRef.current = character;
+  }, [character]);
+
+  // Emit chat_session_end on leave (duration + how many messages the user sent),
+  // but only for sessions where the user actually engaged (≥1 message).
+  React.useEffect(() => {
+    sessionStartRef.current = Date.now();
+    return () => {
+      if (userMsgCountRef.current > 0) {
+        const dur = Math.round((Date.now() - sessionStartRef.current) / 1000);
+        const c = sessionCharRef.current;
+        logChatSessionEnd(c?.name || 'Sarina', dur, userMsgCountRef.current, c?.id);
+      }
+    };
+  }, []);
 
   // Initialize RevenueCat, bind the current user, and refresh premium status.
   // All native (react-native-purchases) → lazy-required + guarded so the screen
@@ -196,10 +224,13 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
 
       if (!chatStartLoggedRef.current) {
         chatStartLoggedRef.current = true;
-        logChatStart(char?.name || 'Sarina');
+        logChatStart(char?.name || 'Sarina', char?.id, char?.categories?.[0]);
+        logStoryViewed(char?.id);
       }
 
-      const story = getStory(char?.id, i18n.language, char?.name || 'Sarina');
+      const story = char?.story?.length
+        ? char.story
+        : getStory(char?.id, i18n.language, char?.name || 'Sarina');
       const storyMsgs: Message[] = story.map((text, i) => ({
         id: `story-${i}`,
         sender: 'ai' as const,
@@ -323,7 +354,9 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
                 await clearConversation(character.id);
               } catch {}
             }
-            const story = getStory(character?.id, i18n.language, name);
+            const story = character?.story?.length
+              ? character.story
+              : getStory(character?.id, i18n.language, name);
             setMessages(
               story.map((text, i) => ({ id: `story-${i}`, sender: 'ai' as const, text, ts: 0 }))
             );
@@ -375,6 +408,10 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
 
     // Freemium gate — block once the free allowance is spent.
     if (reachedLimit) {
+      if (!freeLimitLoggedRef.current) {
+        freeLimitLoggedRef.current = true;
+        logFreeLimitReached(character?.id);
+      }
       openPaywall();
       return;
     }
@@ -387,7 +424,12 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
     // turns plus this one) to drive both the message_sent number and the
     // engagement-peak review prompt.
     const userMsgNumber = messages.filter((m) => m.sender === 'user').length + 1;
-    logMessageSent(name, trimmed.length);
+    userMsgCountRef.current = userMsgNumber;
+    logMessageSent(name, trimmed.length, character?.id, character?.categories?.[0]);
+    // Engagement-depth milestones (drive the engagement funnel + event volume).
+    if ([1, 5, 10, 25, 50].includes(userMsgNumber)) {
+      logMessageMilestone(userMsgNumber, character?.id);
+    }
     if (userMsgNumber >= REVIEW_AT_MESSAGE && !reviewAskedRef.current) {
       reviewAskedRef.current = true;
       showIfEligible();

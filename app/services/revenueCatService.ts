@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 import { getCurrentUser } from './authService';
 import { doc, updateDoc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { firestore } from '../config/firebase';
-import { logPurchase } from './firebaseAnalytics';
+import { logPurchase, logPurchaseFailed } from './firebaseAnalytics';
 import { ensureAllowanceForPeriod, addTopupCredits } from './voiceCreditsService';
 import ENV from '../config/env';
 
@@ -145,6 +145,7 @@ export const purchasePackage = async (
       return { success: false, error: 'Purchase cancelled' };
     }
 
+    logPurchaseFailed(packageToPurchase.product?.identifier || 'unknown', error?.message || 'unknown');
     return {
       success: false,
       error: error.message || 'Purchase failed',

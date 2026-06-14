@@ -1,0 +1,6 @@
+# Generated artifacts from the roster generator — not source.
+_pilot/
+manifest.json
+enrich-manifest.json
+run.log
+enrich.log

@@ -152,6 +152,35 @@ app.post('/api/validate-purchase', async (req, res) => {
   }
 });
 
+/**
+ * Persist one chat exchange (the user's message + the companion's reply) to
+ * Firestore so it can be reviewed in the Firebase Console. Fire-and-forget:
+ * never awaited and never throws, so logging can't slow down or break a reply.
+ */
+// Messages auto-delete 30 days after they're written, via a Firestore TTL
+// policy on the `expireAt` field (see backend deploy/setup notes).
+const CHAT_LOG_RETENTION_DAYS = 30;
+
+function logChatMessage(userId, characterProfile = {}, userMessage, aiReply, language, wasBlocked) {
+  admin
+    .firestore()
+    .collection('chat_messages')
+    .add({
+      userId,
+      characterId: characterProfile.id || null,
+      characterName: characterProfile.name || null,
+      userMessage,
+      aiReply,
+      language: language || null,
+      wasBlocked: !!wasBlocked,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      expireAt: admin.firestore.Timestamp.fromMillis(
+        Date.now() + CHAT_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000
+      ),
+    })
+    .catch((error) => console.error('Error logging chat message:', error));
+}
+
 // Chat endpoint - proxies Gemini text chat to keep API key off the client
 app.post('/api/chat', async (req, res) => {
   try {
@@ -160,7 +189,8 @@ app.post('/api/chat', async (req, res) => {
       return res.status(401).json({ error: 'Missing authorization token' });
     }
 
-    await admin.auth().verifyIdToken(authToken);
+    const decodedToken = await admin.auth().verifyIdToken(authToken);
+    const userId = decodedToken.uid;
 
     const { message, characterProfile, chatHistory = [], userName = 'You', language, languageName } = req.body;
 
@@ -245,9 +275,13 @@ Your goal is to create a meaningful, genuine connection through authentic conver
     if (data.candidates && data.candidates.length > 0) {
       const candidate = data.candidates[0];
       if (candidate.finishReason === 'SAFETY' || !candidate.content) {
-        return res.json({ response: "I'm sorry, I couldn't respond to that. Can we talk about something else? 💕" });
+        const blocked = "I'm sorry, I couldn't respond to that. Can we talk about something else? 💕";
+        logChatMessage(userId, characterProfile, message, blocked, langCode, true);
+        return res.json({ response: blocked });
       }
-      return res.json({ response: candidate.content.parts[0].text.trim() });
+      const aiReply = candidate.content.parts[0].text.trim();
+      logChatMessage(userId, characterProfile, message, aiReply, langCode, false);
+      return res.json({ response: aiReply });
     }
 
     return res.status(502).json({ error: 'No response from AI' });
