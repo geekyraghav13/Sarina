@@ -60,9 +60,10 @@ import { usePaymentStore, FREE_MESSAGE_LIMIT } from '../../store/paymentStore';
 // (engagement peak). Cooldown-gated so it only ever shows to genuine fans.
 const REVIEW_AT_MESSAGE = 12;
 
-// After this many user messages, "she" calls the user — an incoming call that
-// lands non-premium users on the paywall (conversion hook). Fires once.
-const AUTO_CALL_AT_MESSAGE = 2;
+// How long after the user lands in a chat before "she" calls — an incoming call
+// that lands non-premium users on the paywall (conversion hook). Fires once per
+// chat visit, for unpaid users only.
+const AUTO_CALL_DELAY_MS = 7000;
 
 // Where "Report conversation" (3-dot menu) sends the report email.
 const REPORT_EMAIL = 'helpjalpat@gmail.com';
@@ -256,6 +257,24 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
         showReopenReview();
       }
     })();
+  }, []);
+
+  // Conversion hook: for unpaid users, "she" calls 7s after they land in the
+  // chat (replaces the old after-2nd-message trigger), dropping non-premium users
+  // on the paywall. Fires once per visit; premium status is read at fire time so
+  // a late-resolving RevenueCat check still suppresses it for subscribers, and we
+  // only fire while this screen is focused so a manually-opened call can't stack.
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (autoCallFiredRef.current || !navigation.isFocused()) return;
+      if (usePaymentStore.getState().isPremium) return;
+      autoCallFiredRef.current = true;
+      navigation.navigate('IncomingCall', {
+        character: sessionCharRef.current ?? undefined,
+        auto: true,
+      });
+    }, AUTO_CALL_DELAY_MS);
+    return () => clearTimeout(timer);
   }, []);
 
   // Persist the real conversation turns (everything except the story bubbles).
@@ -453,23 +472,6 @@ export const ChatScreen: React.FC<Props> = ({ navigation, route }) => {
       persist(finalMsgs);
       // Arm/refresh the re-engagement cycle now (foreground = reliable).
       armReengagement(finalMsgs.filter((m) => m.sender === 'user').map((m) => m.text));
-
-      // Conversion hook: after the user's Nth message, "she" calls — landing
-      // non-premium users on the paywall. Premium users already have access, so
-      // we skip them. Fires once, after her reply so it feels natural.
-      if (
-        !isPremium &&
-        userMsgNumber >= AUTO_CALL_AT_MESSAGE &&
-        !autoCallFiredRef.current
-      ) {
-        autoCallFiredRef.current = true;
-        setTimeout(() => {
-          navigation.navigate('IncomingCall', {
-            character: character ?? undefined,
-            auto: true,
-          });
-        }, 1200);
-      }
     } finally {
       setIsTyping(false);
       setSending(false);
