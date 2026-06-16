@@ -259,14 +259,42 @@ Your goal is to create a meaningful, genuine connection through authentic conver
       ],
     };
 
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
-    );
+    // Gemini intermittently returns transient overload/rate errors (429/5xx) —
+    // gemini-2.5-flash in particular has overload bursts. Without retries a single
+    // blip surfaces to the user as a failed message (the app then shows its "my
+    // mind wandered" fallback). Strategy: try the primary model with a few backoff
+    // retries; if it stays overloaded, fall back to flash-lite (a separate, higher
+    // capacity pool). Non-transient errors (400 bad payload, 403 bad key) fail
+    // fast and don't waste the fallback.
+    const MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+    const RETRYABLE = new Set([429, 500, 502, 503, 504]);
+    let geminiRes = null;
+    let lastErr = '';
+    let nonTransient = false;
+    for (const model of MODELS) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (attempt > 0) await new Promise((r) => setTimeout(r, 500 * attempt));
+        try {
+          geminiRes = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        } catch (e) {
+          lastErr = `fetch_failed(${model}): ${e.message}`;
+          continue; // network blip → retry
+        }
+        if (geminiRes.ok) break;
+        lastErr = `${model} ${geminiRes.status}: ${await geminiRes.text()}`;
+        if (!RETRYABLE.has(geminiRes.status)) { nonTransient = true; break; }
+      }
+      if ((geminiRes && geminiRes.ok) || nonTransient) break;
+      // transient exhausted for this model → try the next one
+    }
 
-    if (!geminiRes.ok) {
-      const errorData = await geminiRes.text();
-      console.error('Gemini API Error:', errorData);
+    if (!geminiRes || !geminiRes.ok) {
+      console.error('Gemini API Error (after retries + fallback):', lastErr);
       return res.status(502).json({ error: 'AI service error' });
     }
 
